@@ -1,10 +1,26 @@
-// WebAudio: Bay FM 98.2 "Sunset Drive" synth radio, police sirens and an
-// engine hum. Everything is synthesized — no audio files, no network.
+// WebAudio: Bay FM 98.2 "Sunset Drive" and Ember 101.5 "Midnight
+// Overdrive" synth radio, police sirens and an engine hum. Everything is
+// synthesized — no audio files, no network.
 export function initAudio(G) {
+  const STATIONS = [
+    { name: 'BAY FM 98.2', song: 'Sunset Drive', chords: [110.0, 87.31, 130.81, 98.0] },
+    { name: 'EMBER 101.5', song: 'Midnight Overdrive', chords: [98.0, 110.0, 87.31, 123.47] },
+  ];
   const A = {
     ctx: null, master: null, radioOn: true, sirenOn: false,
     step: 0, nextTime: 0, sirenOsc: null, sirenGain: null, sirenHi: false, sirenNext: 0,
-    engOsc: null, engGain: null, engFilter: null,
+    engOsc: null, engGain: null, engFilter: null, stationIdx: 0,
+    station() { return STATIONS[A.stationIdx]; },
+    prevStation() {
+      A.stationIdx = (A.stationIdx + 1) % STATIONS.length;
+      A.step = 0;
+      const s = A.station();
+      G.toast(`${s.name} — ${s.song}`);
+    },
+    setSound(on) {
+      G.soundOn = on;
+      if (A.master) A.master.gain.value = on ? 0.5 : 0;
+    },
     start() {
       if (A.ctx) { if (A.ctx.state === 'suspended') A.ctx.resume(); return; }
       try {
@@ -34,9 +50,12 @@ export function initAudio(G) {
         A.nextTime = A.ctx.currentTime + 0.1;
       } catch (e) { A.ctx = null; }
     },
-    toggleRadio() { A.radioOn = !A.radioOn; G.toast(A.radioOn ? 'BAY FM 98.2 — Sunset Drive' : 'Radio off'); },
-    // chord roots (Hz): Am F C G, one bar each, 8th-note steps at 0.24 s
-    chords: [110.0, 87.31, 130.81, 98.0],
+    toggleRadio() {
+      const s = A.station();
+      G.toast(A.radioOn ? `${s.name} — ${s.song}` : 'Radio off');
+    },
+    // chord roots (Hz): one bar each, 8th-note steps at 0.24 s
+    get chords() { return A.station().chords; },
     note(freq, t, dur, type, vol) {
       const o = A.ctx.createOscillator();
       o.type = type; o.frequency.value = freq;

@@ -23,6 +23,12 @@ const CAR_COLORS = {
   lowrider: [0x35d05a, 0xae2f7a, 0x2f7aae],
 };
 
+// v8 car names — original Ember Bay names, no real-world brands.
+export const CAR_NAMES = {
+  sport: 'Ember GT', sedan: 'Marina S', taxi: 'Bay Cab', van: 'Harbor Van',
+  pickup: 'Dune Pickup', truck: 'Crate Hauler', lowrider: 'Sunset Low', bike: 'Ember GP',
+};
+
 function std(color, opts = {}) {
   return new THREE.MeshStandardMaterial({ color, roughness: 0.45, metalness: 0.35, ...opts });
 }
@@ -393,6 +399,12 @@ export function makeBike(G, color = 0xd81a1a) {
 }
 
 // Arcade drive controller shared by player-driven and traffic vehicles.
+// v8 drift: velocity is a real vector. Normal driving pins it to the
+// heading; holding the handbrake (Space) at speed breaks the rear grip,
+// so the velocity lags behind the heading — that lag IS the slip angle.
+// Points build from slip angle x speed, combo grows while the drift
+// continues, and the bank lands in cash + respect when the drift ends
+// cleanly. A slip past ~72 deg is a spin-out: combo lost.
 export function createDrive(G, vehicle, opts = {}) {
   const topSpeed = opts.topSpeed ?? (vehicle.kind === 'bike' ? BIKE_TOP_SPEED : CAR_TOP_SPEED);
   const D = {
@@ -404,8 +416,24 @@ export function createDrive(G, vehicle, opts = {}) {
     topSpeed,
     accel: opts.accel ?? 16,
     steer: 0,
+    vel: new THREE.Vector3(0, 0, 0),
+    name: CAR_NAMES[vehicle.kind] || 'Ember GT',
+    condition: 100,
+    drift: { active: false, angle: 0, points: 0, combo: 1, comboTime: 0, endTimer: 0, hadSlip: false, skidTimer: 0 },
+    bankDrift() {
+      const d = D.drift;
+      if (d.points >= 25) {
+        const cash = Math.round(d.points * d.combo);
+        G.money += cash;
+        G.respect = Math.min(100, G.respect + Math.min(6, cash / 400));
+        G.driftBanked += cash;
+        if (G.toast) G.toast(`DRIFT +$${cash} (x${d.combo})`);
+      }
+      d.points = 0; d.combo = 1; d.comboTime = 0; d.endTimer = 0; d.angle = 0; d.hadSlip = false;
+    },
     place(x, z, heading = 0) {
-      D.pos.set(x, 0, z); D.heading = heading; D.speed = 0; D.sync();
+      D.pos.set(x, 0, z); D.heading = heading; D.speed = 0; D.vel.set(0, 0, 0);
+      D.drift.active = false; D.drift.points = 0; D.drift.combo = 1; D.sync();
     },
     sync() {
       D.group.position.copy(D.pos);
@@ -415,17 +443,46 @@ export function createDrive(G, vehicle, opts = {}) {
     update(dt, input) {
       const fwd = input.f ? 1 : 0;
       const back = input.b ? 1 : 0;
+      const isBike = vehicle.kind === 'bike';
       if (fwd) D.speed += D.accel * dt;
       else if (back) D.speed -= (D.speed > 0.5 ? 26 : 10) * dt;
       else D.speed -= Math.sign(D.speed) * Math.min(Math.abs(D.speed), 8 * dt);
-      if (input.brake) D.speed -= Math.sign(D.speed) * Math.min(Math.abs(D.speed), 34 * dt);
+      const spdFactor = Math.min(1, Math.abs(D.speed) / 14);
+      // Handbrake drift: Space at speed breaks the rear grip.
+      const wantDrift = input.brake && Math.abs(D.speed) > 12;
+      if (wantDrift && !D.drift.active) {
+        D.drift.active = true;
+        D.drift.comboTime = 0;
+        D.drift.points = 0;
+        D.drift.combo = 1;
+        D.drift.endTimer = 0;
+        D.drift.hadSlip = false;
+      }
+      if (D.drift.active) {
+        // In drift the handbrake only scrubs a little speed.
+        D.speed -= Math.sign(D.speed) * Math.min(Math.abs(D.speed), 6 * dt);
+        if (Math.abs(D.speed) < 8) { D.drift.active = false; D.bankDrift(); }
+      } else if (input.brake) {
+        D.speed -= Math.sign(D.speed) * Math.min(Math.abs(D.speed), 34 * dt);
+      }
       D.speed = Math.max(-12, Math.min(topSpeed, D.speed));
       const steerIn = (input.l ? 1 : 0) - (input.r ? 1 : 0);
-      const spdFactor = Math.min(1, Math.abs(D.speed) / 14);
       D.steer += (steerIn - D.steer) * Math.min(1, dt * 10);
-      D.heading += D.steer * 1.9 * spdFactor * Math.sign(D.speed || 1) * dt;
-      D.pos.x += Math.sin(D.heading) * D.speed * dt;
-      D.pos.z += Math.cos(D.heading) * D.speed * dt;
+      const yawRate = D.drift.active ? (isBike ? 2.9 : 3.6) : 1.9;
+      D.heading += D.steer * yawRate * spdFactor * Math.sign(D.speed || 1) * dt;
+      // Velocity: normal driving pins it to the heading; drifting lets
+      // it lag behind, which is the visible slip angle.
+      const fx = Math.sin(D.heading), fz = Math.cos(D.heading);
+      const targetVx = fx * D.speed, targetVz = fz * D.speed;
+      if (D.drift.active) {
+        const grip = isBike ? 3.2 : 2.0;
+        D.vel.x += (targetVx - D.vel.x) * Math.min(1, grip * dt);
+        D.vel.z += (targetVz - D.vel.z) * Math.min(1, grip * dt);
+      } else {
+        D.vel.x = targetVx; D.vel.z = targetVz;
+      }
+      D.pos.x += D.vel.x * dt;
+      D.pos.z += D.vel.z * dt;
       D.pos.x = Math.max(-455, Math.min(455, D.pos.x));
       D.pos.z = Math.max(-455, Math.min(455, D.pos.z));
       // wheels spin + bike lean
@@ -434,6 +491,45 @@ export function createDrive(G, vehicle, opts = {}) {
       }
       if (vehicle.kind === 'bike') {
         D.group.rotation.z = -D.steer * 0.28 * spdFactor;
+      }
+      // Drift scoring + smoke + skid marks.
+      if (D.drift.active) {
+        const vMag = Math.hypot(D.vel.x, D.vel.z);
+        const vdx = vMag > 0.1 ? D.vel.x / vMag : fx;
+        const vdz = vMag > 0.1 ? D.vel.z / vMag : fz;
+        const slip = Math.acos(Math.max(-1, Math.min(1, vdx * fx + vdz * fz)));
+        const slipDeg = slip * 180 / Math.PI;
+        D.drift.angle = slipDeg;
+        if (slip > 1.25) {
+          // Spun out — combo lost, car scrubs off its speed.
+          D.drift.active = false;
+          D.drift.points = 0; D.drift.combo = 1; D.drift.hadSlip = false;
+          D.speed *= 0.25;
+          D.vel.multiplyScalar(0.25);
+          if (G.toast) G.toast('SPUN OUT — drift combo lost');
+        } else if (vMag > 8 && slipDeg > 8) {
+          D.drift.hadSlip = true;
+          D.drift.endTimer = 0;
+          D.drift.comboTime += dt;
+          D.drift.combo = Math.min(5, 1 + Math.floor(D.drift.comboTime / 2.5));
+          D.drift.points += slipDeg * vMag * dt * 0.6;
+          const rx = Math.cos(D.heading), rz = -Math.sin(D.heading);
+          D.drift.skidTimer -= dt;
+          const lay = D.drift.skidTimer <= 0;
+          if (lay) D.drift.skidTimer = 0.1;
+          for (const side of [-1, 1]) {
+            const wx = D.pos.x - fx * 1.5 + rx * side * 1.0;
+            const wz = D.pos.z - fz * 1.5 + rz * side * 1.0;
+            if (G.driftFX) {
+              G.driftFX.spawnSmoke(wx, 0.4, wz, 1);
+              if (lay) G.driftFX.laySkid(wx, wz, Math.atan2(D.vel.x, D.vel.z));
+            }
+          }
+        } else if (D.drift.hadSlip) {
+          // Slip died — end the drift and bank it.
+          D.drift.endTimer += dt;
+          if (D.drift.endTimer > 0.4) { D.drift.active = false; D.bankDrift(); }
+        }
       }
       D.sync();
     },

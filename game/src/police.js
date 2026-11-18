@@ -110,6 +110,7 @@ export function initPolice(G) {
   const P = {
     wanted: 0,
     evading: 0,
+    inSight: false, // nearest unit closer than 60 m — the HUD shows IN SIGHT
     units: [], // {kind, group, pos, heading, speed, callsign}
     heli: null,
     roadblock: null, // {cars:[], pos, placedAt}
@@ -256,6 +257,7 @@ export function initPolice(G) {
         P.roadblock = null;
       }
       // evading / decay
+      P.inSight = P.wanted > 0 && nearest < 60;
       if (nearest > 60) {
         P.evading = Math.min(100, P.evading + dt * 9);
         P.unseenTimer += dt;

@@ -246,6 +246,25 @@ function billboardTexture(lines, bg, fg) {
   });
 }
 
+// v8 neon sign: glowing text on a dark panel (MeshBasicMaterial, so it
+// reads at night without a light). Original Ember Bay business names.
+function neonTexture(text, color) {
+  return canvasTexture(512, 128, (g, w, h) => {
+    g.fillStyle = '#0a0614'; g.fillRect(0, 0, w, h);
+    g.strokeStyle = color; g.lineWidth = 5;
+    g.shadowColor = color; g.shadowBlur = 22;
+    g.strokeRect(6, 6, w - 12, h - 12);
+    g.fillStyle = color; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.font = 'bold 52px Verdana';
+    g.fillText(text, w / 2, h / 2 + 2);
+    g.shadowBlur = 0;
+    g.fillStyle = '#ffffff';
+    g.font = 'bold 50px Verdana';
+    g.globalAlpha = 0.35;
+    g.fillText(text, w / 2, h / 2 + 2);
+  });
+}
+
 const MAT = {};
 function mat(color, opts = {}) {
   const key = color + JSON.stringify(opts);
@@ -913,6 +932,28 @@ export function buildCity(G) {
     g.rotation.y = Math.atan2(-bx, -bz);
     root.add(g);
   });
+
+  // v8 neon signs along the Sunset Row avenue (NS road 3, the staging
+  // avenue): glowing shop signs that read at night. Original names.
+  const NEON_SIGNS = [
+    ['CLUB EMBER', '#ff2d95', -130, 7],
+    ['NEON MOTEL', '#2fd8ff', -70, 9],
+    ['BAY ARCADE', '#ffd24d', -10, 7],
+    ['SUNSET LIQUOR', '#ff7a3d', 50, 8],
+    ['PIER 9 DINER', '#7dff5e', 110, 7],
+  ];
+  for (const [text, color, z, y] of NEON_SIGNS) {
+    const sx = nsPlain(ROADS.ns[3], z) + 11;
+    const sign = new THREE.Mesh(
+      new THREE.PlaneGeometry(13, 3.2),
+      new THREE.MeshBasicMaterial({ map: neonTexture(text, color) }),
+    );
+    sign.position.set(sx, y, z);
+    sign.rotation.y = -Math.PI / 2; // face west, onto the avenue
+    root.add(sign);
+    const back = box(13.4, 3.6, 0.3, mat(0x0a0614), sx + 0.2, y, z, root);
+    back.rotation.y = -Math.PI / 2;
+  }
 
   // Street lamps along the avenues, lamps on for golden hour.
   for (const road of ROADS.ns) {

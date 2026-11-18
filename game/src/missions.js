@@ -3,6 +3,19 @@
 import * as THREE from 'three';
 import { makeCar, makeBike } from './vehicles.js';
 
+// Original Ember Bay dialogue — spoken when a job starts. Mara Voss is
+// the fixer, Deke Ramos the wheelman, Vic Torres the crew boss.
+export const DIALOGUE = {
+  1: { name: 'MARA VOSS', role: 'FIXER', line: 'Package goes to Port Ember. No stops, no questions — and don\'t scratch the paint.', who: 'mara' },
+  2: { name: 'DEKE RAMOS', role: 'WHEELMAN', line: 'Fare\'s waiting at Marina Point. Drive like a cabbie, not a getaway man. Yet.', who: 'deke' },
+  3: { name: 'DEKE RAMOS', role: 'WHEELMAN', line: 'Sunset Row loves a sideways car. Give them a drift worth watching.', who: 'deke' },
+  4: { name: 'MARA VOSS', role: 'FIXER', line: 'Three crates at the docks. The harbour master looks the other way — for a price.', who: 'mara' },
+  5: { name: 'MARA VOSS', role: 'FIXER', line: 'Three stars and counting. Stay hot for 45 seconds and they\'ll know your name.', who: 'mara' },
+  6: { name: 'DEKE RAMOS', role: 'WHEELMAN', line: 'That courier bike knows Craneside better than you do. Stay on it.', who: 'deke' },
+  7: { name: 'VIC TORRES', role: 'CREW BOSS', line: 'You think you can push me out of my own harbour? Come and try, kid.', who: 'vic' },
+  8: { name: 'MARA VOSS', role: 'FIXER', line: 'Night drops — Northgate, then Coral Row. Be done before the sun comes up.', who: 'mara' },
+};
+
 const DEFS = [
   { id: 1, name: 'First Delivery', payout: 250, desc: 'Take the package to Port Ember',
     steps: [{ type: 'goto', pos: [350, 350], label: 'Deliver the package to Port Ember' }] },
@@ -11,8 +24,9 @@ const DEFS = [
       { type: 'goto', pos: [-300, -100], label: 'Pick up the passenger at Marina Point' },
       { type: 'goto', pos: [-420, 200], label: 'Drop them off at Palms Beach' },
     ] },
-  { id: 3, name: 'Lowrider Nights', payout: 450, desc: 'Cruise the lowrider to Sunset Row, then the Boardwalk',
+  { id: 3, name: 'Lowrider Nights', payout: 450, desc: 'Drift for the crowd, then cruise Sunset Row and the Boardwalk',
     steps: [
+      { type: 'drift', target: 1500, label: 'Drift for the crowd' },
       { type: 'goto', pos: [-250, 100], label: 'Show the lowrider at Sunset Row' },
       { type: 'goto', pos: [-420, 300], label: 'Finish the cruise at the Boardwalk' },
     ] },
@@ -43,10 +57,18 @@ export function initMissions(G) {
       if (M.active) { G.toast('Mission already running: ' + M.active.def.name); return false; }
       const def = DEFS.find((d) => !M.done.has(d.id));
       if (!def) { G.toast('All 8 story missions complete — Ember Bay is yours'); return false; }
-      M.active = { def, stepIdx: 0, collected: 0, timer: 0, hits: 0, chaseTime: 0 };
+      return M.startId(def.id);
+    },
+    // Start a specific job (used by the shot staging / debug API).
+    startId(id) {
+      const def = DEFS.find((d) => d.id === id);
+      if (!def || M.active) return false;
+      M.active = { def, stepIdx: 0, collected: 0, timer: 0, hits: 0, chaseTime: 0, driftBase: G.driftBanked || 0 };
       if (def.id === 5) G.police.setWanted(Math.max(G.police.wanted, 3));
       if (def.id === 8) G.setClock(23.5);
       G.hud.showMission(`${def.name} — ${def.desc}`);
+      const dlg = DIALOGUE[def.id];
+      if (dlg && G.hud.dialogue) G.hud.dialogue(dlg.name, dlg.role, dlg.line, dlg.who);
       M.placeMarker();
       G.toast(`Mission started: ${def.name} ($${def.payout})`);
       return true;
@@ -56,6 +78,10 @@ export function initMissions(G) {
       const a = M.active;
       if (!a) return;
       const step = a.def.steps[a.stepIdx];
+      if (step.type === 'drift') {
+        G.hud.showMission(`${a.def.name} — Drift for the crowd — 0/${step.target} pts`);
+        return;
+      }
       let pos = null;
       if (step.type === 'goto') pos = step.pos;
       else if (step.type === 'collect') pos = step.pos[a.collected];
@@ -123,13 +149,48 @@ export function initMissions(G) {
       M.clearMarker();
       M.active = null;
     },
+    // Data for the HUD mission banner: chapter, objective, hint, stage,
+    // next step, and the countdown for timed steps.
+    banner() {
+      const a = M.active;
+      if (!a) return null;
+      const step = a.def.steps[a.stepIdx];
+      let objective = step.label;
+      let timer = null;
+      if (step.type === 'drift') {
+        const banked = (G.driftBanked || 0) - (a.driftBase || 0);
+        const live = G.vehicle && G.vehicle.drift ? Math.round(G.vehicle.drift.points * G.vehicle.drift.combo) : 0;
+        objective = `Drift for the crowd — ${Math.min(step.target, banked + live)}/${step.target} pts`;
+      } else if (step.type === 'survive') {
+        timer = Math.max(0, Math.ceil(step.seconds - a.timer));
+        objective = `Stay hot — survive ${timer}s at 3 stars`;
+      } else if (step.type === 'collect') {
+        objective = `${step.label.split('(')[0]}(${a.collected}/3)`;
+      } else if (step.type === 'boss') {
+        objective = `Ram the crew car — ${a.hits}/3 hits`;
+      } else if (step.type === 'chase') {
+        objective = `Stay on the courier bike — ${Math.floor(a.chaseTime)}/8s`;
+      }
+      const nextStep = a.def.steps[a.stepIdx + 1];
+      return {
+        chapter: a.def.id, name: a.def.name, objective, hint: a.def.desc,
+        stage: a.stepIdx + 1, stages: a.def.steps.length,
+        next: nextStep ? nextStep.label : 'Finish the job', timer,
+      };
+    },
     update(dt) {
       if (M.marker) M.marker.userData.gem.rotation.y += dt * 2.4;
       const a = M.active;
       if (!a) return;
       const step = a.def.steps[a.stepIdx];
       const pp = G.playerPos;
-      if (step.type === 'goto') {
+      if (step.type === 'drift') {
+        const banked = (G.driftBanked || 0) - (a.driftBase || 0);
+        const live = G.vehicle && G.vehicle.drift ? Math.round(G.vehicle.drift.points * G.vehicle.drift.combo) : 0;
+        const total = banked + live;
+        G.hud.showMission(`${a.def.name} — Drift for the crowd — ${Math.min(step.target, total)}/${step.target} pts (hold SPACE + steer)`);
+        if (total >= step.target) M.completeStep();
+      } else if (step.type === 'goto') {
         if (Math.hypot(pp.x - step.pos[0], pp.z - step.pos[1]) < 9) M.completeStep();
       } else if (step.type === 'collect') {
         const p = step.pos[a.collected];
