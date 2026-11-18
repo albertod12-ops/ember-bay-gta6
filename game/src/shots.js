@@ -9,8 +9,10 @@ import { ROADS, roadPoint, nsCenter, nsHeading } from './city.js';
 
 const STAGE_ROAD = 3; // NS avenue past the roundabout (base -20)
 
-function enterLowrider(G, x, z, heading, speed) {
-  const v = makeCar(G, 'lowrider', 0);
+function enterSportCar(G, x, z, heading, speed) {
+  // v7: the cover car is a red sports car (red survives the orange
+  // sunset light; orange washed out to pale yellow in the first render).
+  const v = makeCar(G, 'sport', 2);
   G.scene.add(v.group);
   const d = createDrive(G, v, {});
   d.place(x, z, heading);
@@ -44,7 +46,7 @@ export function stageShot(G, name) {
   const pt = roadPoint('ns', STAGE_ROAD, -30, 1);
   if (name === 'cover') {
     G.setClock(17.75);
-    enterLowrider(G, pt.x, pt.z, pt.heading, 38);
+    enterSportCar(G, pt.x, pt.z, pt.heading, 38);
     G.police.setWanted(3);
   } else if (name === 'combat') {
     G.setClock(17.75);
@@ -52,7 +54,9 @@ export function stageShot(G, name) {
     G.police.setWanted(4);
   } else if (name === 'map') {
     G.setClock(17.75);
-    G.camOverride = { pos: [-100, 850, 80], look: [-100, 0, 0] };
+    // v7.1: lower top-down camera (700 m, was 850) so the denser city
+    // fills the frame and houses read at a bigger scale.
+    G.camOverride = { pos: [-100, 700, 80], look: [-100, 0, 0] };
     // Lift the haze for the top-down view so the organic street layout
     // reads clearly instead of drowning in golden fog.
     G.scene.fog.near = 1500;

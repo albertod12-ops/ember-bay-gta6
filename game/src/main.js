@@ -136,7 +136,7 @@ const PARKED_DEFS = [
   ['ns', 4, -80, 1], ['ns', 5, 220, -1], ['ew', 0, -100, 1], ['ew', 1, 260, -1],
   ['ew', 2, -300, 1], ['ew', 3, 80, -1], ['ew', 4, -180, 1], ['ns', 1, 60, 1],
 ];
-const PARKED_KINDS = ['sedan', 'lowrider', 'taxi', 'pickup', 'sedan', 'van', 'sedan', 'lowrider', 'sedan', 'taxi', 'pickup', 'sedan'];
+const PARKED_KINDS = ['sport', 'sport', 'taxi', 'pickup', 'sport', 'van', 'sport', 'sport', 'sport', 'taxi', 'pickup', 'sport'];
 PARKED_DEFS.forEach(([axis, idx, along, dir], i) => {
   const pt = roadPoint(axis, idx, along, dir);
   const v = makeCar(G, PARKED_KINDS[i], i % 3);
@@ -149,9 +149,9 @@ PARKED_DEFS.forEach(([axis, idx, along, dir], i) => {
   d.owned = false;
   G.parked.push(d);
 });
-// One lowrider parked on the Sunset Diagonal.
+// One yellow sports car parked on the Sunset Diagonal.
 {
-  const v = makeCar(G, 'lowrider', 1);
+  const v = makeCar(G, 'sport', 1);
   G.scene.add(v.group);
   const d = createDrive(G, v, {});
   d.place(-138, 8, Math.PI * 3 / 4);

@@ -1,5 +1,5 @@
 // Ember Bay v5 — recorded re-apply under R7; behaviour unchanged
-// Traffic v5: 22 cars, 7 motorbikes and 48 pedestrians, all seeded.
+// Traffic v7: 24 cars (mostly sports cars), 8 race bikes, 48 pedestrians.
 // Cars follow the curved roads, turn at intersections and stop at red
 // lights. At the roundabout they swing around the island and carry on —
 // nobody turns on the ring.
@@ -7,7 +7,8 @@ import * as THREE from 'three';
 import { makeCar, makeBike } from './vehicles.js';
 import { ROADS, ROUNDABOUT, nsPlain, ewPlain, nsCenter, ewCenter, nsHeading, ewHeading } from './city.js';
 
-const KINDS = ['sedan', 'sedan', 'taxi', 'van', 'pickup', 'sedan', 'lowrider'];
+// v7: most traffic cars are sports cars; van/pickup stay for variety.
+const KINDS = ['sport', 'sport', 'sport', 'taxi', 'van', 'pickup', 'sport'];
 
 // Left-hand traffic (Indonesia): the lane offset is on the left of the
 // direction of travel.
@@ -65,7 +66,8 @@ export function initTraffic(G) {
     return { x: along, z, heading: ewHeading(road, along, dir), axis: 'ew', road, dir };
   };
 
-  for (let i = 0; i < 22; i++) {
+  // v7: 24 sports-heavy cars, 8 race bikes.
+  for (let i = 0; i < 24; i++) {
     const kind = rng.pick(KINDS);
     const v = makeCar(G, kind, rng.int(0, 3));
     const s = spawnOnRoad();
@@ -78,8 +80,8 @@ export function initTraffic(G) {
       decidedAt: -1, pendingAxis: null, turnRoad: null,
     });
   }
-  for (let i = 0; i < 7; i++) {
-    const v = makeBike(G, rng.pick([0xd81a1a, 0x2a6fd8, 0x222831]));
+  for (let i = 0; i < 8; i++) {
+    const v = makeBike(G, rng.pick([0xffd400, 0x2a6fd8, 0xff6a00]));
     const s = spawnOnRoad();
     v.group.position.set(s.x, 0, s.z);
     v.group.rotation.y = s.heading;

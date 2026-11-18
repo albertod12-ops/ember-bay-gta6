@@ -403,17 +403,20 @@ export function buildCity(G) {
   ground.rotation.x = -Math.PI / 2; ground.position.y = -0.05;
   ground.receiveShadow = true;
   root.add(ground);
+  // v7.1: ocean/sand/boardwalk sit well above the ground plane (0.8 /
+  // 0.5 / 0.9, was 0.1 / 0.02 / 0.06) — at 700 m the 0.15 m gaps
+  // z-fought into horizontal moire bands on the map shot.
   const ocean = new THREE.Mesh(new THREE.PlaneGeometry(1400, 2000), mat(0x2195a8, { roughness: 0.25, metalness: 0.15 }));
-  ocean.rotation.x = -Math.PI / 2; ocean.position.set(-1300, 0.1, 0);
+  ocean.rotation.x = -Math.PI / 2; ocean.position.set(-1300, 0.8, 0);
   root.add(ocean);
   out.ocean = ocean;
   const sand = new THREE.Mesh(new THREE.PlaneGeometry(150, 1040), mat(0xe2c491));
-  sand.rotation.x = -Math.PI / 2; sand.position.set(-535, 0.02, 0);
+  sand.rotation.x = -Math.PI / 2; sand.position.set(-535, 0.5, 0);
   sand.receiveShadow = true;
   root.add(sand);
   // Boardwalk planks along the beach edge, west of the coast road.
   const boardwalk = new THREE.Mesh(new THREE.PlaneGeometry(14, 940), mat(0x9a6b42));
-  boardwalk.rotation.x = -Math.PI / 2; boardwalk.position.set(-470, 0.06, 0);
+  boardwalk.rotation.x = -Math.PI / 2; boardwalk.position.set(-470, 0.9, 0);
   boardwalk.receiveShadow = true;
   root.add(boardwalk);
 
@@ -558,8 +561,10 @@ export function buildCity(G) {
       blockCenters.push([cx, cz]);
       const d = districtAt(cx, cz);
       const key = `${ix},${iz}`;
-      const slabW = Math.max(30, gapX - 48);
-      const slabD = Math.max(30, gapZ - 48);
+      // v7: slabs hug the roads (14 m setback, was 22) so blocks read as
+      // built-up city from above instead of empty sidewalk.
+      const slabW = Math.max(30, gapX - 14);
+      const slabD = Math.max(30, gapZ - 14);
       const isPlaza = plazas.has(key);
       // Golf course blocks (SA-map style): green + sand traps + pond +
       // clubhouse instead of buildings.
@@ -588,10 +593,26 @@ export function buildCity(G) {
         }
         continue;
       }
-      // Blocks the diagonal avenue cuts through get no slab at all — the
-      // road ribbon must stay visible, not buried under a sidewalk block.
+      // v7: blocks the diagonal avenue cuts through get houses in the
+      // corners clear of the road (inline clearance — place() is defined
+      // below), not just trees — no more empty blocks along the diagonal.
       const nearDiag = DIAGONALS.some(([ax, az, bx, bz]) => distToSegment(cx, cz, ax, az, bx, bz) < 42);
       if (nearDiag) {
+        const clearDiag = (x, z) => {
+          if (DIAGONALS.some(([ax, az, bx, bz]) => distToSegment(x, z, ax, az, bx, bz) < 16)) return false;
+          if (Math.hypot(x - RBX, z - RBZ) < 30) return false;
+          if (FREEWAY.pts.some((p) => Math.hypot(x - p.x, z - p.z) < 17)) return false;
+          return true;
+        };
+        for (let i = 0; i < 8; i++) {
+          const w = rng.range(14, 20), dep = rng.range(12, 16), hgt = rng.range(6, 12);
+          const hx = cx + rng.range(-slabW / 2 + 12, slabW / 2 - 12);
+          const hz = cz + rng.range(-slabD / 2 + 12, slabD / 2 - 12);
+          if (!clearDiag(hx, hz)) continue;
+          const b = box(w, hgt, dep, mat(rng.pick(pastel)), hx, hgt / 2 + 0.4, hz, root);
+          b.rotation.y = rng.range(-0.06, 0.06); b.castShadow = true;
+          pyramidRoof(w, dep, rng.range(3, 5), rng.pick([0xa03a2a, 0x3a5a8a, 0xd8a03c, 0xc94f3d]), hx, hgt + 0.4, hz, root);
+        }
         for (let i = 0; i < 4; i++) {
           makeTree(rng, cx + rng.range(-slabW / 2 + 8, slabW / 2 - 8), cz + rng.range(-slabD / 2 + 8, slabD / 2 - 8), root, rng.range(0.9, 1.3));
         }
@@ -624,16 +645,19 @@ export function buildCity(G) {
       const place = (x, z) => {
         if (DIAGONALS.some(([ax, az, bx, bz]) => distToSegment(x, z, ax, az, bx, bz) < 16)) return false;
         if (Math.hypot(x - RBX, z - RBZ) < 30) return false;
-        if (MINOR_SEGS.some(([ax, az, bx, bz]) => distToSegment(x, z, ax, az, bx, bz) < 9)) return false;
+        // v7: houses may sit 6.5 m from a minor street (was 9) — they line
+        // the narrow streets like the dense-city references.
+        if (MINOR_SEGS.some(([ax, az, bx, bz]) => distToSegment(x, z, ax, az, bx, bz) < 6.5)) return false;
         if (FREEWAY.pts.some((p) => Math.hypot(x - p.x, z - p.z) < 17)) return false;
         return true;
       };
       if (d.type === 'downtown') {
-        // Dense core: four towers on a 2x2 grid, varied heights.
-        for (let i = 0; i < 4; i++) {
-          const w = rng.range(18, 28), dep = rng.range(18, 28), hgt = rng.range(40, 120);
-          const hx = cx + (i % 2 === 0 ? -1 : 1) * slabW / 4 + rng.range(-6, 6);
-          const hz = cz + (i < 2 ? -1 : 1) * slabD / 4 + rng.range(-6, 6);
+        // v7: dense core — six towers on a 3x2 grid plus two mid-rise
+        // slabs filling the gaps, so the block reads packed from above.
+        for (let i = 0; i < 6; i++) {
+          const w = rng.range(16, 26), dep = rng.range(16, 26), hgt = rng.range(40, 120);
+          const hx = cx + ((i % 3) - 1) * slabW / 3 + rng.range(-5, 5);
+          const hz = cz + (i < 3 ? -1 : 1) * slabD / 4 + rng.range(-5, 5);
           if (!place(hx, hz)) continue;
           const t = new THREE.Mesh(
             new THREE.BoxGeometry(w, hgt, dep),
@@ -644,6 +668,20 @@ export function buildCity(G) {
           t.castShadow = true; t.receiveShadow = true;
           root.add(t);
           box(w + 2, 3, dep + 2, mat(0x2a2a33), hx, hgt + 1.5, hz, root);
+        }
+        for (let i = 0; i < 2; i++) {
+          const w = rng.range(20, 26), dep = rng.range(14, 18), hgt = rng.range(18, 30);
+          const hx = cx + (i === 0 ? -slabW / 3 : slabW / 3) + rng.range(-4, 4);
+          const hz = cz + rng.range(-6, 6);
+          if (!place(hx, hz)) continue;
+          const m = new THREE.Mesh(
+            new THREE.BoxGeometry(w, hgt, dep),
+            towerMat(rng.chance(0.5) ? winTexA : winTexC),
+          );
+          m.position.set(hx, hgt / 2 + 0.4, hz);
+          m.rotation.y = diagNear ? Math.PI / 4 : rng.range(-0.06, 0.06);
+          m.castShadow = true; m.receiveShadow = true;
+          root.add(m);
         }
       } else if (d.type === 'docks') {
         const cols = [0xc94f3d, 0x3d7fc9, 0x4fc94f, 0xd8a03c, 0x8a6fd8];
@@ -667,17 +705,19 @@ export function buildCity(G) {
           box(32, 1, 20, mat(0x5a5a5a), hx, 8.8, hz, root);
         }
       } else if (d.type === 'beach') {
-        for (let i = 0; i < 4; i++) {
-          const w = rng.range(12, 18), hgt = rng.range(7, 12);
-          const hx = cx + ((i % 2) - 0.5) * slabW / 2 + rng.range(-5, 5);
-          const hz = cz + (i < 2 ? -1 : 1) * slabD / 4 + rng.range(-5, 5);
+        // v7: six beach houses (was four), 3x2 grid.
+        for (let i = 0; i < 6; i++) {
+          const w = rng.range(11, 16), hgt = rng.range(7, 12);
+          const hx = cx + ((i % 3) - 1) * slabW / 3 + rng.range(-4, 4);
+          const hz = cz + (i < 3 ? -1 : 1) * slabD / 4 + rng.range(-4, 4);
           if (!place(hx, hz)) continue;
           const b = box(w, hgt, rng.range(12, 16), mat(rng.pick(pastel)), hx, hgt / 2 + 0.4, hz, root);
           b.rotation.y = rng.range(-0.06, 0.06); b.castShadow = true;
         }
         makePalm(rng, cx + rng.range(-slabW / 2 + 8, slabW / 2 - 8), cz + rng.range(-slabD / 2 + 8, slabD / 2 - 8), root);
       } else if (d.type === 'hill') {
-        for (let i = 0; i < 3; i++) {
+        // v7: five hill houses (was three).
+        for (let i = 0; i < 5; i++) {
           const w = rng.range(14, 20), hgt = rng.range(8, 14);
           const hx = cx + rng.range(-slabW / 2 + 10, slabW / 2 - 10);
           const hz = cz + rng.range(-slabD / 2 + 10, slabD / 2 - 10);
@@ -688,26 +728,46 @@ export function buildCity(G) {
           pyramidRoof(w, 16, 4, 0x7a4a3a, hx, hgt + 0.4 + lift, hz, root);
         }
       } else {
-        // brick / residential / marina / hood: houses with pyramid roofs,
-        // six to a block in two rows of three — blocks read filled, not empty.
-        for (let i = 0; i < 6; i++) {
-          const w = rng.range(13, 18), dep = rng.range(11, 15), hgt = d.type === 'brick' ? rng.range(12, 22) : rng.range(6, 10);
-          const hx = cx + ((i % 3) - 1) * slabW / 3 + rng.range(-5, 5);
-          const hz = cz + (i < 3 ? -1 : 1) * slabD / 4 + rng.range(-5, 5);
+        // v7.1: THIRTY houses per block in a 5x6 grid (was 5x5) — tighter
+        // in z so no empty strips show between rows from above.
+        const roofCols = [0xa03a2a, 0x3a5a8a, 0x4a7a3a, 0xd8a03c, 0x2a8a8a, 0x8a8a8a, 0xe8dcc0, 0xc94f3d];
+        for (let i = 0; i < 30; i++) {
+          const col = i % 5, row = Math.floor(i / 5);
+          const w = rng.range(15, 21), dep = rng.range(14, 18), hgt = d.type === 'brick' ? rng.range(12, 22) : rng.range(6, 10);
+          const hx = cx + (col - 2) * slabW / 5 + rng.range(-3, 3);
+          const hz = cz + (row - 2.5) * slabD / 6 + rng.range(-3, 3);
           if (!place(hx, hz)) continue;
-          const col = d.type === 'hood' ? rng.pick(hoodColors) : d.type === 'brick' ? 0x9a5a44 : rng.pick(pastel);
+          const colr = d.type === 'hood' ? rng.pick(hoodColors) : d.type === 'brick' ? 0x9a5a44 : rng.pick(pastel);
           let b;
           if (d.type === 'brick') {
             b = new THREE.Mesh(new THREE.BoxGeometry(w, hgt, dep), towerMat(winTexC));
             b.position.set(hx, hgt / 2 + 0.4, hz);
             root.add(b);
           } else {
-            b = box(w, hgt, dep, mat(col), hx, hgt / 2 + 0.4, hz, root);
+            b = box(w, hgt, dep, mat(colr), hx, hgt / 2 + 0.4, hz, root);
           }
           b.rotation.y = diagNear ? Math.PI / 4 : localAngle + rng.range(-0.05, 0.05);
           b.castShadow = true; b.receiveShadow = true;
-          if (d.type !== 'brick') pyramidRoof(w, dep, rng.range(3, 5), rng.pick([0xa03a2a, 0x3a5a8a, 0x4a7a3a, 0xd8a03c]), hx, hgt + 0.4, hz, root);
+          if (d.type !== 'brick') pyramidRoof(w, dep, rng.range(3, 5), rng.pick(roofCols), hx, hgt + 0.4, hz, root);
           else box(w + 1, 1.2, dep + 1, mat(0x5a3a30), hx, hgt + 1, hz, root);
+        }
+        // v7: four mid-rise apartment blocks per residential block.
+        if (d.type === 'residential' || d.type === 'marina') {
+          for (let i = 0; i < 4; i++) {
+            const w = rng.range(20, 26), dep = rng.range(15, 18), hgt = rng.range(13, 18);
+            const hx = cx + (i % 2 === 0 ? -slabW / 2 + 14 : slabW / 2 - 14);
+            const hz = cz + (i < 2 ? slabD / 2 - 12 : -slabD / 2 + 12);
+            if (!place(hx, hz)) continue;
+            const m = new THREE.Mesh(
+              new THREE.BoxGeometry(w, hgt, dep),
+              towerMat(rng.chance(0.5) ? winTexA : winTexB),
+            );
+            m.position.set(hx, hgt / 2 + 0.4, hz);
+            m.rotation.y = diagNear ? Math.PI / 4 : localAngle + rng.range(-0.05, 0.05);
+            m.castShadow = true; m.receiveShadow = true;
+            root.add(m);
+            box(w + 1, 1, dep + 1, mat(0x5a3a30), hx, hgt + 0.9, hz, root);
+          }
         }
       }
       // Beach houses along the coast road (west column of blocks).
