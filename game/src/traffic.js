@@ -102,7 +102,7 @@ export function initTraffic(G) {
       const alongNS = rng.chance(0.5);
       const along = rng.range(-430, 430);
       const side = rng.chance(0.5) ? 1 : -1;
-      const off = rng.range(9, 13) * side;
+      const off = rng.range(7.5, 10) * side;
       if (alongNS) {
         const road = rng.pick(ROADS.ns);
         x = nsPlain(road, along) + off; z = along;

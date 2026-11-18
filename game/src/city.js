@@ -46,7 +46,7 @@ export const ROADS = {
     { base: 380, amp: 15, freq: Math.PI / 560, phase: 3.9 },
   ],
 };
-export const ROAD_W = 14;
+export const ROAD_W = 12;
 export const RB_R = 18; // roundabout bulge: how far the road swings around the island
 export const RB_ISLAND = 10; // roundabout island radius
 
@@ -668,8 +668,9 @@ export function buildCity(G) {
       if (d.type === 'downtown') {
         for (let i = 0; i < 8; i++) {
           const w = rng.range(16, 26), dep = rng.range(16, 26), hgt = rng.range(70, 190);
-          const hx = cx + ((i % 4) - 1.5) * slabW / 4 + rng.range(-5, 5);
-          const hz = cz + (i < 4 ? -1 : 1) * slabD / 4 + rng.range(-5, 5);
+          const col = i % 4, ex = slabW / 2 - 4 - w / 2, ez = slabD / 2 - 4 - dep / 2;
+          const hx = cx + (col === 0 ? -ex : col === 3 ? ex : (col - 1.5) * slabW / 4) + rng.range(-5, 5);
+          const hz = cz + (i < 4 ? -ez : ez) + rng.range(-5, 5);
           if (!place(hx, hz)) continue;
           const fi = (ix * 5 + iz * 3 + i * 3) % FACADES.length;
           const stepped = i % 2 === 0;
@@ -679,7 +680,7 @@ export function buildCity(G) {
           t.castShadow = true; t.receiveShadow = true;
           root.add(t);
           // Ground floor: shop podium with a coloured awning band.
-          box(w + 1.5, 4, dep + 1.5, mat([0x2fd8ff, 0xff2d95, 0xffd24d, 0x7dff5e, 0xd8c8a8][fi % 5]), hx, 2.4, hz, root);
+          box(w + 1.5, 4, dep + 1.5, mat([0x1c4a6a, 0x6a1c3a, 0x6a5a1c, 0x2a5a3a, 0x8a7a6a][fi % 5]), hx, 2.4, hz, root);
           // Stepped top on half the towers; a spire on the first.
           if (stepped) {
             const sw = w * 0.55, sd = dep * 0.55, sh = rng.range(6, 14);
@@ -710,8 +711,8 @@ export function buildCity(G) {
         }
         for (let i = 0; i < 2; i++) {
           const w = rng.range(20, 26), dep = rng.range(14, 18), hgt = rng.range(30, 55);
-          const hx = cx + (i === 0 ? -slabW / 3 : slabW / 3) + rng.range(-4, 4);
-          const hz = cz + rng.range(-6, 6);
+          const hx = cx + (i === 0 ? -1 : 1) * slabW / 8 + rng.range(-4, 4);
+          const hz = cz + (i === 0 ? -1 : 1) * (slabD / 2 - 4 - dep / 2);
           if (!place(hx, hz)) continue;
           const m = new THREE.Mesh(
             new THREE.BoxGeometry(w, hgt, dep),
@@ -721,7 +722,7 @@ export function buildCity(G) {
           m.rotation.y = diagNear ? Math.PI / 4 : rng.range(-0.06, 0.06);
           m.castShadow = true; m.receiveShadow = true;
           root.add(m);
-          box(w + 1.5, 4, dep + 1.5, mat([0x2fd8ff, 0xff2d95, 0xffd24d, 0x7dff5e][(ix + i) % 4]), hx, 2.4, hz, root);
+          box(w + 1.5, 4, dep + 1.5, mat([0x1c4a6a, 0x6a1c3a, 0x6a5a1c, 0x2a5a3a][(ix + i) % 4]), hx, 2.4, hz, root);
           if (rng.chance(0.5)) {
             const tank = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, 3.4, 10), mat(0x8a7a5a));
             tank.position.set(hx + rng.range(-5, 5), hgt + 2.1, hz + rng.range(-4, 4)); tank.castShadow = true; root.add(tank);
@@ -750,8 +751,8 @@ export function buildCity(G) {
       } else if (d.type === 'beach') {
         for (let i = 0; i < 6; i++) {
           const w = rng.range(11, 16), hgt = rng.range(7, 12);
-          const hx = cx + ((i % 3) - 1) * slabW / 3 + rng.range(-4, 4);
-          const hz = cz + (i < 3 ? -1 : 1) * slabD / 4 + rng.range(-4, 4);
+          const hx = cx + ((i % 3) - 1) * (slabW / 2 - 3 - w / 2) + rng.range(-4, 4);
+          const hz = cz + (i < 3 ? -1 : 1) * (slabD / 2 - 10) + rng.range(-4, 4);
           if (!place(hx, hz)) continue;
           const b = box(w, hgt, rng.range(12, 16), mat(rng.pick(pastel)), hx, hgt / 2 + 0.4, hz, root);
           b.rotation.y = rng.range(-0.06, 0.06); b.castShadow = true;
@@ -773,8 +774,8 @@ export function buildCity(G) {
         for (let i = 0; i < 30; i++) {
           const col = i % 5, row = Math.floor(i / 5);
           const w = rng.range(15, 21), dep = rng.range(14, 18), hgt = d.type === 'brick' ? rng.range(18, 30) : rng.range(6, 10);
-          const hx = cx + (col - 2) * slabW / 5 + rng.range(-3, 3);
-          const hz = cz + (row - 2.5) * slabD / 6 + rng.range(-3, 3);
+          const hx = cx + (col === 0 ? -(slabW / 2 - 3 - w / 2) : col === 4 ? slabW / 2 - 3 - w / 2 : (col - 2) * slabW / 5) + rng.range(-3, 3);
+          const hz = cz + (row === 0 ? -(slabD / 2 - 3 - dep / 2) : row === 5 ? slabD / 2 - 3 - dep / 2 : (row - 2.5) * slabD / 6) + rng.range(-3, 3);
           if (!place(hx, hz)) continue;
           const colr = d.type === 'hood' ? rng.pick(hoodColors) : d.type === 'brick' ? 0x9a5a44 : rng.pick(pastel);
           let b;
@@ -901,25 +902,6 @@ export function buildCity(G) {
     makePalm(rng, bx, bz, root, 0.9);
   }
 
-  for (const road of ROADS.ns) {
-    for (let z = -420; z <= 420; z += 110) {
-      const side = (Math.round(z / 110) % 2 === 0) ? 1 : -1;
-      const x = nsPlain(road, z) + side * 11;
-      if (Math.hypot(x - RBX, z - RBZ) < 32) continue;
-      if (DIAGONALS.some(([ax, az, bx, bz]) => distToSegment(x, z, ax, az, bx, bz) < 12)) continue;
-      makeTree(rng, x, z, root, rng.range(0.9, 1.25));
-    }
-  }
-  for (const road of ROADS.ew) {
-    for (let x = -420; x <= 420; x += 110) {
-      const side = (Math.round(x / 110) % 2 === 0) ? 1 : -1;
-      const z = ewPlain(road, x) + side * 11;
-      if (Math.hypot(x - RBX, z - RBZ) < 32) continue;
-      if (DIAGONALS.some(([ax, az, bx, bz]) => distToSegment(x, z, ax, az, bx, bz) < 12)) continue;
-      makeTree(rng, x, z, root, rng.range(0.9, 1.25));
-    }
-  }
-
   const boardBlocks = [[0, 0], [4, 0], [0, 3], [4, 2], [2, 0], [1, 3]];
   const boardCopy = [
     [['EMBER BAY', 'WELCOME TO THE BAY'], '#1c2a4d', '#ffd24d'],
@@ -953,7 +935,7 @@ export function buildCity(G) {
     ['PIER 9 DINER', '#7dff5e', 110, 7],
   ];
   for (const [text, color, z, y] of NEON_SIGNS) {
-    const sx = nsPlain(ROADS.ns[3], z) + 11;
+    const sx = nsPlain(ROADS.ns[3], z) + 10;
     const sign = new THREE.Mesh(
       new THREE.PlaneGeometry(13, 3.2),
       new THREE.MeshBasicMaterial({ map: neonTexture(text, color) }),
@@ -968,7 +950,7 @@ export function buildCity(G) {
   for (const road of ROADS.ns) {
     for (let z = -400; z <= 400; z += 120) {
       const side = (Math.round(z / 120) % 2 === 0) ? 1 : -1;
-      const x = nsPlain(road, z) + side * 8.5;
+      const x = nsPlain(road, z) + side * 10;
       const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 9, 6), mat(0x3a3a3a));
       pole.position.set(x, 4.5, z); root.add(pole);
       const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 6), new THREE.MeshStandardMaterial({ color: 0xffe9b0, emissive: 0xffd24d, emissiveIntensity: 0.9 }));
@@ -978,7 +960,7 @@ export function buildCity(G) {
   for (const road of ROADS.ew) {
     for (let x = -400; x <= 400; x += 120) {
       const side = (Math.round(x / 120) % 2 === 0) ? 1 : -1;
-      const z = ewPlain(road, x) + side * 8.5;
+      const z = ewPlain(road, x) + side * 10;
       const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 9, 6), mat(0x3a3a3a));
       pole.position.set(x, 4.5, z); root.add(pole);
       const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 6), new THREE.MeshStandardMaterial({ color: 0xffe9b0, emissive: 0xffd24d, emissiveIntensity: 0.9 }));
@@ -1006,7 +988,7 @@ export function buildCity(G) {
   const nearCrossing = (x, z, m = 16) => crossPts.some((c) => Math.hypot(x - c.x, z - c.z) < m);
   for (let z = -400; z <= 400; z += 34) {
     for (const side of [-1, 1]) {
-      const x = nsPlain(stageRoad, z) + side * 12;
+      const x = nsPlain(stageRoad, z) + side * 10;
       if (Math.hypot(x - RBX, z - RBZ) < 34) continue;
       if (nearCrossing(x, z)) continue;
       if (DIAGONALS.some(([ax, az, bx, bz]) => distToSegment(x, z, ax, az, bx, bz) < 12)) continue;
@@ -1045,7 +1027,7 @@ export function buildCity(G) {
         : { x: a, z: ewPlain(road, a), h: Math.PI / 2 };
       for (const side of [-1, 1]) {
         if (rng.chance(0.25)) continue; // gaps in the row
-        const off = 9.6;
+        const off = 8.6;
         const x = axis === 'ns' ? p.x + side * off : p.x;
         const z = axis === 'ns' ? p.z : p.z + side * off;
         if (Math.hypot(x - RBX, z - RBZ) < 34) continue;
@@ -1067,8 +1049,8 @@ export function buildCity(G) {
     box(0.25, 3, 0.25, mat(0x3a3a3a), 2.2, 1.5, 0, g);
     box(5.2, 0.25, 2.2, mat(0x2a6fd8), 0, 3.1, 0, g);
     box(4.6, 0.5, 1.0, mat(0x6b4a2a), 0, 0.7, 0, g);
-    g.position.set(c.x + 11, 0, c.z + 11);
-    g.rotation.y = rng.range(0, Math.PI);
+    g.position.set(c.x + 9, 0, c.z + 9);
+    g.rotation.y = 0;
     g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
     root.add(g);
   }
@@ -1077,7 +1059,7 @@ export function buildCity(G) {
     ['HOTEL CORALIE', '#2fd8ff', 190, 8],
   ];
   for (const [text, color, z, y] of NEON_EXTRA) {
-    const sx = nsPlain(ROADS.ns[3], z) + 11;
+    const sx = nsPlain(ROADS.ns[3], z) + 10;
     const sign = new THREE.Mesh(
       new THREE.PlaneGeometry(13, 3.2),
       new THREE.MeshBasicMaterial({ map: neonTexture(text, color) }),

@@ -439,13 +439,13 @@ function updateCamera(dt) {
   // car — the rider reads big in frame instead of a speck. V toggles the
   // classic far camera.
   const isBike = G.vehicle && G.vehicle.vehicle && G.vehicle.vehicle.kind === 'bike';
-  const dist = G.camClassic ? 16 : (G.vehicle ? (isBike ? 5.5 : 8) : 6.5);
-  const height = G.camClassic ? 7 : (G.vehicle ? (isBike ? 2.2 : 2.8) : 2.6);
+  const dist = G.camClassic ? 16 : (G.vehicle ? (isBike ? 5.5 : 5.5) : 6.5);
+  const height = G.camClassic ? 7 : (G.vehicle ? (isBike ? 2.2 : 2.2) : 2.6);
   desired.set(pp.x - fx * dist, height, pp.z - fz * dist);
   camera.position.lerp(desired, 1 - Math.pow(0.001, dt));
   camera.lookAt(pp.x + fx * 10, 1.8, pp.z + fz * 10);
   const top = G.vehicle ? G.vehicle.topSpeed : 0;
-  const targetFov = 62 + (G.vehicle ? (Math.abs(G.vehicle.speed) / top) * 12 : 0);
+  const targetFov = 62 + (G.vehicle ? (Math.abs(G.vehicle.speed) / top) * 6 : 0);
   if (Math.abs(camera.fov - targetFov) > 0.05) {
     camera.fov += (targetFov - camera.fov) * Math.min(1, dt * 4);
     camera.updateProjectionMatrix();

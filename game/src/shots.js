@@ -102,7 +102,7 @@ export function stageShot(G, name) {
     // Over-shoulder angle: player left of frame, crew ahead centre —
     // the dialogue box at bottom-centre does not cover the player.
     G.camOverride = {
-      pos: [pt.x + rx * 6 - fx * 4, 2.8, pt.z + rz * 6 - fz * 4],
+      pos: [pt.x + rx * 5 - fx * 3, 2.4, pt.z + rz * 5 - fz * 3],
       look: [pt.x + fx * 11, 1.5, pt.z + fz * 11],
     };
   }
@@ -146,14 +146,13 @@ export function updateShot(G, dt) {
           G.driftFX.laySkid(wx, wz, Math.atan2(car.vel.x, car.vel.z));
         }
       }
-      // Two interceptors on the tail, light bars flashing — close enough
-      // to layer between the chase camera and the car (back 8 / 15).
+      // Two interceptors ahead of the car, light bars flashing.
       const fx = Math.sin(car.heading), fz = Math.cos(car.heading);
       const rx = Math.cos(car.heading), rz = -Math.sin(car.heading);
       const flash = Math.sin(G._titleT * 14) > 0;
       G._titleCops.forEach((cop, i) => {
-        const back = 6 + i * 4;
-        const side = i === 0 ? -6 : 6;
+        const back = -(8 + i * 5);
+        const side = i === 0 ? 2 : 6;
         cop.group.position.set(car.pos.x - fx * back + rx * side, 0, car.pos.z - fz * back + rz * side);
         cop.group.rotation.y = car.heading;
         cop.red.material.emissiveIntensity = flash ? 2.4 : 0.25;
@@ -186,7 +185,7 @@ export function updateShot(G, dt) {
       const tSports = G.traffic.cars.filter((c) => c.kind === 'sport' && c.color !== 0xffc21c);
       const tOthers = G.traffic.cars.filter((c) => c.kind !== 'sport' || c.color === 0xffc21c);
       const tHeld = [...tSports, ...tOthers];
-      const tSlots = [[24, -3.5], [30, 3.5], [42, -3.5], [52, 3.5]];
+      const tSlots = [[24, 0.5], [30, 6.5], [42, 0.5], [52, 6.5]];
       tSlots.forEach(([fwd, side], i) => {
         const tc = tHeld[i];
         if (!tc) return;
@@ -199,8 +198,8 @@ export function updateShot(G, dt) {
       // the hero: the interceptors flank the sightline instead of
       // blocking it, road + sunset city ahead.
       G.camOverride = {
-        pos: [car.pos.x - fx * 16 + rx * 4, 3.6, car.pos.z - fz * 16 + rz * 4],
-        look: [car.pos.x + fx * 4, 1.2, car.pos.z + fz * 4],
+        pos: [car.pos.x - fx * 10 + rx * 4, 2.6, car.pos.z - fz * 10 + rz * 4],
+        look: [car.pos.x + fx * 8, 1.2, car.pos.z + fz * 8],
       };
       G.playerHeading = car.heading;
     }
@@ -230,22 +229,22 @@ export function updateShot(G, dt) {
     const sports = G.traffic.cars.filter((c) => c.kind === 'sport' && c.color !== 0xffc21c);
     const others = G.traffic.cars.filter((c) => c.kind !== 'sport' || c.color === 0xffc21c);
     const held = [...sports, ...others];
-    holdTraffic(held[0], 22, -12);
-    holdTraffic(held[1], 16, 13);
-    holdTraffic(held[2], 30, -5);
-    holdTraffic(held[3], 38, 7);
+    holdTraffic(held[0], 22, -4);
+    holdTraffic(held[1], 16, 4);
+    holdTraffic(held[2], 30, -2);
+    holdTraffic(held[3], 38, 3);
     const bikeA = G.traffic.bikes[0];
     if (bikeA) {
-      bikeA.pos.set(pp.x + rx * 18, 0, pp.z + rz * 18 + fz * 26);
+      bikeA.pos.set(pp.x + rx * 4, 0, pp.z + rz * 4 + fz * 20);
       bikeA.heading = ph; bikeA.group.position.copy(bikeA.pos); bikeA.group.rotation.y = ph;
     }
     const bikeB = G.traffic.bikes[1];
     if (bikeB) {
-      bikeB.pos.set(pp.x - rx * 20, 0, pp.z - rz * 20 + fz * 20);
+      bikeB.pos.set(pp.x - rx * 4, 0, pp.z - rz * 4 + fz * 24);
       bikeB.heading = ph; bikeB.group.position.copy(bikeB.pos); bikeB.group.rotation.y = ph;
     }
     const cars = P.units.filter((u) => u.kind === 'car');
-    const carSlots = [[-24, 14], [24, 14], [-26, 26], [26, 26], [-18, 32], [18, 32], [-30, 8], [30, 8]];
+    const carSlots = [[-4, 12], [4, 16], [-3, 22], [3, 26], [-4, 30], [4, 34]];
     cars.forEach((c, i) => {
       const [side, fwd] = carSlots[i % carSlots.length];
       c.pos.set(pp.x + rx * side + fx * fwd, 0, pp.z + rz * side + fz * fwd);
@@ -309,25 +308,25 @@ export function updateShot(G, dt) {
   const sports = G.traffic.cars.filter((c) => c.kind === 'sport' && c.color !== 0xffc21c);
   const others = G.traffic.cars.filter((c) => c.kind !== 'sport' || c.color === 0xffc21c);
   const held = [...sports, ...others];
-  const slots = [[22, -3.5], [26, 3.5], [34, -3.5], [40, 3.5], [50, -3.5], [58, 3.5]];
+  const slots = [[12, 0.5], [16, 6.5], [24, 0.5], [30, 6.5], [40, 0.5], [50, 6.5]];
   slots.forEach(([fwd, side], i) => holdTraffic(held[i], fwd, side));
   const cars = P.units.filter((u) => u.kind === 'car');
   if (cars[0]) {
-    cars[0].pos.set(pp.x - rx * 15 + fx * 20, 0, pp.z - rz * 15 + fz * 20);
+    cars[0].pos.set(pp.x + rx * 6.5 + fx * 8, 0, pp.z + rz * 6.5 + fz * 8);
     cars[0].heading = ph; cars[0].group.position.copy(cars[0].pos); cars[0].group.rotation.y = ph;
   }
   if (cars[1]) {
-    cars[1].pos.set(pp.x + rx * 15 + fx * 24, 0, pp.z + rz * 15 + fz * 24);
+    cars[1].pos.set(pp.x + rx * 0.5 + fx * 22, 0, pp.z + rz * 0.5 + fz * 22);
     cars[1].heading = ph; cars[1].group.position.copy(cars[1].pos); cars[1].group.rotation.y = ph;
   }
   const bike = G.traffic.bikes[0];
   if (bike) {
-    bike.pos.set(pp.x + rx * 14, 0, pp.z + rz * 14 + fz * 32);
+    bike.pos.set(pp.x + rx * 6.5, 0, pp.z + rz * 6.5 + fz * 26);
     bike.heading = ph; bike.group.position.copy(bike.pos); bike.group.rotation.y = ph;
   }
   const bike2 = G.traffic.bikes[1];
   if (bike2) {
-    bike2.pos.set(pp.x - rx * 10, 0, pp.z - rz * 10 + fz * 46);
+    bike2.pos.set(pp.x + rx * 0.5, 0, pp.z + rz * 0.5 + fz * 40);
     bike2.heading = ph; bike2.group.position.copy(bike2.pos); bike2.group.rotation.y = ph;
   }
   if (P.heli) P.heli.group.position.set(pp.x + fx * 26, 24, pp.z + fz * 26);

@@ -280,12 +280,12 @@ export function initHud(G) {
           const midX = pts.reduce((s, p) => s + p.x, 0) / 4;
           const midZ = pts.reduce((s, p) => s + p.z, 0) / 4;
           if (Math.hypot(midX - ROUNDABOUT.cx, midZ - ROUNDABOUT.cz) < 55) continue;
-          poly(insetPoly(pts, 8));
+          poly(insetPoly(pts, 4));
           c.fillStyle = '#f4f4f4'; c.fill();
-          poly(insetPoly(pts, 20));
+          poly(insetPoly(pts, 10));
           c.fillStyle = '#dcdcdc'; c.fill();
           // Building rects, varied count and tone per block, clipped.
-          const inner = insetPoly(pts, 26);
+          const inner = insetPoly(pts, 14);
           poly(inner);
           c.save();
           c.clip();
@@ -293,8 +293,8 @@ export function initHud(G) {
           const minX = Math.min(...mpts.map((p) => p[0])), maxX = Math.max(...mpts.map((p) => p[0]));
           const minY = Math.min(...mpts.map((p) => p[1])), maxY = Math.max(...mpts.map((p) => p[1]));
           const shades = ['#b8b8b8', '#9a9a9a', '#c8b898', '#8fa08f', '#a89a88', '#c4c4c4'];
-          const n = 2 + ((ix * 3 + iz) % 3);
-          const m = 2 + ((ix + iz * 2) % 2);
+          const n = 3 + ((ix * 3 + iz) % 3);
+          const m = 3 + ((ix + iz * 2) % 2);
           for (let gx = 0; gx < n; gx++) {
             for (let gy = 0; gy < m; gy++) {
               const bw = (maxX - minX) / n, bh = (maxY - minY) / m;
@@ -358,12 +358,12 @@ export function initHud(G) {
       for (const road of ROADS.ns) {
         const pts = [];
         for (let z = -460; z <= 460; z += 20) pts.push([nsPlain(road, z), z]);
-        strokePts(pts, 5);
+        strokePts(pts, 4);
       }
       for (const road of ROADS.ew) {
         const pts = [];
         for (let x = -460; x <= 460; x += 20) pts.push([x, ewPlain(road, x)]);
-        strokePts(pts, 5);
+        strokePts(pts, 4);
       }
       for (const [ax, az, bx, bz] of DIAGONALS) strokePts([[ax, az], [bx, bz]], 4);
       {
