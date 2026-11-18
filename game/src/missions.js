@@ -46,9 +46,9 @@ export function initMissions(G) {
   const M = {
     defs: DEFS,
     done: new Set(G.save?.missionsDone || []),
-    active: null, // {def, stepIdx, stepState, marker}
+    active: null,
     marker: null,
-    target: null, // chase/boss vehicle {drive-ish}
+    target: null,
     startNext() {
       if (M.active) { G.toast('Mission already running: ' + M.active.def.name); return false; }
       const def = DEFS.find((d) => !M.done.has(d.id));
@@ -244,3 +244,4 @@ export function initMissions(G) {
   };
   return M;
 }
+

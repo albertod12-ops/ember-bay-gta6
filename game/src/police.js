@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { makeBike, sportWheel } from './vehicles.js';
+import { makeBike, sportWheel, arch } from './vehicles.js';
 
 const CALLSIGNS = ['KESTREL-39', 'FALCON-12', 'VIPER-07', 'COBRA-21', 'HAVOC-55'];
 
@@ -26,27 +26,27 @@ export function makePoliceCar(G) {
     w.position.set(x, 0.46, z);
     g.add(w); wheels.push(w);
   };
-  box(2.2, 0.42, 4.8, black, 0, 0.55, 0, g); // main body
-  box(2.1, 0.3, 1.3, black, 0, 0.5, 1.85, g, -0.16, 0, 0); // sloping nose
-  box(2.15, 0.34, 0.9, black, 0, 0.62, -1.95, g); // rear deck
-  box(2.22, 0.12, 4.6, dark, 0, 0.32, 0, g); // black side skirt / splitter
+  box(2.2, 0.42, 4.8, black, 0, 0.52, 0, g);
+  box(2.1, 0.3, 1.3, black, 0, 0.48, 1.85, g, -0.16, 0, 0);
+  box(2.15, 0.34, 0.9, black, 0, 0.6, -1.95, g);
+  box(2.22, 0.12, 4.6, dark, 0, 0.3, 0, g);
   box(0.06, 0.46, 2.4, white, -1.06, 0.72, 0.15, g);
   box(0.06, 0.46, 2.4, white, 1.06, 0.72, 0.15, g);
   box(0.065, 0.08, 2.4, dark, -1.07, 0.5, 0.15, g);
   box(0.065, 0.08, 2.4, dark, 1.07, 0.5, 0.15, g);
   box(1.7, 0.38, 1.5, glass, 0, 0.95, -0.15, g);
-  box(1.75, 0.07, 1.4, black, 0, 1.16, -0.2, g); // roof
-  box(1.66, 0.05, 0.9, glass, 0, 0.92, 0.62, g, 0.55, 0, 0); // windshield
-  box(1.66, 0.05, 0.7, glass, 0, 0.9, -0.92, g, -0.5, 0, 0); // rear glass
-  box(0.08, 0.38, 0.1, dark, -0.86, 0.95, -0.15, g); // B-pillar L
-  box(0.08, 0.38, 0.1, dark, 0.86, 0.95, -0.15, g); // B-pillar R
+  box(1.75, 0.07, 1.4, black, 0, 1.16, -0.2, g);
+  box(1.66, 0.05, 0.9, glass, 0, 0.92, 0.62, g, 0.55, 0, 0);
+  box(1.66, 0.05, 0.7, glass, 0, 0.9, -0.92, g, -0.5, 0, 0);
+  box(0.08, 0.38, 0.1, dark, -0.86, 0.95, -0.15, g);
+  box(0.08, 0.38, 0.1, dark, 0.86, 0.95, -0.15, g);
   box(0.05, 0.05, 0.2, dark, -1.06, 0.98, 0.55, g);
   box(0.05, 0.05, 0.2, dark, 1.06, 0.98, 0.55, g);
   box(0.16, 0.09, 0.18, black, -1.12, 1.0, 0.55, g);
   box(0.16, 0.09, 0.18, black, 1.12, 1.0, 0.55, g);
   box(0.04, 0.05, 0.26, chrome, -1.06, 0.72, -0.1, g);
   box(0.04, 0.05, 0.26, chrome, 1.06, 0.72, -0.1, g);
-  box(2.0, 0.5, 0.14, std(0x888888, { metalness: 0.8, roughness: 0.3 }), 0, 0.6, 2.4, g); // push bar
+  box(2.0, 0.5, 0.14, std(0x888888, { metalness: 0.8, roughness: 0.3 }), 0, 0.6, 2.4, g);
   box(1.0, 0.12, 0.08, dark, 0, 0.5, 2.44, g);
   box(1.9, 0.24, 0.28, dark, 0, 0.34, -2.38, g);
   for (const ex of [-0.35, 0.35]) {
@@ -58,6 +58,12 @@ export function makePoliceCar(G) {
   box(1.7, 0.1, 0.5, std(0x222222), 0, 1.38, -0.2, g);
   addSportWheel(-1.02, 1.5); addSportWheel(1.02, 1.5);
   addSportWheel(-1.02, -1.5); addSportWheel(1.02, -1.5);
+  for (const w of wheels) arch(g, w.position.x, w.position.y, w.position.z, w.position.y + 0.12);
+  for (const sx of [-1.11, 1.11]) {
+    box(0.02, 0.42, 0.03, dark, sx, 0.72, 0.3, g);
+    box(0.02, 0.42, 0.03, dark, sx, 0.72, -0.9, g);
+  }
+  for (const gx of [-0.3, 0, 0.3]) box(0.07, 0.1, 0.03, chrome, gx, 0.5, 2.46, g);
   const head = std(0xfff2b0, { emissive: 0xffe9a0, emissiveIntensity: 1.4 });
   box(0.6, 0.12, 0.08, head, -0.7, 0.62, 2.42, g, 0, -0.45, 0);
   box(0.6, 0.12, 0.08, head, 0.7, 0.62, 2.42, g, 0, 0.45, 0);
@@ -71,8 +77,8 @@ export function makeHeli(G) {
   const g = new THREE.Group();
   const body = std(0x1c2733, { roughness: 0.4, metalness: 0.4 });
   box(2.4, 1.8, 4.4, body, 0, 0, 0, g);
-  box(1.8, 1.1, 1.2, std(0x9fd4e8, { roughness: 0.1, metalness: 0.5 }), 0, 0.1, 2.4, g); // glass nose
-  box(1.0, 0.9, 5.2, body, 0, 0.3, -4.2, g); // tail boom
+  box(1.8, 1.1, 1.2, std(0x9fd4e8, { roughness: 0.1, metalness: 0.5 }), 0, 0.1, 2.4, g);
+  box(1.0, 0.9, 5.2, body, 0, 0.3, -4.2, g);
   const fin = box(0.3, 1.6, 1.2, std(0xd8a03c), 0, 1.0, -6.6, g);
   const tailRotor = new THREE.Group();
   const tr1 = box(0.12, 2.4, 0.12, std(0x222222), 0, 0, 0, tailRotor);
@@ -104,10 +110,10 @@ export function initPolice(G) {
   const P = {
     wanted: 0,
     evading: 0,
-    inSight: false, // nearest unit closer than 60 m — the HUD shows IN SIGHT
-    units: [], // {kind, group, pos, heading, speed, callsign}
+    inSight: false,
+    units: [],
     heli: null,
-    roadblock: null, // {cars:[], pos, placedAt}
+    roadblock: null,
     unseenTimer: 0,
     flashT: 0,
     setWanted(n) {
@@ -260,3 +266,4 @@ export function initPolice(G) {
   };
   return P;
 }
+

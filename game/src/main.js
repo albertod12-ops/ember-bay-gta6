@@ -60,7 +60,7 @@ const G = {
   driftBanked: 0,
   ammo: { 1: [12, 60], 2: [32, 160], 3: [30, 120], 4: [8, 24] },
   mapOpen: false, camClassic: false, soundOn: true,
-  crew: [], // hostile crew NPCs (combat staging / boss fights)
+  crew: [],
 };
 if (G.save) {
   G.money = G.save.money ?? 500;
@@ -144,8 +144,8 @@ PARKED_DEFS.forEach(([axis, idx, along, dir], i) => {
   const v = makeCar(G, PARKED_KINDS[i], i % 3);
   G.scene.add(v.group);
   const d = createDrive(G, v, {});
-  const side = axis === 'ns' ? (dir > 0 ? 5.5 : -5.5) : 0;
-  const sideZ = axis === 'ew' ? (dir > 0 ? -5.5 : 5.5) : 0;
+  const side = axis === 'ns' ? (dir > 0 ? 4.4 : -4.4) : 0;
+  const sideZ = axis === 'ew' ? (dir > 0 ? -4.4 : 4.4) : 0;
   d.place(pt.x + (axis === 'ns' ? side : 0), pt.z + (axis === 'ew' ? sideZ : 0), pt.heading);
   d.owned = false;
   G.parked.push(d);
@@ -471,3 +471,4 @@ installDebugApi(G);
 G.setClock(G.clock);
 if (shotName) stageShot(G, shotName);
 loop();
+

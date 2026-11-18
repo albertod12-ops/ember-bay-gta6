@@ -14,19 +14,24 @@ import { makePerson } from './people.js';
 function pedFigure(G, x, z) {
   const rng = G.rng;
   const fig = makePerson(G, {
-    skin: rng.pick([0xd9a066, 0xb07a4a, 0xe8b98a, 0x8a5a34]),
-    shirt: rng.pick([0xd83a2a, 0x2a6fd8, 0x2fae4e, 0xe8b820, 0x8a6fd8, 0xdddddd, 0x222831]),
-    shirt2: rng.chance(0.4) ? rng.pick([0xffffff, 0x222831, 0xd83a2a]) : null,
-    pants: rng.pick([0x2a3a5a, 0x3a3a3a, 0x5a4a3a, 0x2a4a2a]),
-    shoes: rng.pick([0x222222, 0x8a2a2a, 0xdddddd, 0x2a3a5a]),
-    hair: rng.pick([0x14141c, 0x3a2a1a, 0x8a8a8a, 0xe8c820, 0x2a1410]),
-    hairStyle: rng.pick(['short', 'short', 'long', 'bald', 'bandana']),
-    hat: rng.chance(0.35) ? rng.pick([0xe02030, 0x222831, 0xe8b820]) : null,
-    jacket: rng.chance(0.25) ? rng.pick([0x2a6fd8, 0x8a6fd8, 0x3a3a3a]) : null,
+    skin: rng.pick([0xd9a066, 0xb07a4a, 0xe8b98a, 0x8a5a34, 0xc98a5e, 0x6e4530]),
+    shirt: rng.pick([0x2a3a5a, 0x5a6a3a, 0x7a2a2a, 0x3a3a3a, 0x4a6a6a, 0xc9c2b2, 0x1c1c22, 0x2a6fd8, 0x8a6fd8, 0xb06a3a]),
+    shirt2: rng.chance(0.4) ? rng.pick([0xffffff, 0x222831, 0xd83a2a, 0x2a3a5a]) : null,
+    pants: rng.pick([0x2a3a5a, 0x3a3a3a, 0x5a4a3a, 0x2a4a2a, 0x1c222e, 0x6a5a4a]),
+    shoes: rng.pick([0x222222, 0x8a2a2a, 0xdddddd, 0x2a3a5a, 0x3a2a1a]),
+    hair: rng.pick([0x14141c, 0x3a2a1a, 0x8a8a8a, 0xe8c820, 0x2a1410, 0x5a3a22]),
+    hairStyle: rng.pick(['short', 'short', 'long', 'bald', 'bandana', 'afro', 'bun', 'buzz']),
+    hat: rng.chance(0.3) ? rng.pick([0xe02030, 0x222831, 0xe8b820]) : null,
+    jacket: rng.chance(0.25) ? rng.pick([0x2a6fd8, 0x8a6fd8, 0x3a3a3a, 0x5a3a2a]) : null,
+    h: rng.range(1.62, 1.92),
+    build: rng.range(0.92, 1.08),
+    sleeves: rng.chance(0.55) ? 'long' : 'short',
+    hoodie: rng.chance(0.2),
+    backpack: rng.chance(0.18) ? rng.pick([0x2a6fd8, 0xd83a2a, 0x3a3a3a, 0x2fae4e]) : null,
   });
   const g = fig.group;
   g.position.set(x, 0, z);
-  return { group: g, hipL: fig.hipL, hipR: fig.hipR, pos: new THREE.Vector3(x, 0, z), target: new THREE.Vector3(x, 0, z), speed: rng.range(1.2, 2.4), phase: rng.range(0, 6) };
+  return { group: g, hipL: fig.hipL, hipR: fig.hipR, shL: fig.shL, shR: fig.shR, pos: new THREE.Vector3(x, 0, z), speed: rng.range(1.2, 2.4), phase: rng.range(0, 6) };
 }
 
 function lightState(light, t) {
@@ -79,29 +84,19 @@ export function initTraffic(G) {
       decidedAt: -1, pendingAxis: null, turnRoad: null,
     });
   }
-  const pedSpot = () => {
-    let x, z;
-    if (rng.chance(0.7)) {
-      const alongNS = rng.chance(0.5);
-      const along = rng.range(-430, 430);
-      const side = rng.chance(0.5) ? 1 : -1;
-      const off = rng.range(7.5, 10) * side;
-      if (alongNS) {
-        const road = rng.pick(ROADS.ns);
-        x = nsPlain(road, along) + off; z = along;
-      } else {
-        const road = rng.pick(ROADS.ew);
-        x = along; z = ewPlain(road, along) + off;
-      }
-    } else {
-      x = rng.range(-430, 430); z = rng.range(-430, 430);
-    }
-    if (Math.hypot(x - ROUNDABOUT.cx, z - ROUNDABOUT.cz) < 26) return pedSpot();
-    return [x, z];
+  const pedWalk = () => {
+    const axis = rng.chance(0.5) ? 'ns' : 'ew';
+    const road = rng.pick(ROADS[axis]);
+    const side = rng.chance(0.5) ? 1 : -1;
+    return { axis, road, side, off: rng.range(7.6, 8.9) * side, along: rng.range(-430, 430), dir: rng.chance(0.5) ? 1 : -1, targetAlong: 0 };
   };
   for (let i = 0; i < 90; i++) {
-    const [x, z] = pedSpot();
+    const w = pedWalk();
+    w.targetAlong = w.along + w.dir * rng.range(40, 140);
+    const x = w.axis === 'ns' ? nsCenter(w.road, w.along, w.dir) + w.off : w.along;
+    const z = w.axis === 'ns' ? w.along : ewCenter(w.road, w.along, w.dir) + w.off;
     const p = pedFigure(G, x, z);
+    Object.assign(p, w);
     scene.add(p.group);
     T.peds.push(p);
   }
@@ -149,7 +144,7 @@ export function initTraffic(G) {
         c.decidedAt = crossKey;
         if (!isRbCross) {
           const roll = rng.next();
-          let turn = 0; // 0 straight, -1 left, +1 right
+          let turn = 0;
           if (roll > 0.62) turn = rng.chance(0.5) ? -1 : 1;
           if (turn !== 0 && nextRoad) {
             c.targetHeading = c.heading + turn * Math.PI / 2;
@@ -162,7 +157,7 @@ export function initTraffic(G) {
       while (dh > Math.PI) dh -= Math.PI * 2;
       while (dh < -Math.PI) dh += Math.PI * 2;
       const turning = !!c.pendingAxis;
-      if (turning) c.heading += dh * Math.min(1, dt * 3);
+      if (turning) c.heading += dh * Math.min(1, dt * 5);
       if (Math.abs(dh) < 0.05 && c.pendingAxis) {
         c.axis = c.pendingAxis; c.pendingAxis = null;
         c.road = c.turnRoad; c.turnRoad = null;
@@ -173,6 +168,7 @@ export function initTraffic(G) {
         snapToRoad(c);
       }
       let want = c.cruise;
+      if (turning) want = Math.min(want, 6);
       const { light, dist } = nearestLight(c.pos.x + fx * 14, c.pos.z + fz * 14);
       if (light && dist < 26) {
         const st = lightState(light, time);
@@ -193,23 +189,26 @@ export function initTraffic(G) {
     for (const c of T.cars) stepCar(c);
     for (const c of T.bikes) stepCar(c);
     for (const p of T.peds) {
-      const dx = p.target.x - p.pos.x, dz = p.target.z - p.pos.z;
-      const d = Math.hypot(dx, dz);
-      if (d < 2) {
-        let tx, tz;
-        do {
-          tx = rng.range(-430, 430); tz = rng.range(-430, 430);
-        } while (Math.hypot(tx - ROUNDABOUT.cx, tz - ROUNDABOUT.cz) < 26);
-        p.target.set(tx, 0, tz);
-      } else {
-        const vx = dx / d, vz = dz / d;
-        p.pos.x += vx * p.speed * dt;
-        p.pos.z += vz * p.speed * dt;
-        p.group.rotation.y = Math.atan2(vx, vz);
-        p.phase += dt * p.speed * 2.2;
-        const s = Math.sin(p.phase) * 0.5;
-        p.hipL.rotation.x = s; p.hipR.rotation.x = -s;
+      p.along += p.dir * p.speed * dt;
+      if ((p.dir > 0 && p.along >= p.targetAlong) || (p.dir < 0 && p.along <= p.targetAlong)) {
+        if (p.along > 420 || p.along < -420) p.dir *= -1;
+        p.targetAlong = p.along + p.dir * rng.range(40, 140);
+        if (p.targetAlong > 430) p.targetAlong = 430;
+        if (p.targetAlong < -430) p.targetAlong = -430;
       }
+      if (p.axis === 'ns') {
+        p.pos.x = nsCenter(p.road, p.along, p.dir) + p.off;
+        p.pos.z = p.along;
+        p.group.rotation.y = nsHeading(p.road, p.along, p.dir);
+      } else {
+        p.pos.x = p.along;
+        p.pos.z = ewCenter(p.road, p.along, p.dir) + p.off;
+        p.group.rotation.y = ewHeading(p.road, p.along, p.dir);
+      }
+      p.phase += dt * p.speed * 2.2;
+      const s = Math.sin(p.phase) * 0.5;
+      p.hipL.rotation.x = s; p.hipR.rotation.x = -s;
+      p.shL.rotation.x = -s * 0.8; p.shR.rotation.x = s * 0.8;
       p.group.position.copy(p.pos);
     }
     for (const l of city.lights) {
@@ -226,3 +225,4 @@ export function initTraffic(G) {
   };
   return T;
 }
+

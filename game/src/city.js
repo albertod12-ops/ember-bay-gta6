@@ -29,7 +29,7 @@ export function districtAt(x, z) {
 
 export const ROADS = {
   ns: [
-    { base: -440, amp: 14, freq: Math.PI / 520, phase: 0.4 }, // coast road
+    { base: -440, amp: 14, freq: Math.PI / 520, phase: 0.4 },
     { base: -300, amp: 12, freq: Math.PI / 460, phase: 1.7 },
     { base: -140, amp: 10, freq: Math.PI / 500, phase: 3.1 },
     { base: -20, amp: 14, freq: Math.PI / 430, phase: 5.0, rb: true },
@@ -45,12 +45,12 @@ export const ROADS = {
   ],
 };
 export const ROAD_W = 12;
-export const RB_R = 18; // roundabout bulge: how far the road swings around the island
-export const RB_ISLAND = 10; // roundabout island radius
+export const RB_R = 18;
+export const RB_ISLAND = 10;
 
 export const DIAGONALS = [
-  [-430, 300, 300, -430], // Sunset Diagonal, NW-SE across the city
-  [180, 260, 420, 430], // Docks Diagonal, short, through Craneside
+  [-430, 300, 300, -430],
+  [180, 260, 420, 430],
 ];
 
 export function nsPlain(road, z) { return road.base + road.amp * Math.sin(z * road.freq + road.phase); }
@@ -107,7 +107,7 @@ export const FREEWAY = (() => {
   return { cx, cz, rx, rz, pts };
 })();
 
-export const GOLF_RECT = [-100, 280, 160, 440]; // x0, z0, x1, z1
+export const GOLF_RECT = [-100, 280, 160, 440];
 export const STADIUM = { x: 330, z: 140, r: 30 };
 export const RAIL_X = 405;
 
@@ -170,7 +170,7 @@ function canvasTexture(w, h, draw) {
 
 function roadTexture() {
   const t = canvasTexture(128, 256, (g, w, h) => {
-    g.fillStyle = '#2e2e33'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#232327'; g.fillRect(0, 0, w, h);
     g.fillStyle = '#33333a';
     for (let i = 0; i < 200; i++) g.fillRect(Math.random() * w, Math.random() * h, 2, 2);
     g.fillStyle = '#28282d';
@@ -442,7 +442,7 @@ export function buildCity(G) {
   root.add(sky);
   out.sky = sky;
 
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(2400, 2400), mat(0xa39c92));
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(2400, 2400), mat(0x6b6a58));
   ground.rotation.x = -Math.PI / 2; ground.position.y = -0.05;
   ground.receiveShadow = true;
   root.add(ground);
@@ -516,6 +516,30 @@ export function buildCity(G) {
     }
     roadRibbon(pts, ROAD_W, roadMat, 0.11, root);
   }
+  const offsetPts = (pts, d) => pts.map((p, i) => {
+    const q = pts[Math.min(i + 1, pts.length - 1)];
+    const r = pts[Math.max(i - 1, 0)];
+    let tx = q.x - r.x, tz = q.z - r.z;
+    const len = Math.hypot(tx, tz) || 1; tx /= len; tz /= len;
+    return { x: p.x - tz * d, z: p.z + tx * d };
+  });
+  const roadSegments = (axis, road) => {
+    if (!road.rb) return [sampleRoad(axis, road, -460, 460, 20)];
+    if (axis === 'ns') return [sampleRoad('ns', road, -460, RBZ - RB_R, 20), sampleRoad('ns', road, RBZ - RB_R, RBZ + RB_R, 8, 1), sampleRoad('ns', road, RBZ - RB_R, RBZ + RB_R, 8, -1), sampleRoad('ns', road, RBZ + RB_R, 460, 20)];
+    return [sampleRoad('ew', road, -460, RBX - RB_R, 20), sampleRoad('ew', road, RBX - RB_R, RBX + RB_R, 8, 1), sampleRoad('ew', road, RBX - RB_R, RBX + RB_R, 8, -1), sampleRoad('ew', road, RBX + RB_R, 460, 20)];
+  };
+  const walkMat = mat(0xb5ad9c, { roughness: 0.95 });
+  const curbMat = mat(0x3a3a3a, { roughness: 0.9 });
+  for (const axis of ['ns', 'ew']) {
+    for (const road of ROADS[axis]) {
+      for (const seg of roadSegments(axis, road)) {
+        for (const s of [-1, 1]) {
+          roadRibbon(offsetPts(seg, s * (ROAD_W / 2 + 1.75)), 3.5, walkMat, 0.12, root);
+          roadRibbon(offsetPts(seg, s * (ROAD_W / 2 + 0.3)), 0.6, curbMat, 0.14, root);
+        }
+      }
+    }
+  }
   const minorMat = new THREE.MeshStandardMaterial({
     map: canvasTexture(64, 128, (g, w, h) => {
       g.fillStyle = '#33333a'; g.fillRect(0, 0, w, h);
@@ -538,8 +562,8 @@ export function buildCity(G) {
   for (let z = -450; z <= 450; z += 14) {
     box(7, 0.3, 1.4, mat(0x3a2a22), RAIL_X, 0.15, z, root);
   }
-  box(10, 1, 24, mat(0x9a958a), RAIL_X + 9, 0.5, 0, root); // station platform
-  box(10, 0.5, 24, mat(0x4a6a8a), RAIL_X + 9, 4.5, 0, root); // station roof
+  box(10, 1, 24, mat(0x9a958a), RAIL_X + 9, 0.5, 0, root);
+  box(10, 0.5, 24, mat(0x4a6a8a), RAIL_X + 9, 4.5, 0, root);
   for (const pz of [-10, 10]) {
     box(0.5, 4, 0.5, mat(0x555555), RAIL_X + 6, 2.5, pz, root);
     box(0.5, 4, 0.5, mat(0x555555), RAIL_X + 12, 2.5, pz, root);
@@ -675,8 +699,8 @@ export function buildCity(G) {
       blockCenters.push([cx, cz]);
       const d = districtAt(cx, cz);
       const key = `${ix},${iz}`;
-      const slabW = Math.max(30, gapX - 14);
-      const slabD = Math.max(30, gapZ - 14);
+      const slabW = Math.max(30, gapX - 19);
+      const slabD = Math.max(30, gapZ - 19);
       const isPlaza = plazas.has(key);
       const inGolf = cx > GOLF_RECT[0] && cx < GOLF_RECT[2] && cz > GOLF_RECT[1] && cz < GOLF_RECT[3];
       if (inGolf) {
@@ -688,7 +712,7 @@ export function buildCity(G) {
         }
         const pond = new THREE.Mesh(new THREE.CylinderGeometry(8, 8, 0.3, 12), mat(0x3a9ab8, { roughness: 0.15 }));
         pond.position.set(cx + 16, 0.4, cz - 12); pond.scale.z = 0.7; root.add(pond);
-        box(14, 6, 10, mat(0xf2f2f2), cx - slabW / 2 + 12, 3.4, cz + slabD / 2 - 10, root); // clubhouse
+        box(14, 6, 10, mat(0xf2f2f2), cx - slabW / 2 + 12, 3.4, cz + slabD / 2 - 10, root);
         for (let i = 0; i < 8; i++) {
           makeTree(rng, cx + rng.range(-slabW / 2 + 8, slabW / 2 - 8), cz + rng.range(-slabD / 2 + 8, slabD / 2 - 8), root, rng.range(0.9, 1.3));
         }
@@ -743,7 +767,7 @@ export function buildCity(G) {
         continue;
       }
       const nearRb = Math.hypot(cx - RBX, cz - RBZ) < 55;
-      if (nearRb) continue; // keep the roundabout clear
+      if (nearRb) continue;
       const localAngle = nsHeading(ROADS.ns[ix], cz);
       const diagNear = DIAGONALS.some(([ax, az, bx, bz]) => distToSegment(cx, cz, ax, az, bx, bz) < 70);
       const place = (x, z) => {
@@ -955,8 +979,8 @@ export function buildCity(G) {
     bar.rotation.x = -Math.PI / 2; bar.position.set(ex, 0.14, 380);
     root.add(bar);
   }
-  box(110, 9, 26, mat(0xe8e8e8), 330, 4.5, 335, root); // terminal
-  box(110, 1, 30, mat(0x4a6a8a), 330, 9.5, 335, root); // terminal roof band
+  box(110, 9, 26, mat(0xe8e8e8), 330, 4.5, 335, root);
+  box(110, 1, 30, mat(0x4a6a8a), 330, 9.5, 335, root);
   const tower = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 4.5, 26, 10), mat(0xcccccc));
   tower.position.set(395, 13, 330); tower.castShadow = true; root.add(tower);
   const cab = new THREE.Mesh(new THREE.CylinderGeometry(5.5, 5.5, 4, 10), mat(0x14202e, { roughness: 0.12, metalness: 0.6 }));
@@ -964,9 +988,9 @@ export function buildCity(G) {
   for (const [px, pz] of [[300, 352], [362, 354]]) {
     const fus = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 26, 10), mat(0xf2f2f2));
     fus.rotation.z = Math.PI / 2; fus.position.set(px, 2.5, pz); fus.castShadow = true; root.add(fus);
-    box(6, 0.4, 22, mat(0xf2f2f2), px, 2.5, pz, root); // wings
-    box(0.4, 5, 4, mat(0x2a6fd8), px - 12, 5, pz, root); // tail fin
-    box(26, 0.5, 1, mat(0x2a6fd8), px, 1.2, pz + 2.1, root); // cheatline
+    box(6, 0.4, 22, mat(0xf2f2f2), px, 2.5, pz, root);
+    box(0.4, 5, 4, mat(0x2a6fd8), px - 12, 5, pz, root);
+    box(26, 0.5, 1, mat(0x2a6fd8), px, 1.2, pz + 2.1, root);
   }
 
   const bowl = new THREE.Mesh(new THREE.CylinderGeometry(30, 32, 9, 28), mat(0xf2f2f2));
@@ -1026,7 +1050,7 @@ export function buildCity(G) {
       new THREE.MeshBasicMaterial({ map: neonTexture(text, color) }),
     );
     sign.position.set(sx, y, z);
-    sign.rotation.y = -Math.PI / 2; // face west, onto the avenue
+    sign.rotation.y = -Math.PI / 2;
     root.add(sign);
     const back = box(13.4, 3.6, 0.3, mat(0x0a0614), sx + 0.2, y, z, root);
     back.rotation.y = -Math.PI / 2;
@@ -1092,7 +1116,11 @@ export function buildCity(G) {
     for (const [wx, wz] of [[-1.0, 1.45], [1.0, 1.45], [-1.0, -1.45], [1.0, -1.45]]) {
       const w = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.3, 10), dark);
       w.rotation.z = Math.PI / 2; w.position.set(wx, 0.42, wz); g.add(w);
+      const arch = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.09, 6, 12, Math.PI), dark);
+      arch.rotation.y = Math.PI / 2; arch.position.set(wx, 0.42, wz); g.add(arch);
     }
+    box(1.2, 0.14, 0.08, dark, 0, 0.62, 2.32, g);
+    box(2.04, 0.12, 4.4, dark, 0, 0.3, 0, g);
     box(0.55, 0.14, 0.08, mat(0xfff2b0, { emissive: 0xffe9a0, emissiveIntensity: 0.8 }), -0.65, 0.62, 2.32, g);
     box(0.55, 0.14, 0.08, mat(0xfff2b0, { emissive: 0xffe9a0, emissiveIntensity: 0.8 }), 0.65, 0.62, 2.32, g);
     box(0.6, 0.14, 0.08, mat(0xd81a1a, { emissive: 0xaa0000, emissiveIntensity: 0.8 }), -0.65, 0.62, -2.32, g);
@@ -1109,8 +1137,8 @@ export function buildCity(G) {
         ? { x: nsPlain(road, a), z: a, h: 0 }
         : { x: a, z: ewPlain(road, a), h: Math.PI / 2 };
       for (const side of [-1, 1]) {
-        if (rng.chance(0.25)) continue; // gaps in the row
-        const off = 8.6;
+        if (rng.chance(0.25)) continue;
+        const off = 4.4;
         const x = axis === 'ns' ? p.x + side * off : p.x;
         const z = axis === 'ns' ? p.z : p.z + side * off;
         if (Math.hypot(x - RBX, z - RBZ) < 34) continue;
@@ -1203,3 +1231,4 @@ export function buildCity(G) {
 
   return out;
 }
+

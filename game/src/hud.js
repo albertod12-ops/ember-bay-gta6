@@ -19,7 +19,7 @@ const CREW = [
 function drawPortrait(canvas, who) {
   const g = canvas.getContext('2d');
   const S = canvas.width;
-  const u = S / 8; // one cell
+  const u = S / 8;
   const styles = {
     mara: { bg: '#7a2a4a', skin: '#d9a066', hair: '#14141c', acc: '#ffd24d', top: '#3a2a4a' },
     deke: { bg: '#2a4a7a', skin: '#b07a4a', hair: '#e02030', acc: '#2a2a2a', top: '#1c2733' },
@@ -57,11 +57,11 @@ function drawPortrait(canvas, who) {
     rect(u * 5.45, u * 2.4, u * 0.55, u * 2.8, st.hair);
   } else if (who === 'deke') {
     g.beginPath(); g.ellipse(cx, u * 2.3, u * 1.9, u * 0.95, 0, Math.PI, 0); g.fill();
-    rect(u * 2.1, u * 2.9, u * 3.8, u * 0.35, st.hair); // bandana edge
-    rect(u * 2.9, u * 5.9, u * 2.2, u * 0.5, '#3a2a22'); // beard
+    rect(u * 2.1, u * 2.9, u * 3.8, u * 0.35, st.hair);
+    rect(u * 2.9, u * 5.9, u * 2.2, u * 0.5, '#3a2a22');
   } else if (who === 'vic') {
     g.beginPath(); g.ellipse(cx, u * 2.35, u * 1.85, u * 0.7, 0, Math.PI, 0); g.fill();
-    rect(u * 2.3, u * 5.9, u * 3.4, u * 0.6, '#dddddd'); // gray beard
+    rect(u * 2.3, u * 5.9, u * 3.4, u * 0.6, '#dddddd');
     g.strokeStyle = '#222222'; g.lineWidth = u * 0.14;
     g.strokeRect(u * 2.55, u * 3.5, u * 1.1, u * 0.9);
     g.strokeRect(u * 4.35, u * 3.5, u * 1.1, u * 0.9);
@@ -70,9 +70,9 @@ function drawPortrait(canvas, who) {
     g.beginPath(); g.ellipse(cx, u * 2.1, u * 2.0, u * 1.2, 0, Math.PI, 0); g.fill();
     rect(u * 1.7, u * 2.4, u * 0.6, u * 3.6, st.hair);
     rect(u * 5.7, u * 2.4, u * 0.6, u * 3.6, st.hair);
-  } else { // kip
+  } else {
     g.beginPath(); g.ellipse(cx, u * 2.3, u * 1.9, u * 0.95, 0, Math.PI, 0); g.fill();
-    rect(u * 2.2, u * 2.6, u * 3.6, u * 0.35, st.acc); // headband
+    rect(u * 2.2, u * 2.6, u * 3.6, u * 0.35, st.acc);
   }
   for (const ex of [u * 3.05, u * 4.55]) {
     ell(ex + u * 0.2, u * 3.9, u * 0.34, u * 0.28, '#ffffff');
@@ -206,20 +206,52 @@ export function initHud(G) {
       const W = el.mapCanvas.width, Ht = el.mapCanvas.height;
       const S = 580, ox = (W - S) / 2, oy = (Ht - S) / 2;
       const toMap = (x, z) => [ox + ((x + 460) / 920) * S, oy + ((z + 460) / 920) * S];
-      const m2p = (m) => (m / 920) * S; // metres -> map pixels
+      const m2p = (m) => (m / 920) * S;
+      const coastX = (z) => -465 + 12 * Math.sin(z * 0.006 + 0.8) + 8 * Math.sin(z * 0.017 + 2.2);
+      const inBay = (x, z) => ((x + 240) / 110) ** 2 + ((z - 455) / 48) ** 2 < 1;
+      const onLand = (x, z) => x > coastX(z) + 26 && !inBay(x, z) && x < 460 && z > -460 && z < 460;
       c.clearRect(0, 0, W, Ht);
-      c.fillStyle = '#0d1a20'; c.fillRect(0, 0, W, Ht);
-      const [lx, ly] = toMap(-460, -460);
-      c.fillStyle = '#98a684';
-      c.fillRect(lx, ly, S, S);
-      c.fillStyle = '#4d8fb5';
-      c.fillRect(0, 0, lx, Ht);
-      c.fillStyle = '#d9c08a';
-      c.fillRect(lx, ly, m2p(40), S);
-      const [wx, wy] = toMap(-530, -20);
-      c.strokeStyle = '#2fd8ff'; c.lineWidth = 2;
-      c.beginPath(); c.arc(wx, wy, 5, 0, Math.PI * 2); c.stroke();
-      c.beginPath(); c.moveTo(wx - 5, wy); c.lineTo(wx + 5, wy); c.moveTo(wx, wy - 5); c.lineTo(wx, wy + 5); c.stroke();
+      const sea = c.createLinearGradient(0, 0, W, Ht);
+      sea.addColorStop(0, '#1c5a78'); sea.addColorStop(1, '#2a7a9a');
+      c.fillStyle = sea; c.fillRect(0, 0, W, Ht);
+      const landPath = () => {
+        c.beginPath();
+        let [mx, mz] = toMap(coastX(-460), -460);
+        c.moveTo(mx, mz);
+        for (let z = -440; z <= 460; z += 20) { [mx, mz] = toMap(coastX(z), z); c.lineTo(mx, mz); }
+        [mx, mz] = toMap(-350, 460); c.lineTo(mx, mz);
+        const [bx, by] = toMap(-240, 407);
+        const [ex, ey] = toMap(-130, 460);
+        c.quadraticCurveTo(bx, by, ex, ey);
+        [mx, mz] = toMap(460, 460); c.lineTo(mx, mz);
+        [mx, mz] = toMap(460, -460); c.lineTo(mx, mz);
+        c.closePath();
+      };
+      landPath();
+      c.fillStyle = '#98a684'; c.fill();
+      c.save();
+      c.strokeStyle = '#d9c08a'; c.lineWidth = m2p(12); c.lineJoin = 'round';
+      c.beginPath();
+      for (let z = -460; z <= 460; z += 20) { const [mx, mz] = toMap(coastX(z) + 5, z); if (z === -460) c.moveTo(mx, mz); else c.lineTo(mx, mz); }
+      c.stroke();
+      c.beginPath();
+      {
+        const [ax, ay] = toMap(-350, 460); c.moveTo(ax, ay);
+        const [bx, by] = toMap(-240, 407); const [ex, ey] = toMap(-130, 460);
+        c.quadraticCurveTo(bx, by, ex, ey);
+      }
+      c.stroke();
+      c.restore();
+      {
+        const [cx0, cz0] = toMap(coastX(-20), -20);
+        const [wx, wy] = toMap(coastX(-20) - 16, -20);
+        c.strokeStyle = '#8a6a42'; c.lineWidth = 3;
+        c.beginPath(); c.moveTo(cx0, cz0); c.lineTo(wx, wy); c.stroke();
+        c.strokeStyle = '#2fd8ff'; c.lineWidth = 2;
+        c.beginPath(); c.arc(wx, wy, 6, 0, Math.PI * 2); c.stroke();
+        c.beginPath(); c.moveTo(wx - 6, wy); c.lineTo(wx + 6, wy); c.moveTo(wx, wy - 6); c.lineTo(wx, wy + 6); c.stroke();
+      }
+      landPath(); c.save(); c.clip();
       const cell = (ix, iz) => {
         const a = crossing(ROADS.ns[ix], ROADS.ew[iz]);
         const b = crossing(ROADS.ns[ix + 1], ROADS.ew[iz]);
@@ -247,8 +279,9 @@ export function initHud(G) {
           const midX = pts.reduce((s, p) => s + p.x, 0) / 4;
           const midZ = pts.reduce((s, p) => s + p.z, 0) / 4;
           if (Math.hypot(midX - ROUNDABOUT.cx, midZ - ROUNDABOUT.cz) < 55) continue;
+          if (!onLand(midX, midZ)) continue;
           poly(insetPoly(pts, 4));
-          c.fillStyle = '#f4f4f4'; c.fill();
+          c.fillStyle = (ix * 5 + iz * 3) % 9 === 0 ? '#7ab85e' : '#f4f4f4'; c.fill();
           poly(insetPoly(pts, 10));
           c.fillStyle = '#dcdcdc'; c.fill();
           const inner = insetPoly(pts, 14);
@@ -277,7 +310,7 @@ export function initHud(G) {
         const [bx, by] = toMap(GOLF_RECT[2], GOLF_RECT[3]);
         c.fillRect(ax, ay, bx - ax, by - ay);
         c.fillStyle = '#7ab85e';
-        c.fillRect(ax + 12, ay + 10, (bx - ax) - 24, 14); // fairway
+        c.fillRect(ax + 12, ay + 10, (bx - ax) - 24, 14);
         c.fillStyle = '#e8dd9a';
         c.beginPath(); c.arc(ax + 30, ay + 60, 6, 0, Math.PI * 2); c.fill();
         c.beginPath(); c.arc(bx - 30, by - 40, 6, 0, Math.PI * 2); c.fill();
@@ -324,10 +357,10 @@ export function initHud(G) {
         for (let x = -460; x <= 460; x += 20) pts.push([x, ewPlain(road, x)]);
         strokePts(pts, 4);
       }
-      for (const [ax, az, bx, bz] of DIAGONALS) strokePts([[ax, az], [bx, bz]], 4);
+      for (const [ax, az, bx, bz] of DIAGONALS) strokePts([[ax, az], [bx, bz]], 3);
       {
         const [rx, rz] = toMap(ROUNDABOUT.cx, ROUNDABOUT.cz);
-        c.strokeStyle = '#111111'; c.lineWidth = 5;
+        c.strokeStyle = '#111111'; c.lineWidth = 3;
         c.beginPath(); c.arc(rx, rz, m2p(ROUNDABOUT.r), 0, Math.PI * 2); c.stroke();
       }
       {
@@ -336,6 +369,7 @@ export function initHud(G) {
         c.strokeStyle = '#7a2a2a'; c.lineWidth = 3;
         c.beginPath(); c.moveTo(ax, ay); c.lineTo(bx, by); c.stroke();
       }
+      c.restore();
       c.textAlign = 'center'; c.textBaseline = 'middle';
       const dlabel = (x, z, name, size = 13) => {
         const [mx, mz] = toMap(x, z);
@@ -414,9 +448,15 @@ export function initHud(G) {
         : null;
       if (obj) {
         const px = G.playerPos.x, pz = G.playerPos.z;
-        const midZ = ROADS.ew.reduce((best, r) => Math.abs(ewPlain(r, px) - pz) < Math.abs(ewPlain(best, px) - pz) ? r : best).base;
-        const corX = obj[0] >= px ? 240 : -240;
-        const pts = [[px, pz], [px, midZ], [corX, midZ], [corX, obj[1]], [obj[0], obj[1]]];
+        const nsNear = ROADS.ns.reduce((best, r) => Math.abs(nsPlain(r, pz) - px) < Math.abs(nsPlain(best, pz) - px) ? r : best);
+        const ewNear = ROADS.ew.reduce((best, r) => Math.abs(ewPlain(r, obj[0]) - obj[1]) < Math.abs(ewPlain(best, obj[0]) - obj[1]) ? r : best);
+        const zMid = ewNear.base;
+        const pts = [[px, pz], [nsPlain(nsNear, pz), pz]];
+        for (let z = pz; zMid > pz ? z <= zMid : z >= zMid; z += zMid > pz ? 20 : -20) pts.push([nsPlain(nsNear, z), z]);
+        pts.push([nsPlain(nsNear, zMid), zMid]);
+        const x0 = nsPlain(nsNear, zMid);
+        for (let x = x0; obj[0] > x0 ? x <= obj[0] : x >= obj[0]; x += obj[0] > x0 ? 20 : -20) pts.push([x, ewPlain(ewNear, x)]);
+        pts.push([obj[0], ewPlain(ewNear, obj[0])], [obj[0], obj[1]]);
         const trace = (width, style, dash) => {
           c.strokeStyle = style; c.lineWidth = width; c.lineJoin = 'round';
           c.setLineDash(dash || []);
@@ -430,6 +470,15 @@ export function initHud(G) {
         const [ox2, oz2] = toMap(obj[0], obj[1]);
         c.fillStyle = '#ffe14d';
         c.beginPath(); c.moveTo(ox2, oz2 - 8); c.lineTo(ox2 + 6, oz2); c.lineTo(ox2, oz2 + 8); c.lineTo(ox2 - 6, oz2); c.closePath(); c.fill();
+      }
+      {
+        const [cx, cy] = toMap(420, -420);
+        c.fillStyle = '#ffffff'; c.font = 'bold 14px Verdana'; c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.fillText('N', cx, cy - 16);
+        c.beginPath(); c.moveTo(cx, cy - 10); c.lineTo(cx + 6, cy + 8); c.lineTo(cx - 6, cy + 8); c.closePath(); c.fill();
+        c.strokeStyle = '#ffffff'; c.lineWidth = 2;
+        c.beginPath(); c.moveTo(cx - m2p(50), cy + 20); c.lineTo(cx + m2p(50), cy + 20); c.stroke();
+        c.font = 'bold 10px Verdana'; c.fillText('100 m', cx, cy + 32);
       }
       const [px, pz] = toMap(G.playerPos.x, G.playerPos.z);
       c.save();
@@ -527,7 +576,11 @@ export function initHud(G) {
       const toMap = (x, z) => [((x + 460) / W2) * S, ((z + 460) / W2) * S];
       mm.clearRect(0, 0, S, S);
       mm.fillStyle = '#0c2b12'; mm.fillRect(0, 0, S, S);
-      mm.fillStyle = '#1a7f8e'; mm.fillRect(0, 0, 5, S);
+      mm.fillStyle = '#1a7f8e';
+      mm.beginPath(); mm.moveTo(0, 0);
+      for (let y = 0; y <= S; y += 10) mm.lineTo(4 + 3 * Math.sin(y * 0.05), y);
+      mm.lineTo(0, S); mm.closePath(); mm.fill();
+      mm.beginPath(); mm.ellipse(((-240 + 460) / W2) * S, S, 22, 10, 0, Math.PI, 0); mm.fill();
       mm.fillStyle = '#3a4a2f';
       for (let ix = 0; ix < ROADS.ns.length - 1; ix++) {
         for (let iz = 0; iz < ROADS.ew.length - 1; iz++) {
@@ -594,3 +647,4 @@ export function initHud(G) {
   };
   return H;
 }
+
