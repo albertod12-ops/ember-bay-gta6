@@ -80,6 +80,56 @@ export const ROUNDABOUT = (() => {
   return { cx: c.x, cz: c.z, r: RB_R };
 })();
 
+// --- Minor streets (visual layer) ----------------------------------------
+// A thin street down the middle of every big block, so the map reads as a
+// dense real city (SA-map style) instead of a few huge empty slabs. They
+// are visual only — traffic stays on the six major avenues. Segments are
+// [x0, z0, x1, z1]; buildings keep clear of them (see place() in buildCity).
+export const MINOR_SEGS = (() => {
+  const segs = [];
+  const push = (pts) => {
+    for (let i = 0; i < pts.length - 1; i++) segs.push([pts[i].x, pts[i].z, pts[i + 1].x, pts[i + 1].z]);
+  };
+  for (let ix = 0; ix < ROADS.ns.length - 1; ix++) {
+    for (let iz = 0; iz < ROADS.ew.length - 1; iz++) {
+      const z0 = ROADS.ew[iz].base, z1 = ROADS.ew[iz + 1].base;
+      const midZ = (z0 + z1) / 2;
+      const pts = [];
+      for (let z = z0; z < z1; z += 20) {
+        pts.push({ x: (nsPlain(ROADS.ns[ix], z) + nsPlain(ROADS.ns[ix + 1], z)) / 2, z });
+      }
+      pts.push({ x: (nsPlain(ROADS.ns[ix], z1) + nsPlain(ROADS.ns[ix + 1], z1)) / 2, z: z1 });
+      if (Math.hypot(pts[Math.floor(pts.length / 2)].x - ROUNDABOUT.cx, midZ - ROUNDABOUT.cz) > 55) push(pts);
+      const x0 = ROADS.ns[ix].base, x1 = ROADS.ns[ix + 1].base;
+      const midX = (x0 + x1) / 2;
+      const pts2 = [];
+      for (let x = x0; x < x1; x += 20) {
+        pts2.push({ x, z: (ewPlain(ROADS.ew[iz], x) + ewPlain(ROADS.ew[iz + 1], x)) / 2 });
+      }
+      pts2.push({ x: x1, z: (ewPlain(ROADS.ew[iz], x1) + ewPlain(ROADS.ew[iz + 1], x1)) / 2 });
+      if (Math.hypot(midX - ROUNDABOUT.cx, pts2[Math.floor(pts2.length / 2)].z - ROUNDABOUT.cz) > 55) push(pts2);
+    }
+  }
+  return segs;
+})();
+
+// Freeway ring around the downtown core (SA-map style): a wide loop the
+// map reads at a glance. Visual only — traffic stays on the avenues.
+export const FREEWAY = (() => {
+  const cx = 40, cz = 0, rx = 210, rz = 190;
+  const pts = [];
+  for (let i = 0; i < 64; i++) {
+    const a = (i / 64) * Math.PI * 2;
+    pts.push({ x: cx + Math.cos(a) * rx, z: cz + Math.sin(a) * rz });
+  }
+  return { cx, cz, rx, rz, pts };
+})();
+
+// Landmarks (SA-map style): golf course, airport runway, stadium, rail.
+export const GOLF_RECT = [-100, 280, 160, 440]; // x0, z0, x1, z1
+export const STADIUM = { x: 330, z: 140, r: 30 };
+export const RAIL_X = 405;
+
 // Roundabout bulge: a smooth bump that swings the road around the island.
 // bump(t) is 0 at the ends and 1 in the middle, with zero slope at the ends,
 // so the road joins the straight bend smoothly on both sides.
@@ -347,8 +397,9 @@ export function buildCity(G) {
   root.add(sky);
   out.sky = sky;
 
-  // Ground base (sidewalk tone) + ocean + sand.
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(2400, 2400), mat(0x8f887c));
+  // Ground base (light sidewalk tone, so the map reads like the SA map:
+  // pale blocks, dark roads, green parks) + ocean + sand.
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(2400, 2400), mat(0xa39c92));
   ground.rotation.x = -Math.PI / 2; ground.position.y = -0.05;
   ground.receiveShadow = true;
   root.add(ground);
@@ -398,6 +449,41 @@ export function buildCity(G) {
       pts.push({ x: ax + ((bx - ax) * i) / steps, z: az + ((bz - az) * i) / steps });
     }
     roadRibbon(pts, ROAD_W, roadMat, 0.11, root);
+  }
+  // Minor streets: thin ribbons down the middle of every block (visual
+  // layer — the map reads dense, SA-map style, instead of empty slabs).
+  const minorMat = new THREE.MeshStandardMaterial({
+    map: canvasTexture(64, 128, (g, w, h) => {
+      g.fillStyle = '#33333a'; g.fillRect(0, 0, w, h);
+      g.fillStyle = '#e8e8e8';
+      for (let d = 0; d < h; d += 32) g.fillRect(w / 2 - 1, d, 2, 16);
+    }), roughness: 0.95,
+  });
+  minorMat.map.wrapS = THREE.RepeatWrapping;
+  minorMat.map.wrapT = THREE.RepeatWrapping;
+  for (const [ax, az, bx, bz] of MINOR_SEGS) {
+    // Minors ride just above the block slabs (slab top 0.4), so they read
+    // on the map instead of being buried under the sidewalk blocks.
+    roadRibbon([{ x: ax, z: az }, { x: bx, z: bz }], 8, minorMat, 0.42, root);
+  }
+  // Freeway ring around the downtown core (closed loop, wide, on top —
+  // a raised freeway, SA-map style).
+  roadRibbon([...FREEWAY.pts, FREEWAY.pts[0]], 20, roadMat, 0.45, root);
+  // Rail line on the east edge: two dark rails + ties + a small station.
+  const railMat = mat(0x4a2a2a, { roughness: 0.9 });
+  for (const rx of [RAIL_X - 2, RAIL_X + 2]) {
+    const pts = [];
+    for (let z = -460; z <= 460; z += 40) pts.push({ x: rx, z });
+    roadRibbon(pts, 2.5, railMat, 0.13, root);
+  }
+  for (let z = -450; z <= 450; z += 14) {
+    box(7, 0.3, 1.4, mat(0x3a2a22), RAIL_X, 0.15, z, root);
+  }
+  box(10, 1, 24, mat(0x9a958a), RAIL_X + 9, 0.5, 0, root); // station platform
+  box(10, 0.5, 24, mat(0x4a6a8a), RAIL_X + 9, 4.5, 0, root); // station roof
+  for (const pz of [-10, 10]) {
+    box(0.5, 4, 0.5, mat(0x555555), RAIL_X + 6, 2.5, pz, root);
+    box(0.5, 4, 0.5, mat(0x555555), RAIL_X + 12, 2.5, pz, root);
   }
   // Roundabout ring + island + fountain.
   const ring = new THREE.Mesh(
@@ -455,8 +541,9 @@ export function buildCity(G) {
   });
   const hoodColors = [0xd98a5f, 0xc9b458, 0x9ab87a, 0xb06a8a, 0x7fa8b8];
   const pastel = [0xffc9d6, 0xa8e6e0, 0xffe9a8, 0xd6c2ff, 0xffd0a8];
-  const slabTones = [0x97907f, 0x8a8578, 0xa39c8a];
+  const slabTones = [0xc4beb0, 0xbcb6a8, 0xcdc7b8];
   const plazas = new Set(['3,1', '3,2']);
+  const parks = new Set(['1,2', '4,1']);
   const blockCenters = [];
   for (let ix = 0; ix < ROADS.ns.length - 1; ix++) {
     for (let iz = 0; iz < ROADS.ew.length - 1; iz++) {
@@ -474,6 +561,33 @@ export function buildCity(G) {
       const slabW = Math.max(30, gapX - 48);
       const slabD = Math.max(30, gapZ - 48);
       const isPlaza = plazas.has(key);
+      // Golf course blocks (SA-map style): green + sand traps + pond +
+      // clubhouse instead of buildings.
+      const inGolf = cx > GOLF_RECT[0] && cx < GOLF_RECT[2] && cz > GOLF_RECT[1] && cz < GOLF_RECT[3];
+      if (inGolf) {
+        const green = box(slabW, 0.4, slabD, mat(0x6fae5a), cx, 0.2, cz, root);
+        green.receiveShadow = true;
+        for (const [tx, tz, tr] of [[-14, -10, 7], [12, 8, 9], [0, -16, 6]]) {
+          const trap = new THREE.Mesh(new THREE.CylinderGeometry(tr, tr, 0.4, 12), mat(0xe8d8a0));
+          trap.position.set(cx + tx, 0.45, cz + tz); trap.scale.z = 0.6; root.add(trap);
+        }
+        const pond = new THREE.Mesh(new THREE.CylinderGeometry(8, 8, 0.3, 12), mat(0x3a9ab8, { roughness: 0.15 }));
+        pond.position.set(cx + 16, 0.4, cz - 12); pond.scale.z = 0.7; root.add(pond);
+        box(14, 6, 10, mat(0xf2f2f2), cx - slabW / 2 + 12, 3.4, cz + slabD / 2 - 10, root); // clubhouse
+        for (let i = 0; i < 8; i++) {
+          makeTree(rng, cx + rng.range(-slabW / 2 + 8, slabW / 2 - 8), cz + rng.range(-slabD / 2 + 8, slabD / 2 - 8), root, rng.range(0.9, 1.3));
+        }
+        continue;
+      }
+      // Pocket parks: green + trees instead of buildings.
+      if (parks.has(key)) {
+        const green = box(slabW, 0.4, slabD, mat(0x5a9a4a), cx, 0.2, cz, root);
+        green.receiveShadow = true;
+        for (let i = 0; i < 8; i++) {
+          makeTree(rng, cx + rng.range(-slabW / 2 + 8, slabW / 2 - 8), cz + rng.range(-slabD / 2 + 8, slabD / 2 - 8), root, rng.range(0.9, 1.3));
+        }
+        continue;
+      }
       // Blocks the diagonal avenue cuts through get no slab at all — the
       // road ribbon must stay visible, not buried under a sidewalk block.
       const nearDiag = DIAGONALS.some(([ax, az, bx, bz]) => distToSegment(cx, cz, ax, az, bx, bz) < 42);
@@ -510,14 +624,16 @@ export function buildCity(G) {
       const place = (x, z) => {
         if (DIAGONALS.some(([ax, az, bx, bz]) => distToSegment(x, z, ax, az, bx, bz) < 16)) return false;
         if (Math.hypot(x - RBX, z - RBZ) < 30) return false;
+        if (MINOR_SEGS.some(([ax, az, bx, bz]) => distToSegment(x, z, ax, az, bx, bz) < 9)) return false;
+        if (FREEWAY.pts.some((p) => Math.hypot(x - p.x, z - p.z) < 17)) return false;
         return true;
       };
       if (d.type === 'downtown') {
-        const n = rng.int(1, 2);
-        for (let i = 0; i < n; i++) {
-          const w = rng.range(22, 34), dep = rng.range(22, 34), hgt = rng.range(42, 120);
-          const hx = cx + rng.range(-slabW / 2 + 16, slabW / 2 - 16);
-          const hz = cz + rng.range(-slabD / 2 + 16, slabD / 2 - 16);
+        // Dense core: four towers on a 2x2 grid, varied heights.
+        for (let i = 0; i < 4; i++) {
+          const w = rng.range(18, 28), dep = rng.range(18, 28), hgt = rng.range(40, 120);
+          const hx = cx + (i % 2 === 0 ? -1 : 1) * slabW / 4 + rng.range(-6, 6);
+          const hz = cz + (i < 2 ? -1 : 1) * slabD / 4 + rng.range(-6, 6);
           if (!place(hx, hz)) continue;
           const t = new THREE.Mesh(
             new THREE.BoxGeometry(w, hgt, dep),
@@ -541,11 +657,20 @@ export function buildCity(G) {
             c.rotation.y = rng.range(-0.1, 0.1); c.castShadow = true;
           }
         }
+        // Warehouses: long low sheds with a roof ridge.
+        for (let i = 0; i < 2; i++) {
+          const hx = cx + (i === 0 ? -slabW / 4 : slabW / 4);
+          const hz = cz + (i === 0 ? slabD / 4 : -slabD / 4);
+          if (!place(hx, hz)) continue;
+          const wh = box(30, 8, 18, mat(0x8a8578), hx, 4.4, hz, root);
+          wh.castShadow = true;
+          box(32, 1, 20, mat(0x5a5a5a), hx, 8.8, hz, root);
+        }
       } else if (d.type === 'beach') {
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < 4; i++) {
           const w = rng.range(12, 18), hgt = rng.range(7, 12);
-          const hx = cx + rng.range(-slabW / 2 + 10, slabW / 2 - 10);
-          const hz = cz + rng.range(-slabD / 2 + 10, slabD / 2 - 10);
+          const hx = cx + ((i % 2) - 0.5) * slabW / 2 + rng.range(-5, 5);
+          const hz = cz + (i < 2 ? -1 : 1) * slabD / 4 + rng.range(-5, 5);
           if (!place(hx, hz)) continue;
           const b = box(w, hgt, rng.range(12, 16), mat(rng.pick(pastel)), hx, hgt / 2 + 0.4, hz, root);
           b.rotation.y = rng.range(-0.06, 0.06); b.castShadow = true;
@@ -563,12 +688,12 @@ export function buildCity(G) {
           pyramidRoof(w, 16, 4, 0x7a4a3a, hx, hgt + 0.4 + lift, hz, root);
         }
       } else {
-        // brick / residential / marina / hood: houses with pyramid roofs.
-        const n = d.type === 'hood' ? rng.int(3, 4) : rng.int(2, 3);
-        for (let i = 0; i < n; i++) {
-          const w = rng.range(13, 20), dep = rng.range(12, 18), hgt = d.type === 'brick' ? rng.range(12, 22) : rng.range(6, 10);
-          const hx = cx + rng.range(-slabW / 2 + 10, slabW / 2 - 10);
-          const hz = cz + rng.range(-slabD / 2 + 10, slabD / 2 - 10);
+        // brick / residential / marina / hood: houses with pyramid roofs,
+        // six to a block in two rows of three — blocks read filled, not empty.
+        for (let i = 0; i < 6; i++) {
+          const w = rng.range(13, 18), dep = rng.range(11, 15), hgt = d.type === 'brick' ? rng.range(12, 22) : rng.range(6, 10);
+          const hx = cx + ((i % 3) - 1) * slabW / 3 + rng.range(-5, 5);
+          const hz = cz + (i < 3 ? -1 : 1) * slabD / 4 + rng.range(-5, 5);
           if (!place(hx, hz)) continue;
           const col = d.type === 'hood' ? rng.pick(hoodColors) : d.type === 'brick' ? 0x9a5a44 : rng.pick(pastel);
           let b;
@@ -581,7 +706,7 @@ export function buildCity(G) {
           }
           b.rotation.y = diagNear ? Math.PI / 4 : localAngle + rng.range(-0.05, 0.05);
           b.castShadow = true; b.receiveShadow = true;
-          if (d.type !== 'brick') pyramidRoof(w, dep, rng.range(3, 5), rng.pick([0x7a4a3a, 0x4a5a7a, 0x5a7a4a]), hx, hgt + 0.4, hz, root);
+          if (d.type !== 'brick') pyramidRoof(w, dep, rng.range(3, 5), rng.pick([0xa03a2a, 0x3a5a8a, 0x4a7a3a, 0xd8a03c]), hx, hgt + 0.4, hz, root);
           else box(w + 1, 1.2, dep + 1, mat(0x5a3a30), hx, hgt + 1, hz, root);
         }
       }
@@ -623,12 +748,53 @@ export function buildCity(G) {
   const dockCols = [0xc94f3d, 0x3d7fc9, 0x4fc94f, 0xd8a03c];
   for (let i = 0; i < 10; i++) {
     const hx = rng.range(345, 435), hz = rng.range(80, 430);
+    // Keep the docks clear of the runway strip and the stadium.
+    if (hx > 220 && hx < 440 && hz > 360 && hz < 400) continue;
+    if (Math.hypot(hx - STADIUM.x, hz - STADIUM.z) < 42) continue;
     const stack = rng.int(1, 3);
     for (let s = 0; s < stack; s++) {
       const c = box(12, 2.6, 2.6, mat(rng.pick(dockCols)), hx, 1.5 + s * 2.7, hz, root);
       c.rotation.y = rng.range(-0.08, 0.08); c.castShadow = true;
     }
   }
+
+  // Ember Bay International — runway, terminal, tower, parked planes
+  // (SA-map style landmark in the south-east corner).
+  const runway = new THREE.Mesh(new THREE.PlaneGeometry(220, 26), mat(0x2a2a30, { roughness: 0.95 }));
+  runway.rotation.x = -Math.PI / 2; runway.position.set(330, 0.12, 380);
+  runway.receiveShadow = true; root.add(runway);
+  for (let x = 230; x <= 430; x += 20) {
+    const dash = new THREE.Mesh(new THREE.PlaneGeometry(8, 1.5), mat(0xffffff));
+    dash.rotation.x = -Math.PI / 2; dash.position.set(x, 0.14, 380);
+    root.add(dash);
+  }
+  for (const ex of [232, 428]) {
+    const bar = new THREE.Mesh(new THREE.PlaneGeometry(2, 24), mat(0xffffff));
+    bar.rotation.x = -Math.PI / 2; bar.position.set(ex, 0.14, 380);
+    root.add(bar);
+  }
+  box(110, 9, 26, mat(0xe8e8e8), 330, 4.5, 335, root); // terminal
+  box(110, 1, 30, mat(0x4a6a8a), 330, 9.5, 335, root); // terminal roof band
+  const tower = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 4.5, 26, 10), mat(0xcccccc));
+  tower.position.set(395, 13, 330); tower.castShadow = true; root.add(tower);
+  const cab = new THREE.Mesh(new THREE.CylinderGeometry(5.5, 5.5, 4, 10), mat(0x14202e, { roughness: 0.12, metalness: 0.6 }));
+  cab.position.set(395, 28, 330); root.add(cab);
+  // Parked planes: fuselage + wings + tail fin.
+  for (const [px, pz] of [[300, 352], [362, 354]]) {
+    const fus = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 26, 10), mat(0xf2f2f2));
+    fus.rotation.z = Math.PI / 2; fus.position.set(px, 2.5, pz); fus.castShadow = true; root.add(fus);
+    box(6, 0.4, 22, mat(0xf2f2f2), px, 2.5, pz, root); // wings
+    box(0.4, 5, 4, mat(0x2a6fd8), px - 12, 5, pz, root); // tail fin
+    box(26, 0.5, 1, mat(0x2a6fd8), px, 1.2, pz + 2.1, root); // cheatline
+  }
+
+  // Ember Bowl stadium (SA-map style white circle, east side).
+  const bowl = new THREE.Mesh(new THREE.CylinderGeometry(30, 32, 9, 28), mat(0xf2f2f2));
+  bowl.position.set(STADIUM.x, 4.5, STADIUM.z); bowl.castShadow = true; root.add(bowl);
+  const field = new THREE.Mesh(new THREE.CylinderGeometry(24, 24, 0.6, 28), mat(0x4a8f3c));
+  field.position.set(STADIUM.x, 9.2, STADIUM.z); root.add(field);
+  const ringTop = new THREE.Mesh(new THREE.TorusGeometry(27, 1.2, 6, 28), mat(0x2a6fd8));
+  ringTop.rotation.x = Math.PI / 2; ringTop.position.set(STADIUM.x, 9.4, STADIUM.z); root.add(ringTop);
 
   // Palms on the sand + along the beachfront, umbrellas on the sand.
   for (let z = -420; z <= 420; z += 70) {

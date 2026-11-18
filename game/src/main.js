@@ -290,8 +290,11 @@ function updateCamera(dt) {
   }
   const h = G.playerHeading;
   const fx = Math.sin(h), fz = Math.cos(h);
-  const dist = G.vehicle ? 8 : 6.5;
-  const height = G.vehicle ? 2.8 : 2.6;
+  // Bikes are narrow, so the chase camera sits closer on a bike than in a
+  // car — the rider reads big in frame instead of a speck.
+  const isBike = G.vehicle && G.vehicle.vehicle && G.vehicle.vehicle.kind === 'bike';
+  const dist = G.vehicle ? (isBike ? 5.5 : 8) : 6.5;
+  const height = G.vehicle ? (isBike ? 2.2 : 2.8) : 2.6;
   desired.set(pp.x - fx * dist, height, pp.z - fz * dist);
   camera.position.lerp(desired, 1 - Math.pow(0.001, dt));
   camera.lookAt(pp.x + fx * 10, 1.8, pp.z + fz * 10);
