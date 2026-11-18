@@ -1,7 +1,7 @@
 // Ember Bay v8 — HUD: mission banner, EBPD panel, weapon slots with ammo
 // and locks, dialogue box with blocky portraits, car + radio panels,
 // drift panel, crosshair, and the full city map overlay (M key).
-import { ROADS, DISTRICTS, DIAGONALS, ROUNDABOUT, nsPlain, ewPlain, crossing, districtAt } from './city.js';
+import { ROADS, DISTRICTS, DIAGONALS, ROUNDABOUT, MINOR_SEGS, FREEWAY, GOLF_RECT, STADIUM, RAIL_X, nsPlain, ewPlain, crossing, districtAt } from './city.js';
 
 // Weapons: mag / reserve ammo, and the respect needed to unlock.
 const WEAPONS = [
@@ -20,41 +20,96 @@ const CREW = [
   { who: 'kip', name: 'KIP MARLOWE', role: 'RUNNER' },
 ];
 
-// Blocky pixel portraits, painted on a canvas — one look per character.
+// Character portraits, painted on a canvas — smooth vector faces now
+// (v9): round head, hair shapes, eyes with whites, brows, nose, lips,
+// collar and shading, one look per character.
 function drawPortrait(canvas, who) {
   const g = canvas.getContext('2d');
   const S = canvas.width;
   const u = S / 8; // one cell
   const styles = {
-    mara: { bg: '#7a2a4a', skin: '#d9a066', hair: '#14141c', acc: '#ffd24d' },
-    deke: { bg: '#2a4a7a', skin: '#b07a4a', hair: '#e02030', acc: '#2a2a2a' },
-    vic: { bg: '#3a3a3a', skin: '#e8b98a', hair: '#cccccc', acc: '#2a2a2a' },
-    rosa: { bg: '#4a2a6a', skin: '#d9a066', hair: '#2a1410', acc: '#ffd24d' },
-    kip: { bg: '#2a6a4a', skin: '#e8b98a', hair: '#e8c820', acc: '#ff2d55' },
+    mara: { bg: '#7a2a4a', skin: '#d9a066', hair: '#14141c', acc: '#ffd24d', top: '#3a2a4a' },
+    deke: { bg: '#2a4a7a', skin: '#b07a4a', hair: '#e02030', acc: '#2a2a2a', top: '#1c2733' },
+    vic: { bg: '#3a3a3a', skin: '#e8b98a', hair: '#cccccc', acc: '#2a2a2a', top: '#222831' },
+    rosa: { bg: '#4a2a6a', skin: '#d9a066', hair: '#2a1410', acc: '#ffd24d', top: '#5a2a4a' },
+    kip: { bg: '#2a6a4a', skin: '#e8b98a', hair: '#e8c820', acc: '#ff2d55', top: '#1c4a3a' },
   };
   const st = styles[who] || styles.mara;
-  const R = (x, y, w, h, c) => { g.fillStyle = c; g.fillRect(x * u, y * u, w * u, h * u); };
-  g.fillStyle = st.bg; g.fillRect(0, 0, S, S);
-  // shoulders / jacket
-  R(1, 6.4, 6, 1.6, who === 'vic' ? '#222831' : '#3a2a4a');
-  // face
-  R(2.2, 2.2, 3.6, 4, st.skin);
+  const cx = S / 2;
+  const ell = (x, y, rx, ry, c) => { g.fillStyle = c; g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); g.fill(); };
+  const rect = (x, y, w, h, c) => { g.fillStyle = c; g.fillRect(x, y, w, h); };
+  // background + soft vignette
+  rect(0, 0, S, S, st.bg);
+  const vg = g.createRadialGradient(cx, S * 0.4, S * 0.1, cx, S * 0.4, S * 0.7);
+  vg.addColorStop(0, 'rgba(255,255,255,0.10)');
+  vg.addColorStop(1, 'rgba(0,0,0,0.25)');
+  g.fillStyle = vg; g.fillRect(0, 0, S, S);
+  // shoulders / top with collar
+  g.fillStyle = st.top;
+  g.beginPath();
+  g.moveTo(u * 0.6, S);
+  g.quadraticCurveTo(u * 0.8, u * 6.1, u * 2.2, u * 6.2);
+  g.lineTo(u * 5.8, u * 6.2);
+  g.quadraticCurveTo(u * 7.2, u * 6.1, u * 7.4, S);
+  g.closePath(); g.fill();
+  // collar V
+  g.fillStyle = st.acc;
+  g.beginPath(); g.moveTo(u * 3.4, u * 6.2); g.lineTo(cx, u * 7.1); g.lineTo(u * 4.6, u * 6.2); g.closePath(); g.fill();
+  // neck
+  rect(u * 3.4, u * 5.6, u * 1.2, u * 0.8, st.skin);
+  // head: round, slightly narrow chin
+  ell(cx, u * 3.9, u * 1.85, u * 2.05, st.skin);
+  // side shading
+  ell(cx + u * 0.9, u * 4.1, u * 0.7, u * 1.5, 'rgba(0,0,0,0.08)');
+  // ears
+  ell(u * 2.05, u * 4.0, u * 0.28, u * 0.5, st.skin);
+  ell(u * 5.95, u * 4.0, u * 0.28, u * 0.5, st.skin);
   // hair
-  if (who === 'mara') { R(2, 1.2, 4, 1.4, st.hair); R(2, 2.2, 0.7, 2.6, st.hair); R(5.3, 2.2, 0.7, 2.6, st.hair); }
-  else if (who === 'deke') { R(2, 1.2, 4, 1, st.hair); R(1.8, 2.2, 4.4, 0.5, st.hair); R(2.8, 4.6, 2.4, 0.7, '#3a2a22'); }
-  else if (who === 'vic') { R(2.2, 1.4, 3.6, 0.9, st.hair); R(2.2, 5.4, 3.6, 0.8, '#dddddd'); }
-  else if (who === 'rosa') { R(1.6, 1, 4.8, 1.6, st.hair); R(1.6, 2.6, 0.8, 3.8, st.hair); R(5.6, 2.6, 0.8, 3.8, st.hair); }
-  else { R(2.2, 1.4, 3.6, 1, st.hair); R(2.2, 2.2, 3.6, 0.4, st.acc); }
-  // eyes
-  R(2.9, 3.4, 0.7, 0.7, '#141414');
-  R(4.4, 3.4, 0.7, 0.7, '#141414');
-  if (who === 'vic') { g.strokeStyle = '#222222'; g.lineWidth = u * 0.18; g.strokeRect(2.6 * u, 3.2 * u, 1.2 * u, 1.1 * u); g.strokeRect(4.2 * u, 3.2 * u, 1.2 * u, 1.1 * u); }
+  g.fillStyle = st.hair;
+  if (who === 'mara') {
+    g.beginPath(); g.ellipse(cx, u * 2.2, u * 1.95, u * 1.15, 0, Math.PI, 0); g.fill();
+    rect(u * 2.0, u * 2.4, u * 0.55, u * 2.8, st.hair);
+    rect(u * 5.45, u * 2.4, u * 0.55, u * 2.8, st.hair);
+  } else if (who === 'deke') {
+    g.beginPath(); g.ellipse(cx, u * 2.3, u * 1.9, u * 0.95, 0, Math.PI, 0); g.fill();
+    rect(u * 2.1, u * 2.9, u * 3.8, u * 0.35, st.hair); // bandana edge
+    rect(u * 2.9, u * 5.9, u * 2.2, u * 0.5, '#3a2a22'); // beard
+  } else if (who === 'vic') {
+    g.beginPath(); g.ellipse(cx, u * 2.35, u * 1.85, u * 0.7, 0, Math.PI, 0); g.fill();
+    rect(u * 2.3, u * 5.9, u * 3.4, u * 0.6, '#dddddd'); // gray beard
+    // glasses
+    g.strokeStyle = '#222222'; g.lineWidth = u * 0.14;
+    g.strokeRect(u * 2.55, u * 3.5, u * 1.1, u * 0.9);
+    g.strokeRect(u * 4.35, u * 3.5, u * 1.1, u * 0.9);
+    g.beginPath(); g.moveTo(u * 3.65, u * 3.9); g.lineTo(u * 4.35, u * 3.9); g.stroke();
+  } else if (who === 'rosa') {
+    g.beginPath(); g.ellipse(cx, u * 2.1, u * 2.0, u * 1.2, 0, Math.PI, 0); g.fill();
+    rect(u * 1.7, u * 2.4, u * 0.6, u * 3.6, st.hair);
+    rect(u * 5.7, u * 2.4, u * 0.6, u * 3.6, st.hair);
+  } else { // kip
+    g.beginPath(); g.ellipse(cx, u * 2.3, u * 1.9, u * 0.95, 0, Math.PI, 0); g.fill();
+    rect(u * 2.2, u * 2.6, u * 3.6, u * 0.35, st.acc); // headband
+  }
+  // eyes: white + pupil
+  for (const ex of [u * 3.05, u * 4.55]) {
+    ell(ex + u * 0.2, u * 3.9, u * 0.34, u * 0.28, '#ffffff');
+    ell(ex + u * 0.2, u * 3.92, u * 0.16, u * 0.18, '#141414');
+  }
+  // brows
+  g.strokeStyle = st.hair; g.lineWidth = u * 0.14; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(u * 2.85, u * 3.45); g.lineTo(u * 3.65, u * 3.35); g.stroke();
+  g.beginPath(); g.moveTo(u * 4.35, u * 3.35); g.lineTo(u * 5.15, u * 3.45); g.stroke();
+  // nose
+  g.strokeStyle = 'rgba(0,0,0,0.35)'; g.lineWidth = u * 0.1;
+  g.beginPath(); g.moveTo(cx, u * 4.1); g.lineTo(cx + u * 0.12, u * 4.75); g.lineTo(cx - u * 0.1, u * 4.8); g.stroke();
   // mouth
-  R(3.2, 5, 1.6, 0.45, '#8a3a2a');
+  g.strokeStyle = '#8a3a2a'; g.lineWidth = u * 0.16; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(u * 3.35, u * 5.25); g.quadraticCurveTo(cx, u * 5.45, u * 4.65, u * 5.25); g.stroke();
   // accessories
-  if (who === 'mara') { R(2, 5.6, 0.4, 0.4, st.acc); R(5.6, 5.6, 0.4, 0.4, st.acc); }
-  if (who === 'rosa') { R(1.9, 5.2, 0.5, 0.5, st.acc); R(5.6, 5.2, 0.5, 0.5, st.acc); }
-  if (who === 'kip') { R(2.2, 2.4, 3.6, 0.35, st.acc); }
+  if (who === 'mara' || who === 'rosa') {
+    ell(u * 2.1, u * 4.9, u * 0.16, u * 0.16, st.acc);
+    ell(u * 5.9, u * 4.9, u * 0.16, u * 0.16, st.acc);
+  }
 }
 
 export function initHud(G) {
@@ -173,74 +228,185 @@ export function initHud(G) {
       H.drawMap();
     },
     drawMap() {
+      // v9 SA-style map: the graphic itself reads like GTA San Andreas'
+      // in-game map — white building blocks filling the land, black road
+      // lines with a clear hierarchy (thick majors, thin minors), green
+      // parks, blue water + tan beach on the west edge, bold white district
+      // labels with a black outline, safehouse / blip icons, player arrow.
       const c = mapCtx;
       const W = el.mapCanvas.width, Ht = el.mapCanvas.height;
       const S = 600, ox = (W - S) / 2, oy = (Ht - S) / 2;
       const toMap = (x, z) => [ox + ((x + 460) / 920) * S, oy + ((z + 460) / 920) * S];
+      const m2p = (m) => (m / 920) * S; // metres -> map pixels
       c.clearRect(0, 0, W, Ht);
-      c.fillStyle = '#12303a'; c.fillRect(0, 0, W, Ht);
-      // land mass
-      c.fillStyle = '#b8ac96';
+      c.fillStyle = '#0d1a20'; c.fillRect(0, 0, W, Ht);
+      // Land base (SA gray-green) over the whole city square.
       const [lx, ly] = toMap(-460, -460);
+      c.fillStyle = '#8b9a78';
       c.fillRect(lx, ly, S, S);
-      // ocean strip west
-      c.fillStyle = '#1a7f8e';
+      // Ocean west of the land + tan beach strip on the edge.
+      c.fillStyle = '#4d8fb5';
       c.fillRect(0, 0, lx, Ht);
-      // district blocks + labels
-      for (const [x0, z0, x1, z1, name] of DISTRICTS) {
-        const [ax, ay] = toMap(x0, z0);
-        const [bx, by] = toMap(x1, z1);
-        c.fillStyle = 'rgba(90,110,70,0.25)';
-        c.fillRect(ax, ay, bx - ax, by - ay);
-        c.strokeStyle = 'rgba(255,255,255,0.25)';
-        c.strokeRect(ax, ay, bx - ax, by - ay);
-        c.fillStyle = '#fff';
-        c.font = 'bold 11px Verdana';
-        c.textAlign = 'center';
-        c.fillText(name.toUpperCase(), (ax + bx) / 2, (ay + by) / 2);
+      c.fillStyle = '#d9c08a';
+      c.fillRect(lx, ly, m2p(40), S);
+      // --- Building blocks: one white block per road cell, inset by the
+      // road half-width, with a light-gray roof detail inside. ---
+      const cell = (ix, iz) => {
+        const a = crossing(ROADS.ns[ix], ROADS.ew[iz]);
+        const b = crossing(ROADS.ns[ix + 1], ROADS.ew[iz]);
+        const d = crossing(ROADS.ns[ix + 1], ROADS.ew[iz + 1]);
+        const e = crossing(ROADS.ns[ix], ROADS.ew[iz + 1]);
+        return [a, b, d, e];
+      };
+      const insetPoly = (pts, m) => {
+        const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
+        const cz = pts.reduce((s, p) => s + p.z, 0) / pts.length;
+        return pts.map((p) => {
+          const dx = p.x - cx, dz = p.z - cz;
+          const len = Math.hypot(dx, dz) || 1;
+          return { x: p.x - (dx / len) * m, z: p.z - (dz / len) * m };
+        });
+      };
+      const poly = (pts) => {
+        c.beginPath();
+        pts.forEach((p, i) => { const [mx, mz] = toMap(p.x, p.z); if (i === 0) c.moveTo(mx, mz); else c.lineTo(mx, mz); });
+        c.closePath();
+      };
+      for (let ix = 0; ix < ROADS.ns.length - 1; ix++) {
+        for (let iz = 0; iz < ROADS.ew.length - 1; iz++) {
+          const pts = cell(ix, iz);
+          // skip the roundabout cell — the island reads as road, not block
+          const midX = pts.reduce((s, p) => s + p.x, 0) / 4;
+          const midZ = pts.reduce((s, p) => s + p.z, 0) / 4;
+          if (Math.hypot(midX - ROUNDABOUT.cx, midZ - ROUNDABOUT.cz) < 55) continue;
+          poly(insetPoly(pts, 8));
+          c.fillStyle = '#f4f4f4'; c.fill();
+          poly(insetPoly(pts, 20));
+          c.fillStyle = '#dcdcdc'; c.fill();
+          // tiny roof details: two small gray squares inside the block
+          const in1 = insetPoly(pts, 34);
+          poly([in1[0], { x: in1[0].x + 14, z: in1[0].z }, { x: in1[0].x + 14, z: in1[0].z + 14 }, { x: in1[0].x, z: in1[0].z + 14 }]);
+          c.fillStyle = '#c4c4c4'; c.fill();
+        }
       }
-      // roads
-      c.strokeStyle = '#e8d27a'; c.lineWidth = 3;
-      const strokeRoad = (pts) => {
+      // --- Parks + golf + stadium. ---
+      c.fillStyle = '#5f9a4a';
+      {
+        const [ax, ay] = toMap(GOLF_RECT[0], GOLF_RECT[1]);
+        const [bx, by] = toMap(GOLF_RECT[2], GOLF_RECT[3]);
+        c.fillRect(ax, ay, bx - ax, by - ay);
+        c.fillStyle = '#7ab85e';
+        c.fillRect(ax + 12, ay + 10, (bx - ax) - 24, 14); // fairway
+        c.fillStyle = '#e8dd9a';
+        c.beginPath(); c.arc(ax + 30, ay + 60, 6, 0, Math.PI * 2); c.fill();
+        c.beginPath(); c.arc(bx - 30, by - 40, 6, 0, Math.PI * 2); c.fill();
+      }
+      // two neighbourhood parks
+      c.fillStyle = '#5f9a4a';
+      {
+        const [ax, ay] = toMap(-60, 100);
+        c.fillRect(ax, ay, m2p(90), m2p(60));
+        const [bx, by] = toMap(220, -260);
+        c.fillRect(bx, by, m2p(70), m2p(50));
+      }
+      // stadium: white oval with a gray ring
+      {
+        const [sx, sy] = toMap(STADIUM.x, STADIUM.z);
+        c.fillStyle = '#f4f4f4';
+        c.beginPath(); c.ellipse(sx, sy, m2p(STADIUM.r), m2p(STADIUM.r) * 0.8, 0, 0, Math.PI * 2); c.fill();
+        c.strokeStyle = '#9a9a9a'; c.lineWidth = 3;
+        c.beginPath(); c.ellipse(sx, sy, m2p(STADIUM.r) * 0.6, m2p(STADIUM.r) * 0.45, 0, 0, Math.PI * 2); c.stroke();
+      }
+      // --- Roads: black lines, hierarchy thick -> thin. ---
+      const strokePts = (pts, width) => {
+        c.strokeStyle = '#111111'; c.lineWidth = width; c.lineJoin = 'round';
         c.beginPath();
         pts.forEach(([x, z], i) => { const [mx, mz] = toMap(x, z); if (i === 0) c.moveTo(mx, mz); else c.lineTo(mx, mz); });
         c.stroke();
       };
+      // minor streets first (thin, under the majors)
+      c.lineWidth = 2;
+      for (const [ax, az, bx, bz] of MINOR_SEGS) strokePts([[ax, az], [bx, bz]], 2);
+      // freeway ring (thick black band with a gray median)
+      {
+        const pts = FREEWAY.pts.map((p) => [p.x, p.z]);
+        pts.push(pts[0]);
+        strokePts(pts, 6);
+        c.strokeStyle = '#8a8a8a'; c.lineWidth = 2;
+        c.beginPath();
+        pts.forEach(([x, z], i) => { const [mx, mz] = toMap(x, z); if (i === 0) c.moveTo(mx, mz); else c.lineTo(mx, mz); });
+        c.stroke();
+      }
+      // major avenues
       for (const road of ROADS.ns) {
         const pts = [];
         for (let z = -460; z <= 460; z += 20) pts.push([nsPlain(road, z), z]);
-        strokeRoad(pts);
+        strokePts(pts, 5);
       }
       for (const road of ROADS.ew) {
         const pts = [];
         for (let x = -460; x <= 460; x += 20) pts.push([x, ewPlain(road, x)]);
-        strokeRoad(pts);
+        strokePts(pts, 5);
       }
-      for (const [ax, az, bx, bz] of DIAGONALS) strokeRoad([[ax, az], [bx, bz]]);
+      for (const [ax, az, bx, bz] of DIAGONALS) strokePts([[ax, az], [bx, bz]], 4);
       {
         const [rx, rz] = toMap(ROUNDABOUT.cx, ROUNDABOUT.cz);
-        c.beginPath(); c.arc(rx, rz, (ROUNDABOUT.r / 920) * S, 0, Math.PI * 2); c.stroke();
+        c.strokeStyle = '#111111'; c.lineWidth = 5;
+        c.beginPath(); c.arc(rx, rz, m2p(ROUNDABOUT.r), 0, Math.PI * 2); c.stroke();
       }
-      // markers
+      // rail line (dark red, like SA)
+      {
+        const [ax, ay] = toMap(RAIL_X, -460);
+        const [bx, by] = toMap(RAIL_X, 460);
+        c.strokeStyle = '#7a2a2a'; c.lineWidth = 3;
+        c.beginPath(); c.moveTo(ax, ay); c.lineTo(bx, by); c.stroke();
+      }
+      // --- District labels: bold white with a black outline. Narrow
+      // districts (the beach strips) get their label shifted right into
+      // the land instead of centred off the edge.
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      for (const [x0, z0, x1, z1, name] of DISTRICTS) {
+        const [ax, ay] = toMap(x0, z0);
+        const [bx, by] = toMap(x1, z1);
+        const w = bx - ax;
+        const cx = w < 70 ? bx + 34 : (ax + bx) / 2;
+        c.font = `bold ${w < 90 ? 10 : 13}px Verdana`;
+        c.lineWidth = 4; c.strokeStyle = '#111111';
+        c.strokeText(name.toUpperCase(), cx, (ay + by) / 2);
+        c.fillStyle = '#ffffff';
+        c.fillText(name.toUpperCase(), cx, (ay + by) / 2);
+      }
+      // --- Markers + labels (white with black outline). ---
       const dot = (x, z, color, r = 5) => {
         const [mx, mz] = toMap(x, z);
         c.fillStyle = color;
         c.beginPath(); c.arc(mx, mz, r, 0, Math.PI * 2); c.fill();
+        c.strokeStyle = '#111111'; c.lineWidth = 2; c.stroke();
       };
-      const label = (x, z, text) => {
+      const label = (x, z, text, dy = -10) => {
         const [mx, mz] = toMap(x, z);
-        c.fillStyle = '#fff'; c.font = 'bold 10px Verdana'; c.textAlign = 'center';
-        c.fillText(text, mx, mz - 8);
+        c.font = 'bold 10px Verdana';
+        c.lineWidth = 3; c.strokeStyle = '#111111';
+        c.strokeText(text, mx, mz + dy);
+        c.fillStyle = '#ffffff';
+        c.fillText(text, mx, mz + dy);
       };
-      // points of interest (original Ember Bay spots)
-      dot(-300, 300, '#7dff5e'); label(-300, 300, 'SAFEHOUSE');
-      dot(200, -300, '#7dff5e'); label(200, -300, 'SAFEHOUSE');
+      // green safehouse icons (house = square + roof triangle)
+      const house = (x, z) => {
+        const [mx, mz] = toMap(x, z);
+        c.fillStyle = '#7dff5e';
+        c.fillRect(mx - 5, mz - 2, 10, 8);
+        c.beginPath(); c.moveTo(mx - 6, mz - 2); c.lineTo(mx, mz - 8); c.lineTo(mx + 6, mz - 2); c.closePath(); c.fill();
+        c.strokeStyle = '#111111'; c.lineWidth = 1.5; c.stroke();
+      };
+      house(-300, 300); label(-300, 300, 'SAFEHOUSE');
+      house(200, -300); label(200, -300, 'SAFEHOUSE');
       dot(150, 150, '#ff9de2'); label(150, 150, 'EMBER ARMS');
       dot(-100, 300, '#2fd8ff'); label(-100, 300, 'SPRAY & GO');
       dot(350, -350, '#ffd24d', 6); label(350, -350, 'MIDNIGHT MILE');
       dot(0, 200, '#ffffff'); label(0, 200, 'EMBER GENERAL');
       dot(0, 0, '#6ec6ff'); label(0, 0, 'EBPD HQ');
-      dot(-60, -60, '#ffe14d', 6); label(-60, -60, "MARA'S BAR");
+      dot(-60, -60, '#ffe14d', 6); label(-60, -60, "MARA'S BAR", 16);
       // remaining tapes
       c.fillStyle = '#ff6fa5';
       for (const t of G.tapes.items.slice(0, 6)) {
@@ -267,6 +433,7 @@ export function initHud(G) {
       c.rotate(Math.atan2(Math.sin(G.playerHeading), Math.cos(G.playerHeading)));
       c.fillStyle = '#ff2d55';
       c.beginPath(); c.moveTo(0, -9); c.lineTo(7, 8); c.lineTo(-7, 8); c.closePath(); c.fill();
+      c.strokeStyle = '#111111'; c.lineWidth = 1.5; c.stroke();
       c.restore();
     },
     update(dt) {

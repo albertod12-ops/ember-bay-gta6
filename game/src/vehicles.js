@@ -91,7 +91,7 @@ function lamps(g, frontZ, rearZ, y = 0.85) {
 
 // v7 sports wheel: bigger rim, 7 thin spokes, big brake disc + coloured
 // caliper — the wheel reads as a supercar wheel from the side and rear.
-function sportWheel(r = 0.46, caliperColor = 0xffc21c) {
+export function sportWheel(r = 0.46, caliperColor = 0xffc21c) {
   const g = new THREE.Group();
   const tire = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.32, 18), std(0x141414, { roughness: 0.92, metalness: 0 }));
   tire.rotation.z = Math.PI / 2;

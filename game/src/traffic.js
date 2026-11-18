@@ -17,27 +17,27 @@ function laneOffset(axis, dir) {
   return dir > 0 ? 3.5 : -3.5;
 }
 
+import { makePerson } from './people.js';
+
+// v9: peds built by makePerson — real proportions, varied skin / shirts /
+// hair / hats, sneakers with soles. Same pivot names (hipL/hipR) so the
+// walk swing below keeps working.
 function pedFigure(G, x, z) {
   const rng = G.rng;
-  const g = new THREE.Group();
-  const skin = [0xd9a066, 0xb07a4a, 0xe8b98a, 0x8a5a34][rng.int(0, 3)];
-  const shirt = [0xd83a2a, 0x2a6fd8, 0x2fae4e, 0xe8b820, 0x8a6fd8, 0xdddddd, 0x222831][rng.int(0, 6)];
-  const std = (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.85 });
-  const legL = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.8, 0.3), std(0x2a3a5a));
-  const legR = legL.clone();
-  const hipL = new THREE.Group(); hipL.position.set(-0.18, 0.8, 0); hipL.add(legL); legL.position.y = -0.4;
-  const hipR = new THREE.Group(); hipR.position.set(0.18, 0.8, 0); hipR.add(legR); legR.position.y = -0.4;
-  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.95, 0.45), std(shirt));
-  torso.position.y = 1.3;
-  const head = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.46, 0.46), std(skin));
-  head.position.y = 2.05;
-  g.add(hipL, hipR, torso, head);
-  if (rng.chance(0.4)) {
-    const hat = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.14, 0.52), std(rng.pick([0xe02030, 0x222831, 0xe8b820])));
-    hat.position.y = 2.32; g.add(hat);
-  }
+  const fig = makePerson(G, {
+    skin: rng.pick([0xd9a066, 0xb07a4a, 0xe8b98a, 0x8a5a34]),
+    shirt: rng.pick([0xd83a2a, 0x2a6fd8, 0x2fae4e, 0xe8b820, 0x8a6fd8, 0xdddddd, 0x222831]),
+    shirt2: rng.chance(0.4) ? rng.pick([0xffffff, 0x222831, 0xd83a2a]) : null,
+    pants: rng.pick([0x2a3a5a, 0x3a3a3a, 0x5a4a3a, 0x2a4a2a]),
+    shoes: rng.pick([0x222222, 0x8a2a2a, 0xdddddd, 0x2a3a5a]),
+    hair: rng.pick([0x14141c, 0x3a2a1a, 0x8a8a8a, 0xe8c820, 0x2a1410]),
+    hairStyle: rng.pick(['short', 'short', 'long', 'bald', 'bandana']),
+    hat: rng.chance(0.35) ? rng.pick([0xe02030, 0x222831, 0xe8b820]) : null,
+    jacket: rng.chance(0.25) ? rng.pick([0x2a6fd8, 0x8a6fd8, 0x3a3a3a]) : null,
+  });
+  const g = fig.group;
   g.position.set(x, 0, z);
-  return { group: g, hipL, hipR, pos: new THREE.Vector3(x, 0, z), target: new THREE.Vector3(x, 0, z), speed: rng.range(1.2, 2.4), phase: rng.range(0, 6) };
+  return { group: g, hipL: fig.hipL, hipR: fig.hipR, pos: new THREE.Vector3(x, 0, z), target: new THREE.Vector3(x, 0, z), speed: rng.range(1.2, 2.4), phase: rng.range(0, 6) };
 }
 
 function lightState(light, t) {

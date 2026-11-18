@@ -14,6 +14,7 @@ import { initHud } from './hud.js';
 import { initAudio } from './audio.js';
 import { initTapes } from './collectibles.js';
 import { initDriftFX } from './drift.js';
+import { makePerson } from './people.js';
 import { stageShot, updateShot, installDebugApi } from './shots.js';
 
 const params = new URLSearchParams(location.search);
@@ -274,21 +275,18 @@ tracer.visible = false;
 scene.add(tracer);
 G._flash = { light: flashLight, tracer, t: 0 };
 
-// Hostile crew NPCs (red shirts, standing) — for the boss fight staging.
+// Hostile crew NPCs — v9: real figures via makePerson (red shirts, caps,
+// varied skin/hair), ~1.8 m like the player instead of 2.5 m boxes.
 G.spawnCrew = (x, z, count = 3) => {
-  const mat = (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.85 });
+  const skins = [0xd9a066, 0xb07a4a, 0xe8b98a];
+  const hairs = [0x14141c, 0x3a2a1a, 0x8a8a8a];
   for (let i = 0; i < count; i++) {
-    const g = new THREE.Group();
-    const legL = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.85, 0.3), mat(0x222831));
-    legL.position.set(-0.2, 0.43, 0);
-    const legR = legL.clone(); legR.position.x = 0.2;
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.95, 1.05, 0.5), mat(0xc22a2a));
-    torso.position.y = 1.4;
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), mat(0xd9a066));
-    head.position.y = 2.2;
-    const cap = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.16, 0.56), mat(0x14161c));
-    cap.position.y = 2.5;
-    g.add(legL, legR, torso, head, cap);
+    const fig = makePerson(G, {
+      skin: skins[i % skins.length], shirt: 0xc22a2a, shirt2: 0x222831,
+      pants: 0x222831, shoes: 0x222222, hair: hairs[i % hairs.length],
+      hairStyle: 'cap', hat: 0x14161c, jacket: null,
+    });
+    const g = fig.group;
     const px = x + (i - (count - 1) / 2) * 4;
     const pz = z + (i % 2) * 3;
     g.position.set(px, 0, pz);
@@ -315,11 +313,11 @@ G.shoot = () => {
   const h = G.playerHeading;
   const fx = Math.sin(h), fz = Math.cos(h);
   const gx = G.playerPos.x + fx * 1.4, gz = G.playerPos.z + fz * 1.4;
-  flashLight.position.set(gx, 1.6, gz);
+  flashLight.position.set(gx, 1.35, gz);
   flashLight.intensity = 80;
   const tp = tracer.geometry.attributes.position;
-  tp.setXYZ(0, gx, 1.55, gz);
-  tp.setXYZ(1, G.playerPos.x + fx * 50, 1.4, G.playerPos.z + fz * 50);
+  tp.setXYZ(0, gx, 1.32, gz);
+  tp.setXYZ(1, G.playerPos.x + fx * 50, 1.25, G.playerPos.z + fz * 50);
   tp.needsUpdate = true;
   tracer.material.opacity = 0.9;
   tracer.visible = true;
@@ -467,8 +465,8 @@ function loop() {
   const inp = input();
   if (G.mode === 'playing' && !G.mapOpen) {
     if (G.vehicle) {
-      // Cover shot: stage a real handbrake drift (W + Space + steer).
-      const inp2 = G.shot === 'cover' ? { ...inp, f: true, brake: true, l: true } : inp;
+      // Cover / title shots: stage a real handbrake drift (W + Space + steer).
+      const inp2 = (G.shot === 'cover' || G.shot === 'title') ? { ...inp, f: true, brake: true, l: true } : inp;
       G.vehicle.update(dt, inp2);
       G.playerHeading = G.vehicle.heading;
     } else {

@@ -2,7 +2,7 @@
 // Police-Maverick-style helicopter at 3+ stars, roadblocks at 4+ stars, and
 // the EBPD RESPONSE panel data the HUD shows.
 import * as THREE from 'three';
-import { makeBike } from './vehicles.js';
+import { makeBike, sportWheel } from './vehicles.js';
 
 const CALLSIGNS = ['KESTREL-39', 'FALCON-12', 'VIPER-07', 'COBRA-21', 'HAVOC-55'];
 
@@ -15,62 +15,79 @@ function box(w, h, d, material, x, y, z, parent) {
   parent.add(m);
   return m;
 }
-function wheel(r = 0.42) {
-  const g = new THREE.Group();
-  const tire = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.3, 14), std(0x141414, { roughness: 0.92, metalness: 0 }));
-  tire.rotation.z = Math.PI / 2;
-  g.add(tire);
-  const rim = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.62, r * 0.62, 0.32, 10), std(0xc8c8c8, { metalness: 0.85, roughness: 0.25 }));
-  rim.rotation.z = Math.PI / 2;
-  g.add(rim);
-  const hub = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.14, r * 0.14, 0.34, 8), std(0x222222));
-  hub.rotation.z = Math.PI / 2;
-  g.add(hub);
-  return g;
-}
 
-// Police sedan after the same side profile as the traffic sedans:
-// long hood, glasshouse with pillars, short trunk, white doors.
-function makePoliceCar(G) {
+// Police interceptor — v9 sports-sedan rebuild: the same low wide wedge
+// as the v7 sports car (sloping nose, short rear deck, 7-spoke rims with
+// brake discs), in black with white doors, light bar, push bar and door
+// band. The old boxy sedan is gone — the unit now reads as a real
+// high-performance police car from every angle.
+export function makePoliceCar(G) {
   const g = new THREE.Group();
   const black = std(0x14161c);
-  const white = std(0xf2f2f2, { roughness: 0.4 });
+  // White doors: a cool emissive keeps them reading white under the
+  // warm night streetlights (without it they tinted yellow and the
+  // interceptor read as a taxi). Full-length panels, classic black-
+  // and-white.
+  const white = std(0xf2f2f2, { roughness: 0.4, emissive: 0x8a94a8, emissiveIntensity: 0.25 });
   const glass = std(0x14202e, { roughness: 0.12, metalness: 0.65 });
   const dark = std(0x1a1a1a, { roughness: 0.8 });
   const chrome = std(0xd8d8d8, { metalness: 0.9, roughness: 0.2 });
-  box(2.0, 0.5, 4.6, black, 0, 0.55, 0, g); // lower body
-  box(1.95, 0.1, 1.5, black, 0, 0.85, 1.5, g, 0.1, 0, 0); // hood slope
-  box(2.0, 0.35, 0.35, dark, 0, 0.43, 2.2, g); // front valance
-  box(2.0, 0.35, 0.35, dark, 0, 0.43, -2.2, g); // rear valance
-  box(1.75, 0.55, 2.1, glass, 0, 1.08, -0.35, g); // glasshouse
-  box(1.8, 0.08, 1.9, black, 0, 1.38, -0.35, g); // roof
-  box(1.7, 0.05, 0.85, glass, 0, 1.15, 0.68, g, 0.5, 0, 0); // windshield
-  box(1.7, 0.05, 0.8, glass, 0, 1.13, -1.38, g, -0.42, 0, 0); // rear glass
-  box(0.08, 0.55, 0.1, dark, -0.88, 1.08, -0.35, g); // B-pillar L
-  box(0.08, 0.55, 0.1, dark, 0.88, 1.08, -0.35, g); // B-pillar R
-  box(1.95, 0.42, 0.95, black, 0, 0.83, -1.82, g); // trunk
-  box(2.12, 0.5, 1.6, white, 0, 0.85, 0.2, g); // white doors
-  box(2.04, 0.06, 4.3, chrome, 0, 0.77, 0, g); // character line
-  box(0.14, 0.1, 0.2, dark, -1.08, 1.08, 0.72, g); // mirror L
-  box(0.14, 0.1, 0.2, dark, 1.08, 1.08, 0.72, g); // mirror R
+  const wheels = [];
+  const addSportWheel = (x, z) => {
+    const w = sportWheel(0.46, 0xffc21c);
+    w.position.set(x, 0.46, z);
+    g.add(w); wheels.push(w);
+  };
+  // Low wedge body, like the sports car.
+  box(2.2, 0.42, 4.8, black, 0, 0.55, 0, g); // main body
+  box(2.1, 0.3, 1.3, black, 0, 0.5, 1.85, g, -0.16, 0, 0); // sloping nose
+  box(2.15, 0.34, 0.9, black, 0, 0.62, -1.95, g); // rear deck
+  box(2.22, 0.12, 4.6, dark, 0, 0.32, 0, g); // black side skirt / splitter
+  // White doors (the classic black-and-white) with a thin dark band.
+  box(0.06, 0.46, 2.4, white, -1.06, 0.72, 0.15, g);
+  box(0.06, 0.46, 2.4, white, 1.06, 0.72, 0.15, g);
+  box(0.065, 0.08, 2.4, dark, -1.07, 0.5, 0.15, g);
+  box(0.065, 0.08, 2.4, dark, 1.07, 0.5, 0.15, g);
+  // Low canopy: raked windshield, tinted glass, slim roof.
+  box(1.7, 0.38, 1.5, glass, 0, 0.95, -0.15, g);
+  box(1.75, 0.07, 1.4, black, 0, 1.16, -0.2, g); // roof
+  box(1.66, 0.05, 0.9, glass, 0, 0.92, 0.62, g, 0.55, 0, 0); // windshield
+  box(1.66, 0.05, 0.7, glass, 0, 0.9, -0.92, g, -0.5, 0, 0); // rear glass
+  box(0.08, 0.38, 0.1, dark, -0.86, 0.95, -0.15, g); // B-pillar L
+  box(0.08, 0.38, 0.1, dark, 0.86, 0.95, -0.15, g); // B-pillar R
+  // Slim mirrors on stalks + door handles.
+  box(0.05, 0.05, 0.2, dark, -1.06, 0.98, 0.55, g);
+  box(0.05, 0.05, 0.2, dark, 1.06, 0.98, 0.55, g);
+  box(0.16, 0.09, 0.18, black, -1.12, 1.0, 0.55, g);
+  box(0.16, 0.09, 0.18, black, 1.12, 1.0, 0.55, g);
+  box(0.04, 0.05, 0.26, chrome, -1.06, 0.72, -0.1, g);
+  box(0.04, 0.05, 0.26, chrome, 1.06, 0.72, -0.1, g);
+  // Push bar up front + grille slit.
   box(2.0, 0.5, 0.14, std(0x888888, { metalness: 0.8, roughness: 0.3 }), 0, 0.6, 2.4, g); // push bar
-  // light bar: red left, blue right, flashing
-  const red = box(0.7, 0.22, 0.4, std(0xff2211, { emissive: 0xff2211, emissiveIntensity: 2 }), -0.45, 1.98, -0.2, g);
-  const blue = box(0.7, 0.22, 0.4, std(0x2244ff, { emissive: 0x2244ff, emissiveIntensity: 2 }), 0.45, 1.98, -0.2, g);
-  box(1.7, 0.1, 0.5, std(0x222222), 0, 1.86, -0.2, g);
-  for (const [x, z] of [[-1.05, 1.45], [1.05, 1.45], [-1.05, -1.45], [1.05, -1.45]]) {
-    const w = wheel(); w.position.set(x, 0.42, z); g.add(w);
+  box(1.0, 0.12, 0.08, dark, 0, 0.5, 2.44, g);
+  // Rear diffuser + twin exhausts.
+  box(1.9, 0.24, 0.28, dark, 0, 0.34, -2.38, g);
+  for (const ex of [-0.35, 0.35]) {
+    const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.2, 8), chrome);
+    tip.rotation.x = Math.PI / 2; tip.position.set(ex, 0.42, -2.5); g.add(tip);
   }
-  const lamp = std(0xfff2b0, { emissive: 0xffe9a0, emissiveIntensity: 1 });
-  box(0.55, 0.16, 0.1, lamp, -0.68, 0.85, 2.32, g, 0, -0.2, 0);
-  box(0.55, 0.16, 0.1, lamp, 0.68, 0.85, 2.32, g, 0, 0.2, 0);
-  const tail = std(0xd81a1a, { emissive: 0xaa0000, emissiveIntensity: 0.9 });
-  box(0.6, 0.16, 0.1, tail, -0.65, 0.89, -2.32, g);
-  box(0.6, 0.16, 0.1, tail, 0.65, 0.89, -2.32, g);
-  return { group: g, red, blue, wheels: [] };
+  // light bar: red left, blue right, flashing
+  const red = box(0.7, 0.22, 0.4, std(0xff2211, { emissive: 0xff2211, emissiveIntensity: 2 }), -0.45, 1.5, -0.2, g);
+  const blue = box(0.7, 0.22, 0.4, std(0x2244ff, { emissive: 0x2244ff, emissiveIntensity: 2 }), 0.45, 1.5, -0.2, g);
+  box(1.7, 0.1, 0.5, std(0x222222), 0, 1.38, -0.2, g);
+  addSportWheel(-1.02, 1.5); addSportWheel(1.02, 1.5);
+  addSportWheel(-1.02, -1.5); addSportWheel(1.02, -1.5);
+  // Y-shaped headlights + full-width rear light bar.
+  const head = std(0xfff2b0, { emissive: 0xffe9a0, emissiveIntensity: 1.4 });
+  box(0.6, 0.12, 0.08, head, -0.7, 0.62, 2.42, g, 0, -0.45, 0);
+  box(0.6, 0.12, 0.08, head, 0.7, 0.62, 2.42, g, 0, 0.45, 0);
+  const tailBar = std(0xd81a1a, { emissive: 0xaa0000, emissiveIntensity: 1.1 });
+  box(1.9, 0.12, 0.08, tailBar, 0, 0.72, -2.42, g);
+  g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; } });
+  return { group: g, red, blue, wheels };
 }
 
-function makeHeli(G) {
+export function makeHeli(G) {
   const g = new THREE.Group();
   const body = std(0x1c2733, { roughness: 0.4, metalness: 0.4 });
   box(2.4, 1.8, 4.4, body, 0, 0, 0, g);

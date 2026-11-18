@@ -1,34 +1,17 @@
-// The player on foot: orange jacket, red cap. Walk / run with leg swing,
-// movement relative to the camera heading.
+// The player on foot: Mara Voss — orange jacket over a dark tee, jeans,
+// red cap. Walk / run with leg swing, movement relative to the camera
+// heading. Figure built by makePerson (v9): real proportions, ~1.8 m.
 import * as THREE from 'three';
-
-const SKIN = 0xd9a066;
-const JACKET = 0xff7a1a;
-const PANTS = 0x2a3a5a;
-const CAP = 0xe02030;
+import { makePerson } from './people.js';
 
 export function createPlayer(G) {
-  const g = new THREE.Group();
-  const mat = (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.8 });
-  const legL = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.85, 0.34), mat(PANTS));
-  const legR = legL.clone();
-  legL.position.set(-0.2, 0.43, 0); legR.position.set(0.2, 0.43, 0);
-  // pivot legs at the hip: wrap each in a group positioned at hip height.
-  const hipL = new THREE.Group(); hipL.position.set(-0.2, 0.85, 0); hipL.add(legL); legL.position.y = -0.43;
-  const hipR = new THREE.Group(); hipR.position.set(0.2, 0.85, 0); hipR.add(legR); legR.position.y = -0.43;
-  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.95, 1.05, 0.5), mat(JACKET));
-  torso.position.y = 1.4;
-  const armL = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.85, 0.26), mat(JACKET));
-  const armR = armL.clone();
-  const shL = new THREE.Group(); shL.position.set(-0.62, 1.85, 0); shL.add(armL); armL.position.y = -0.42;
-  const shR = new THREE.Group(); shR.position.set(0.62, 1.85, 0); shR.add(armR); armR.position.y = -0.42;
-  const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), mat(SKIN));
-  head.position.y = 2.2;
-  const cap = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.16, 0.56), mat(CAP));
-  cap.position.y = 2.5;
-  const brim = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.06, 0.3), mat(CAP));
-  brim.position.set(0, 2.44, 0.38);
-  g.add(hipL, hipR, torso, shL, shR, head, cap, brim);
+  const fig = makePerson(G, {
+    skin: 0xd9a066, shirt: 0x2a2a2a, shirt2: 0x2a2a2a, pants: 0x2a3a5a,
+    shoes: 0x222222, hair: 0x14141c, hairStyle: 'cap', hat: 0xe02030,
+    jacket: 0xff7a1a,
+  });
+  const g = fig.group;
+  const { hipL, hipR, shL, shR } = fig;
 
   const P = {
     group: g,
