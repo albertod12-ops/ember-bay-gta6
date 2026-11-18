@@ -1,7 +1,3 @@
-// Ember Bay v5 — recorded re-apply under R7; behaviour unchanged
-// Ember Bay city v5: an organic coastal city — curved avenues, diagonal
-// boulevards, a curved coast road, a roundabout, plazas, varied blocks.
-// Everything is built from a seeded RNG, so a fixed seed builds the same city.
 import * as THREE from 'three';
 
 export const WORLD = { min: -460, max: 460 };
@@ -33,9 +29,6 @@ export function districtAt(x, z) {
 }
 
 // --- Road network ---------------------------------------------------------
-// A road bends gently: centre(along) = base + amp * sin(along * freq + phase).
-// NS roads run along z (centre is an x), EW roads along x (centre is a z).
-// Spacing is uneven on purpose: blocks come in many sizes, like a real city.
 export const ROADS = {
   ns: [
     { base: -440, amp: 14, freq: Math.PI / 520, phase: 0.4 }, // coast road
@@ -57,8 +50,6 @@ export const ROAD_W = 14;
 export const RB_R = 18; // roundabout bulge: how far the road swings around the island
 export const RB_ISLAND = 10; // roundabout island radius
 
-// Diagonal avenues: [x0, z0, x1, z1]. Visual boulevards with parked cars
-// and pedestrians — no traffic lanes, so they read as grand diagonals.
 export const DIAGONALS = [
   [-430, 300, 300, -430], // Sunset Diagonal, NW-SE across the city
   [180, 260, 420, 430], // Docks Diagonal, short, through Craneside
@@ -80,11 +71,6 @@ export const ROUNDABOUT = (() => {
   return { cx: c.x, cz: c.z, r: RB_R };
 })();
 
-// --- Minor streets (visual layer) ----------------------------------------
-// A thin street down the middle of every big block, so the map reads as a
-// dense real city (SA-map style) instead of a few huge empty slabs. They
-// are visual only — traffic stays on the six major avenues. Segments are
-// [x0, z0, x1, z1]; buildings keep clear of them (see place() in buildCity).
 export const MINOR_SEGS = (() => {
   const segs = [];
   const push = (pts) => {
@@ -113,8 +99,6 @@ export const MINOR_SEGS = (() => {
   return segs;
 })();
 
-// Freeway ring around the downtown core (SA-map style): a wide loop the
-// map reads at a glance. Visual only — traffic stays on the avenues.
 export const FREEWAY = (() => {
   const cx = 40, cz = 0, rx = 210, rz = 190;
   const pts = [];
@@ -125,14 +109,10 @@ export const FREEWAY = (() => {
   return { cx, cz, rx, rz, pts };
 })();
 
-// Landmarks (SA-map style): golf course, airport runway, stadium, rail.
 export const GOLF_RECT = [-100, 280, 160, 440]; // x0, z0, x1, z1
 export const STADIUM = { x: 330, z: 140, r: 30 };
 export const RAIL_X = 405;
 
-// Roundabout bulge: a smooth bump that swings the road around the island.
-// bump(t) is 0 at the ends and 1 in the middle, with zero slope at the ends,
-// so the road joins the straight bend smoothly on both sides.
 function bump(along, c) {
   const t = (along - (c - RB_R)) / (2 * RB_R);
   if (t <= 0 || t >= 1) return 0;
@@ -144,9 +124,6 @@ function bumpSlope(along, c) {
   return (Math.PI / (2 * RB_R)) * Math.sin(2 * Math.PI * t);
 }
 
-// Arc-aware centreline: on the two roundabout roads the centreline swings
-// around the island — east arc for +z traffic, west arc for -z traffic
-// (clockwise circulation, left-hand traffic), north/south arcs for EW.
 export function nsCenter(road, z, dir = 1) {
   let x = nsPlain(road, z);
   if (road.rb) x += dir * RB_R * bump(z, ROUNDABOUT.cz);
@@ -157,7 +134,6 @@ export function ewCenter(road, x, dir = 1) {
   if (road.rb) z -= dir * RB_R * bump(x, ROUNDABOUT.cx);
   return z;
 }
-// Tangent slope of the centreline (dx/dz for NS, dz/dx for EW).
 export function nsSlope(road, z, dir = 1) {
   let d = road.amp * road.freq * Math.cos(z * road.freq + road.phase);
   if (road.rb) d += dir * RB_R * bumpSlope(z, ROUNDABOUT.cz);
@@ -168,7 +144,6 @@ export function ewSlope(road, x, dir = 1) {
   if (road.rb) d -= dir * RB_R * bumpSlope(x, ROUNDABOUT.cx);
   return d;
 }
-// Heading of a vehicle driving along the road (forward = (sin h, cos h)).
 export function nsHeading(road, z, dir = 1) {
   const d = nsSlope(road, z, dir);
   return dir > 0 ? Math.atan2(d, 1) : Math.atan2(-d, -1);
@@ -177,7 +152,6 @@ export function ewHeading(road, x, dir = 1) {
   const d = ewSlope(road, x, dir);
   return dir > 0 ? Math.atan2(1, d) : Math.atan2(-1, -d);
 }
-// A point on a road, facing along it (dir +1 = +z for NS, +x for EW).
 export function roadPoint(axis, idx, along, dir = 1) {
   if (axis === 'ns') {
     const road = ROADS.ns[idx];
@@ -196,26 +170,19 @@ function canvasTexture(w, h, draw) {
   return t;
 }
 
-// Road surface. The length axis runs along the canvas Y, so the double-yellow
-// centre line always runs ALONG the road, never across it. The texture tiles
-// every 24 m along the ribbon (see roadRibbon).
 function roadTexture() {
   const t = canvasTexture(128, 256, (g, w, h) => {
     g.fillStyle = '#2e2e33'; g.fillRect(0, 0, w, h);
     g.fillStyle = '#33333a';
     for (let i = 0; i < 200; i++) g.fillRect(Math.random() * w, Math.random() * h, 2, 2);
-    // worn patches
     g.fillStyle = '#28282d';
     for (let i = 0; i < 6; i++) g.fillRect(Math.random() * w, Math.random() * h, 18 + Math.random() * 22, 10 + Math.random() * 18);
-    // double yellow centre
     g.fillStyle = '#e8b820';
     g.fillRect(w / 2 - 6, 0, 4, h); g.fillRect(w / 2 + 2, 0, 4, h);
-    // dashed white lane lines
     g.fillStyle = '#e8e8e8';
     for (let d = 0; d < h; d += 32) {
       g.fillRect(w / 4 - 1, d, 2, 16); g.fillRect((3 * w) / 4 - 1, d, 2, 16);
     }
-    // edge lines
     g.fillStyle = '#cccccc';
     g.fillRect(3, 0, 2, h); g.fillRect(w - 5, 0, 2, h);
   });
@@ -224,13 +191,58 @@ function roadTexture() {
   return t;
 }
 
-function windowTexture(base, lit) {
-  return canvasTexture(64, 128, (g, w, h) => {
-    g.fillStyle = base; g.fillRect(0, 0, w, h);
-    for (let y = 6; y < h - 6; y += 12) {
-      for (let x = 6; x < w - 6; x += 10) {
-        g.fillStyle = Math.random() < 0.55 ? lit : '#1c2433';
-        g.fillRect(x, y, 6, 7);
+// Facades, 4 kinds x 2 variants, seeded — no two neighbouring towers
+// share a face. 0 glass curtain wall, 1 warm windows with a different
+// lit ratio per floor, 2 big coloured night panels, 3 cream with trim.
+function facade(kind, seed) {
+  let s = (seed * 2654435761) >>> 0;
+  const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
+  return canvasTexture(128, 256, (g, w, h) => {
+    if (kind === 0) {
+      const gr = g.createLinearGradient(0, 0, 0, h);
+      gr.addColorStop(0, '#3a6a9a'); gr.addColorStop(1, '#1c3a5e');
+      g.fillStyle = gr; g.fillRect(0, 0, w, h);
+      for (let x = 0; x < w; x += 16) { g.fillStyle = '#0f1f33'; g.fillRect(x, 0, 2, h); }
+      for (let y = 0; y < h; y += 16) {
+        g.fillStyle = '#0f1f33'; g.fillRect(0, y, w, 1);
+        for (let x = 4; x < w; x += 16) {
+          const r = rnd();
+          g.fillStyle = r < 0.45 ? '#8fc4e8' : r < 0.7 ? '#cfe8ff' : r < 0.8 ? '#ffd9a0' : '#16283e';
+          g.fillRect(x, y + 3, 10, 11);
+        }
+      }
+    } else if (kind === 1) {
+      g.fillStyle = '#4a3626'; g.fillRect(0, 0, w, h);
+      const warm = ['#ffd9a0', '#ff9a40', '#ffe9b0', '#ff7a3d'];
+      for (let y = 6; y < h - 6; y += 14) {
+        const lit = 0.25 + rnd() * 0.65;
+        g.fillStyle = '#2a2018'; g.fillRect(0, y + 11, w, 3);
+        for (let x = 6; x < w - 6; x += 12) {
+          g.fillStyle = rnd() < lit ? warm[(rnd() * 4) | 0] : '#141c28';
+          g.fillRect(x, y, rnd() < 0.2 ? 16 : 8, 8);
+        }
+      }
+    } else if (kind === 2) {
+      g.fillStyle = '#141828'; g.fillRect(0, 0, w, h);
+      const cols = ['#ffd24d', '#2fd8ff', '#ff6fa5', '#7dff5e', '#ff7a3d'];
+      for (let y = 8; y < h - 8; y += 32) {
+        for (let x = 6; x < w - 6; x += 22) {
+          if (rnd() < 0.3) continue;
+          g.fillStyle = cols[(rnd() * 5) | 0];
+          g.globalAlpha = 0.55 + rnd() * 0.45;
+          g.fillRect(x, y, 16 + rnd() * 10, 22);
+        }
+        g.globalAlpha = 1;
+      }
+      g.fillStyle = '#ff2d95'; g.fillRect(0, 0, 3, h);
+    } else {
+      g.fillStyle = '#d8c8a8'; g.fillRect(0, 0, w, h);
+      for (let y = 0; y < h; y += 32) { g.fillStyle = '#a05a3a'; g.fillRect(0, y, w, 3); }
+      for (let y = 10; y < h - 6; y += 16) {
+        for (let x = 8; x < w - 6; x += 16) {
+          g.fillStyle = rnd() < 0.25 ? '#ffd9a0' : '#2a2a33';
+          g.fillRect(x, y, 8, 9);
+        }
       }
     }
   });
@@ -246,8 +258,6 @@ function billboardTexture(lines, bg, fg) {
   });
 }
 
-// v8 neon sign: glowing text on a dark panel (MeshBasicMaterial, so it
-// reads at night without a light). Original Ember Bay business names.
 function neonTexture(text, color) {
   return canvasTexture(512, 128, (g, w, h) => {
     g.fillStyle = '#0a0614'; g.fillRect(0, 0, w, h);
@@ -340,8 +350,6 @@ function makeUmbrella(rng, x, z, parent) {
   return g;
 }
 
-// A flat ribbon of road following a list of centreline points. UV v runs
-// along the road so the texture tiles every 24 m.
 function roadRibbon(points, width, material, y, parent) {
   const n = points.length;
   const pos = new Float32Array(n * 2 * 3);
@@ -375,7 +383,6 @@ function roadRibbon(points, width, material, y, parent) {
   return m;
 }
 
-// Sample a road centreline from `from` to `to` (inclusive endpoints).
 function sampleRoad(axis, road, from, to, step, dir = 1) {
   const pts = [];
   for (let a = from; a < to; a += step) {
@@ -401,7 +408,6 @@ export function buildCity(G) {
   scene.add(root);
   const out = { root, districts: DISTRICTS, lights: [], palms: [] };
 
-  // Sky dome: golden-hour gradient, warm at the horizon.
   const skyTex = canvasTexture(32, 256, (g, w, h) => {
     const grad = g.createLinearGradient(0, 0, 0, h);
     grad.addColorStop(0, '#241a4a'); grad.addColorStop(0.4, '#6e356e');
@@ -416,8 +422,6 @@ export function buildCity(G) {
   root.add(sky);
   out.sky = sky;
 
-  // Ground base (light sidewalk tone, so the map reads like the SA map:
-  // pale blocks, dark roads, green parks) + ocean + sand.
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(2400, 2400), mat(0xa39c92));
   ground.rotation.x = -Math.PI / 2; ground.position.y = -0.05;
   ground.receiveShadow = true;
@@ -433,14 +437,11 @@ export function buildCity(G) {
   sand.rotation.x = -Math.PI / 2; sand.position.set(-535, 0.5, 0);
   sand.receiveShadow = true;
   root.add(sand);
-  // Boardwalk planks along the beach edge, west of the coast road.
   const boardwalk = new THREE.Mesh(new THREE.PlaneGeometry(14, 940), mat(0x9a6b42));
   boardwalk.rotation.x = -Math.PI / 2; boardwalk.position.set(-470, 0.9, 0);
   boardwalk.receiveShadow = true;
   root.add(boardwalk);
 
-  // Roads: curved ribbons. The two roundabout roads split into two arcs
-  // around the island; a flat ring underneath fills the quadrants.
   const roadMat = new THREE.MeshStandardMaterial({ map: roadTexture(), roughness: 0.95 });
   const { cx: RBX, cz: RBZ } = ROUNDABOUT;
   for (const road of ROADS.ns) {
@@ -463,7 +464,6 @@ export function buildCity(G) {
       roadRibbon(sampleRoad('ew', road, -460, 460, 20), ROAD_W, roadMat, 0.1, root);
     }
   }
-  // Diagonal avenues (slightly above the other roads to avoid z-fighting).
   for (const [ax, az, bx, bz] of DIAGONALS) {
     const pts = [];
     const steps = 24;
@@ -472,8 +472,6 @@ export function buildCity(G) {
     }
     roadRibbon(pts, ROAD_W, roadMat, 0.11, root);
   }
-  // Minor streets: thin ribbons down the middle of every block (visual
-  // layer — the map reads dense, SA-map style, instead of empty slabs).
   const minorMat = new THREE.MeshStandardMaterial({
     map: canvasTexture(64, 128, (g, w, h) => {
       g.fillStyle = '#33333a'; g.fillRect(0, 0, w, h);
@@ -488,10 +486,7 @@ export function buildCity(G) {
     // on the map instead of being buried under the sidewalk blocks.
     roadRibbon([{ x: ax, z: az }, { x: bx, z: bz }], 8, minorMat, 0.42, root);
   }
-  // Freeway ring around the downtown core (closed loop, wide, on top —
-  // a raised freeway, SA-map style).
   roadRibbon([...FREEWAY.pts, FREEWAY.pts[0]], 20, roadMat, 0.45, root);
-  // Rail line on the east edge: two dark rails + ties + a small station.
   const railMat = mat(0x4a2a2a, { roughness: 0.9 });
   for (const rx of [RAIL_X - 2, RAIL_X + 2]) {
     const pts = [];
@@ -507,7 +502,6 @@ export function buildCity(G) {
     box(0.5, 4, 0.5, mat(0x555555), RAIL_X + 6, 2.5, pz, root);
     box(0.5, 4, 0.5, mat(0x555555), RAIL_X + 12, 2.5, pz, root);
   }
-  // Roundabout ring + island + fountain.
   const ring = new THREE.Mesh(
     new THREE.RingGeometry(RB_ISLAND - 0.5, RB_R + 8, 40),
     new THREE.MeshStandardMaterial({ map: roadTexture(), roughness: 0.95 }),
@@ -533,8 +527,6 @@ export function buildCity(G) {
     p.position.y = 0.7;
   }
 
-  // Crosswalks at eight main intersections (was four — v10: more
-  // crossings so the streets read busy, and more traffic lights too).
   const crossMat = mat(0xe8e8e8);
   const crossPts = [
     crossing(ROADS.ns[1], ROADS.ew[1]),
@@ -557,15 +549,9 @@ export function buildCity(G) {
     }
   }
 
-  // Buildings, block by block. Blocks are the irregular quadrilaterals
-  // between neighbouring curved roads — varied sizes, like a real city.
-  const winTexA = windowTexture('#3a4a63', '#ffd9a0');
-  const winTexB = windowTexture('#5a3a4a', '#ffe9b0');
-  const winTexC = windowTexture('#6a4a3a', '#ffd9a0');
-  // v10: TILE the window texture per building size — a stretched
-  // 64x128 texture over a 190 m tower made the windows 19 m tall, so
-  // close towers read as giant blank walls. Cloning + repeating keeps
-  // every window ~13 m of facade, at any height.
+  const FACADES = [0, 1, 2, 3].flatMap((k) => [facade(k, k * 7 + 1), facade(k, k * 7 + 5)]);
+  // Tile the facade per building size, so windows keep their size at any
+  // height. Emissive is white, so glass stays blue and warm stays warm.
   const towerMat = (tex, w = 20, h = 40) => {
     const t = tex.clone();
     t.wrapS = THREE.RepeatWrapping;
@@ -573,7 +559,7 @@ export function buildCity(G) {
     t.repeat.set(Math.max(1, Math.round(w / 13)), Math.max(1, Math.round(h / 13)));
     t.needsUpdate = true;
     return new THREE.MeshStandardMaterial({
-      map: t, emissiveMap: t, emissive: 0xff9a40, emissiveIntensity: 0.5,
+      map: t, emissiveMap: t, emissive: 0xffffff, emissiveIntensity: 0.35,
       roughness: 0.4, metalness: 0.35,
     });
   };
@@ -601,13 +587,9 @@ export function buildCity(G) {
       blockCenters.push([cx, cz]);
       const d = districtAt(cx, cz);
       const key = `${ix},${iz}`;
-      // v7: slabs hug the roads (14 m setback, was 22) so blocks read as
-      // built-up city from above instead of empty sidewalk.
       const slabW = Math.max(30, gapX - 14);
       const slabD = Math.max(30, gapZ - 14);
       const isPlaza = plazas.has(key);
-      // Golf course blocks (SA-map style): green + sand traps + pond +
-      // clubhouse instead of buildings.
       const inGolf = cx > GOLF_RECT[0] && cx < GOLF_RECT[2] && cz > GOLF_RECT[1] && cz < GOLF_RECT[3];
       if (inGolf) {
         const green = box(slabW, 0.4, slabD, mat(0x6fae5a), cx, 0.2, cz, root);
@@ -624,7 +606,6 @@ export function buildCity(G) {
         }
         continue;
       }
-      // Pocket parks: green + trees instead of buildings.
       if (parks.has(key)) {
         const green = box(slabW, 0.4, slabD, mat(0x5a9a4a), cx, 0.2, cz, root);
         green.receiveShadow = true;
@@ -633,9 +614,6 @@ export function buildCity(G) {
         }
         continue;
       }
-      // v7: blocks the diagonal avenue cuts through get houses in the
-      // corners clear of the road (inline clearance — place() is defined
-      // below), not just trees — no more empty blocks along the diagonal.
       const nearDiag = DIAGONALS.some(([ax, az, bx, bz]) => distToSegment(cx, cz, ax, az, bx, bz) < 42);
       if (nearDiag) {
         const clearDiag = (x, z) => {
@@ -658,7 +636,6 @@ export function buildCity(G) {
         }
         continue;
       }
-      // Block slab (sidewalk). Plazas get warm stone.
       const slab = box(slabW, 0.4, slabD, mat(isPlaza ? 0xb8a88a : rng.pick(slabTones)), cx, 0.2, cz, root);
       slab.receiveShadow = true;
       if (isPlaza) {
@@ -671,7 +648,6 @@ export function buildCity(G) {
         for (let i = 0; i < 6; i++) {
           makeTree(rng, cx + rng.range(-slabW / 2 + 8, slabW / 2 - 8), cz + rng.range(-slabD / 2 + 8, slabD / 2 - 8), root, rng.range(0.9, 1.2));
         }
-        // benches
         for (const [bx, bz, ry] of [[-8, 0, 0], [8, 0, Math.PI], [0, -8, Math.PI / 2], [0, 8, -Math.PI / 2]]) {
           const b = box(4, 0.5, 1.2, mat(0x6b4a2a), cx + bx, 0.7, cz + bz, root);
           b.rotation.y = ry; b.castShadow = true;
@@ -685,33 +661,45 @@ export function buildCity(G) {
       const place = (x, z) => {
         if (DIAGONALS.some(([ax, az, bx, bz]) => distToSegment(x, z, ax, az, bx, bz) < 16)) return false;
         if (Math.hypot(x - RBX, z - RBZ) < 30) return false;
-        // v7: houses may sit 6.5 m from a minor street (was 9) — they line
-        // the narrow streets like the dense-city references.
         if (MINOR_SEGS.some(([ax, az, bx, bz]) => distToSegment(x, z, ax, az, bx, bz) < 6.5)) return false;
         if (FREEWAY.pts.some((p) => Math.hypot(x - p.x, z - p.z) < 17)) return false;
         return true;
       };
       if (d.type === 'downtown') {
-        // v10 LIVING CITY: eight towers on a 4x2 grid (was six), much
-        // taller (70-190 m, was 40-120) with varied heights, rooftop
-        // AC boxes and antennas on the tallest — the skyline reads as a
-        // real city wall from the street, not a toy town. Plus two
-        // mid-rise slabs filling the gaps.
         for (let i = 0; i < 8; i++) {
           const w = rng.range(16, 26), dep = rng.range(16, 26), hgt = rng.range(70, 190);
           const hx = cx + ((i % 4) - 1.5) * slabW / 4 + rng.range(-5, 5);
           const hz = cz + (i < 4 ? -1 : 1) * slabD / 4 + rng.range(-5, 5);
           if (!place(hx, hz)) continue;
-          const t = new THREE.Mesh(
-            new THREE.BoxGeometry(w, hgt, dep),
-            towerMat(rng.chance(0.5) ? winTexA : winTexB, w, hgt),
-          );
+          const fi = (ix * 5 + iz * 3 + i * 3) % FACADES.length;
+          const stepped = i % 2 === 0;
+          const t = new THREE.Mesh(new THREE.BoxGeometry(w, hgt, dep), towerMat(FACADES[fi], w, hgt));
           t.position.set(hx, hgt / 2 + 0.4, hz);
           t.rotation.y = diagNear ? Math.PI / 4 : rng.range(-0.06, 0.06);
           t.castShadow = true; t.receiveShadow = true;
           root.add(t);
-          box(w + 2, 3, dep + 2, mat(0x2a2a33), hx, hgt + 1.5, hz, root);
-          // Rooftop detail: AC boxes + a mast on the tallest towers.
+          // Ground floor: shop podium with a coloured awning band.
+          box(w + 1.5, 4, dep + 1.5, mat([0x2fd8ff, 0xff2d95, 0xffd24d, 0x7dff5e, 0xd8c8a8][fi % 5]), hx, 2.4, hz, root);
+          // Stepped top on half the towers; a spire on the first.
+          if (stepped) {
+            const sw = w * 0.55, sd = dep * 0.55, sh = rng.range(6, 14);
+            const st = new THREE.Mesh(new THREE.BoxGeometry(sw, sh, sd), towerMat(FACADES[(fi + 1) % FACADES.length], sw, sh));
+            st.position.set(hx, hgt + sh / 2 + 0.4, hz); st.castShadow = true; root.add(st);
+          } else {
+            box(w + 2, 3, dep + 2, mat(0x2a2a33), hx, hgt + 1.5, hz, root);
+          }
+          if (i === 0) {
+            const sp = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 1.2, 22, 6), mat(0x888888));
+            sp.position.set(hx, hgt + 14, hz); sp.castShadow = true; root.add(sp);
+          }
+          // Helipad on the first flat-topped tower over 160 m.
+          if (!stepped && !G._heliPad && hgt > 160) {
+            G._heliPad = true;
+            const pad = new THREE.Mesh(new THREE.CylinderGeometry(Math.min(w, dep) * 0.45, Math.min(w, dep) * 0.45, 0.8, 16), mat(0x2a2a33));
+            pad.position.set(hx, hgt + 3.4, hz); root.add(pad);
+            box(0.8, 0.2, 6, mat(0xffffff), hx, hgt + 3.9, hz, root);
+            box(6, 0.2, 0.8, mat(0xffffff), hx, hgt + 3.9, hz, root);
+          }
           box(rng.range(3, 5), 1.6, rng.range(3, 5), mat(0x8a8a8a), hx + rng.range(-4, 4), hgt + 3.6, hz + rng.range(-4, 4), root);
           if (hgt > 140) {
             const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.5, 14, 6), mat(0x555555));
@@ -727,12 +715,17 @@ export function buildCity(G) {
           if (!place(hx, hz)) continue;
           const m = new THREE.Mesh(
             new THREE.BoxGeometry(w, hgt, dep),
-            towerMat(rng.chance(0.5) ? winTexA : winTexC, w, hgt),
+            towerMat(FACADES[(ix * 3 + iz + i * 2) % FACADES.length], w, hgt),
           );
           m.position.set(hx, hgt / 2 + 0.4, hz);
           m.rotation.y = diagNear ? Math.PI / 4 : rng.range(-0.06, 0.06);
           m.castShadow = true; m.receiveShadow = true;
           root.add(m);
+          box(w + 1.5, 4, dep + 1.5, mat([0x2fd8ff, 0xff2d95, 0xffd24d, 0x7dff5e][(ix + i) % 4]), hx, 2.4, hz, root);
+          if (rng.chance(0.5)) {
+            const tank = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, 3.4, 10), mat(0x8a7a5a));
+            tank.position.set(hx + rng.range(-5, 5), hgt + 2.1, hz + rng.range(-4, 4)); tank.castShadow = true; root.add(tank);
+          }
         }
       } else if (d.type === 'docks') {
         const cols = [0xc94f3d, 0x3d7fc9, 0x4fc94f, 0xd8a03c, 0x8a6fd8];
@@ -746,7 +739,6 @@ export function buildCity(G) {
             c.rotation.y = rng.range(-0.1, 0.1); c.castShadow = true;
           }
         }
-        // Warehouses: long low sheds with a roof ridge.
         for (let i = 0; i < 2; i++) {
           const hx = cx + (i === 0 ? -slabW / 4 : slabW / 4);
           const hz = cz + (i === 0 ? slabD / 4 : -slabD / 4);
@@ -756,7 +748,6 @@ export function buildCity(G) {
           box(32, 1, 20, mat(0x5a5a5a), hx, 8.8, hz, root);
         }
       } else if (d.type === 'beach') {
-        // v7: six beach houses (was four), 3x2 grid.
         for (let i = 0; i < 6; i++) {
           const w = rng.range(11, 16), hgt = rng.range(7, 12);
           const hx = cx + ((i % 3) - 1) * slabW / 3 + rng.range(-4, 4);
@@ -767,7 +758,6 @@ export function buildCity(G) {
         }
         makePalm(rng, cx + rng.range(-slabW / 2 + 8, slabW / 2 - 8), cz + rng.range(-slabD / 2 + 8, slabD / 2 - 8), root);
       } else if (d.type === 'hill') {
-        // v7: five hill houses (was three).
         for (let i = 0; i < 5; i++) {
           const w = rng.range(14, 20), hgt = rng.range(8, 14);
           const hx = cx + rng.range(-slabW / 2 + 10, slabW / 2 - 10);
@@ -779,8 +769,6 @@ export function buildCity(G) {
           pyramidRoof(w, 16, 4, 0x7a4a3a, hx, hgt + 0.4 + lift, hz, root);
         }
       } else {
-        // v7.1: THIRTY houses per block in a 5x6 grid (was 5x5) — tighter
-        // in z so no empty strips show between rows from above.
         const roofCols = [0xa03a2a, 0x3a5a8a, 0x4a7a3a, 0xd8a03c, 0x2a8a8a, 0x8a8a8a, 0xe8dcc0, 0xc94f3d];
         for (let i = 0; i < 30; i++) {
           const col = i % 5, row = Math.floor(i / 5);
@@ -791,8 +779,7 @@ export function buildCity(G) {
           const colr = d.type === 'hood' ? rng.pick(hoodColors) : d.type === 'brick' ? 0x9a5a44 : rng.pick(pastel);
           let b;
           if (d.type === 'brick') {
-            // v10: Old Town brick blocks taller (18-30 m, was 12-22).
-            b = new THREE.Mesh(new THREE.BoxGeometry(w, hgt, dep), towerMat(winTexC, w, hgt));
+            b = new THREE.Mesh(new THREE.BoxGeometry(w, hgt, dep), towerMat(FACADES[[2, 3, 6, 7][(ix + iz + i) % 4]], w, hgt));
             b.position.set(hx, hgt / 2 + 0.4, hz);
             root.add(b);
           } else {
@@ -803,8 +790,6 @@ export function buildCity(G) {
           if (d.type !== 'brick') pyramidRoof(w, dep, rng.range(3, 5), rng.pick(roofCols), hx, hgt + 0.4, hz, root);
           else box(w + 1, 1.2, dep + 1, mat(0x5a3a30), hx, hgt + 1, hz, root);
         }
-        // v10: six mid-rise apartment blocks per residential block
-        // (was four), taller (22-34 m, was 13-18) — no more flat roofs.
         if (d.type === 'residential' || d.type === 'marina') {
           for (let i = 0; i < 6; i++) {
             const w = rng.range(20, 26), dep = rng.range(15, 18), hgt = rng.range(22, 34);
@@ -813,17 +798,20 @@ export function buildCity(G) {
             if (!place(hx, hz)) continue;
             const m = new THREE.Mesh(
               new THREE.BoxGeometry(w, hgt, dep),
-              towerMat(rng.chance(0.5) ? winTexA : winTexB, w, hgt),
+              towerMat(FACADES[(ix * 2 + iz * 5 + i) % FACADES.length], w, hgt),
             );
             m.position.set(hx, hgt / 2 + 0.4, hz);
             m.rotation.y = diagNear ? Math.PI / 4 : localAngle + rng.range(-0.05, 0.05);
             m.castShadow = true; m.receiveShadow = true;
             root.add(m);
             box(w + 1, 1, dep + 1, mat(0x5a3a30), hx, hgt + 0.9, hz, root);
+            if (rng.chance(0.4)) {
+              const tank = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 3, 10), mat(0x8a7a5a));
+              tank.position.set(hx + rng.range(-5, 5), hgt + 2, hz + rng.range(-4, 4)); tank.castShadow = true; root.add(tank);
+            }
           }
         }
       }
-      // Beach houses along the coast road (west column of blocks).
       if (ix === 0) {
         for (let i = 0; i < 2; i++) {
           const hx = cx - slabW / 2 + 12;
@@ -839,14 +827,12 @@ export function buildCity(G) {
     }
   }
 
-  // Hillside slope mesh (north-east).
   const hill = new THREE.Mesh(new THREE.PlaneGeometry(280, 240), mat(0x7a8a5a));
   hill.rotation.x = -Math.PI / 2; hill.rotation.z = 0.05;
   hill.position.set(320, 7, -60);
   hill.receiveShadow = true;
   root.add(hill);
 
-  // Docks crane + container stacks in the eastern strip.
   const crane = new THREE.Group();
   box(4, 46, 4, mat(0xd8a03c), 0, 23, 0, crane);
   box(4, 46, 4, mat(0xd8a03c), 26, 23, 0, crane);
@@ -861,7 +847,6 @@ export function buildCity(G) {
   const dockCols = [0xc94f3d, 0x3d7fc9, 0x4fc94f, 0xd8a03c];
   for (let i = 0; i < 10; i++) {
     const hx = rng.range(345, 435), hz = rng.range(80, 430);
-    // Keep the docks clear of the runway strip and the stadium.
     if (hx > 220 && hx < 440 && hz > 360 && hz < 400) continue;
     if (Math.hypot(hx - STADIUM.x, hz - STADIUM.z) < 42) continue;
     const stack = rng.int(1, 3);
@@ -871,8 +856,6 @@ export function buildCity(G) {
     }
   }
 
-  // Ember Bay International — runway, terminal, tower, parked planes
-  // (SA-map style landmark in the south-east corner).
   const runway = new THREE.Mesh(new THREE.PlaneGeometry(220, 26), mat(0x2a2a30, { roughness: 0.95 }));
   runway.rotation.x = -Math.PI / 2; runway.position.set(330, 0.12, 380);
   runway.receiveShadow = true; root.add(runway);
@@ -892,7 +875,6 @@ export function buildCity(G) {
   tower.position.set(395, 13, 330); tower.castShadow = true; root.add(tower);
   const cab = new THREE.Mesh(new THREE.CylinderGeometry(5.5, 5.5, 4, 10), mat(0x14202e, { roughness: 0.12, metalness: 0.6 }));
   cab.position.set(395, 28, 330); root.add(cab);
-  // Parked planes: fuselage + wings + tail fin.
   for (const [px, pz] of [[300, 352], [362, 354]]) {
     const fus = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 26, 10), mat(0xf2f2f2));
     fus.rotation.z = Math.PI / 2; fus.position.set(px, 2.5, pz); fus.castShadow = true; root.add(fus);
@@ -901,7 +883,6 @@ export function buildCity(G) {
     box(26, 0.5, 1, mat(0x2a6fd8), px, 1.2, pz + 2.1, root); // cheatline
   }
 
-  // Ember Bowl stadium (SA-map style white circle, east side).
   const bowl = new THREE.Mesh(new THREE.CylinderGeometry(30, 32, 9, 28), mat(0xf2f2f2));
   bowl.position.set(STADIUM.x, 4.5, STADIUM.z); bowl.castShadow = true; root.add(bowl);
   const field = new THREE.Mesh(new THREE.CylinderGeometry(24, 24, 0.6, 28), mat(0x4a8f3c));
@@ -909,7 +890,6 @@ export function buildCity(G) {
   const ringTop = new THREE.Mesh(new THREE.TorusGeometry(27, 1.2, 6, 28), mat(0x2a6fd8));
   ringTop.rotation.x = Math.PI / 2; ringTop.position.set(STADIUM.x, 9.4, STADIUM.z); root.add(ringTop);
 
-  // Palms on the sand + along the beachfront, umbrellas on the sand.
   for (let z = -420; z <= 420; z += 70) {
     makePalm(rng, -475 + rng.range(-6, 6), z + rng.range(-15, 15), root);
     makePalm(rng, -490 + rng.range(-8, 8), z + 35, root, 0.9);
@@ -921,7 +901,6 @@ export function buildCity(G) {
     makePalm(rng, bx, bz, root, 0.9);
   }
 
-  // Street trees along every road, just off the asphalt.
   for (const road of ROADS.ns) {
     for (let z = -420; z <= 420; z += 110) {
       const side = (Math.round(z / 110) % 2 === 0) ? 1 : -1;
@@ -941,7 +920,6 @@ export function buildCity(G) {
     }
   }
 
-  // Billboards with original copy, on block centres facing the city.
   const boardBlocks = [[0, 0], [4, 0], [0, 3], [4, 2], [2, 0], [1, 3]];
   const boardCopy = [
     [['EMBER BAY', 'WELCOME TO THE BAY'], '#1c2a4d', '#ffd24d'],
@@ -967,8 +945,6 @@ export function buildCity(G) {
     root.add(g);
   });
 
-  // v8 neon signs along the Sunset Row avenue (NS road 3, the staging
-  // avenue): glowing shop signs that read at night. Original names.
   const NEON_SIGNS = [
     ['CLUB EMBER', '#ff2d95', -130, 7],
     ['NEON MOTEL', '#2fd8ff', -70, 9],
@@ -989,7 +965,6 @@ export function buildCity(G) {
     back.rotation.y = -Math.PI / 2;
   }
 
-  // Street lamps along the avenues, lamps on for golden hour.
   for (const road of ROADS.ns) {
     for (let z = -400; z <= 400; z += 120) {
       const side = (Math.round(z / 120) % 2 === 0) ? 1 : -1;
@@ -1011,7 +986,6 @@ export function buildCity(G) {
     }
   }
 
-  // Traffic lights at eight intersections (never at the roundabout).
   for (const c of crossPts) {
     const g = new THREE.Group();
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 7, 6), mat(0x2a2a2a));
@@ -1028,9 +1002,6 @@ export function buildCity(G) {
     out.lights.push({ pos: new THREE.Vector3(c.x + 9, 0, c.z + 9), axis: 'ns', phase: rng.range(0, 12), lamps, head });
   }
 
-  // v10 STREET LIFE — the staging avenue reads like top-1's boulevard:
-  // a row of BIG palms with red trunks down both sides, parked cars
-  // lining the curbs, bus-stop shelters, and two more neon signs.
   const stageRoad = ROADS.ns[3];
   const nearCrossing = (x, z, m = 16) => crossPts.some((c) => Math.hypot(x - c.x, z - c.z) < m);
   for (let z = -400; z <= 400; z += 34) {
@@ -1044,8 +1015,6 @@ export function buildCity(G) {
       makePalm(rng, x, z, root, rng.range(1.15, 1.45), 0xc23a2e, 0.55);
     }
   }
-  // Lightweight parked car (~10 meshes): body + cabin + 4 wheels +
-  // lamps. Static — never updated by traffic.
   const parkedColors = [0x2a6fd8, 0xd83a2a, 0xcccccc, 0x222831, 0xff6a00, 0x2fd05a, 0xe8b820, 0x8a6fd8];
   const makeParkedCar = (x, z, heading, color) => {
     const g = new THREE.Group();
@@ -1069,8 +1038,6 @@ export function buildCity(G) {
     root.add(g);
     return g;
   };
-  // Parked rows along the staging avenue curbs (both sides, gaps at
-  // intersections and the roundabout), plus a few on the cross avenues.
   const parkOnRoad = (axis, road, from, to, step) => {
     for (let a = from; a <= to; a += step) {
       const p = axis === 'ns'
@@ -1094,7 +1061,6 @@ export function buildCity(G) {
   parkOnRoad('ns', ROADS.ns[4], -420, 420, 52);
   parkOnRoad('ew', ROADS.ew[1], -420, 420, 52);
   parkOnRoad('ew', ROADS.ew[3], -420, 420, 52);
-  // Bus-stop shelters at four intersections.
   for (const c of [crossPts[0], crossPts[1], crossPts[4], crossPts[5]]) {
     const g = new THREE.Group();
     box(0.25, 3, 0.25, mat(0x3a3a3a), -2.2, 1.5, 0, g);
@@ -1106,7 +1072,6 @@ export function buildCity(G) {
     g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
     root.add(g);
   }
-  // Two more neon signs on the staging avenue (v8 had five).
   const NEON_EXTRA = [
     ['EMBER TACOS', '#ff5e2d', -190, 8],
     ['HOTEL CORALIE', '#2fd8ff', 190, 8],

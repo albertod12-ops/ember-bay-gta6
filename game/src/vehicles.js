@@ -285,7 +285,7 @@ export function makeCar(G, kind, colorIdx = 0) {
   return { group: g, kind, wheels, color };
 }
 
-// v7 race bike after the MotoGP side profiles: FULL FAIRING with
+// v7 race bike after the race-bike side profiles: FULL FAIRING with
 // winglets and a tall windscreen, gold inverted forks, clip-on bars,
 // single seat with a raised tail hump, wide slick rear tyre, chain
 // drive, swingarm, race-livery colours. Generic shape only — no brand

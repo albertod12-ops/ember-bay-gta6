@@ -1,7 +1,7 @@
 // Ember Bay v8 — HUD: mission banner, EBPD panel, weapon slots with ammo
 // and locks, dialogue box with blocky portraits, car + radio panels,
 // drift panel, crosshair, and the full city map overlay (M key).
-import { ROADS, DISTRICTS, DIAGONALS, ROUNDABOUT, MINOR_SEGS, FREEWAY, GOLF_RECT, STADIUM, RAIL_X, nsPlain, ewPlain, crossing, districtAt } from './city.js';
+import { ROADS, DIAGONALS, ROUNDABOUT, MINOR_SEGS, FREEWAY, GOLF_RECT, STADIUM, RAIL_X, nsPlain, ewPlain, crossing, districtAt } from './city.js';
 
 // Weapons: mag / reserve ammo, and the respect needed to unlock.
 const WEAPONS = [
@@ -243,7 +243,7 @@ export function initHud(G) {
       c.fillStyle = '#0d1a20'; c.fillRect(0, 0, W, Ht);
       // Land base (SA gray-green) over the whole city square.
       const [lx, ly] = toMap(-460, -460);
-      c.fillStyle = '#8b9a78';
+      c.fillStyle = '#98a684';
       c.fillRect(lx, ly, S, S);
       // Ocean west of the land + tan beach strip on the edge.
       c.fillStyle = '#4d8fb5';
@@ -284,10 +284,7 @@ export function initHud(G) {
           c.fillStyle = '#f4f4f4'; c.fill();
           poly(insetPoly(pts, 20));
           c.fillStyle = '#dcdcdc'; c.fill();
-          // v10: FILL the block — a 3x3 grid of small building rects
-          // with varied shades, clipped to the block shape, so the map
-          // reads as a busy city like top-1's (no more blank white
-          // slabs). Deterministic shades from the block indices.
+          // Building rects, varied count and tone per block, clipped.
           const inner = insetPoly(pts, 26);
           poly(inner);
           c.save();
@@ -295,11 +292,13 @@ export function initHud(G) {
           const mpts = inner.map((p) => toMap(p.x, p.z));
           const minX = Math.min(...mpts.map((p) => p[0])), maxX = Math.max(...mpts.map((p) => p[0]));
           const minY = Math.min(...mpts.map((p) => p[1])), maxY = Math.max(...mpts.map((p) => p[1]));
-          const shades = ['#c9c9c9', '#b5b5b5', '#d4c9a8', '#a9b8a8', '#c4b8a8', '#dcdcdc'];
-          for (let gx = 0; gx < 3; gx++) {
-            for (let gy = 0; gy < 3; gy++) {
-              const bw = (maxX - minX) / 3, bh = (maxY - minY) / 3;
-              c.fillStyle = shades[(ix * 7 + iz * 3 + gx * 2 + gy) % shades.length];
+          const shades = ['#b8b8b8', '#9a9a9a', '#c8b898', '#8fa08f', '#a89a88', '#c4c4c4'];
+          const n = 2 + ((ix * 3 + iz) % 3);
+          const m = 2 + ((ix + iz * 2) % 2);
+          for (let gx = 0; gx < n; gx++) {
+            for (let gy = 0; gy < m; gy++) {
+              const bw = (maxX - minX) / n, bh = (maxY - minY) / m;
+              c.fillStyle = shades[(ix * 7 + iz * 3 + gx * 2 + gy * 5) % shades.length];
               c.fillRect(minX + gx * bw + 2, minY + gy * bh + 2, bw - 4, bh - 4);
             }
           }
@@ -318,13 +317,18 @@ export function initHud(G) {
         c.beginPath(); c.arc(ax + 30, ay + 60, 6, 0, Math.PI * 2); c.fill();
         c.beginPath(); c.arc(bx - 30, by - 40, 6, 0, Math.PI * 2); c.fill();
       }
-      // two neighbourhood parks
+      // two neighbourhood parks, with tree dots so they read as parks
       c.fillStyle = '#5f9a4a';
       {
         const [ax, ay] = toMap(-60, 100);
         c.fillRect(ax, ay, m2p(90), m2p(60));
         const [bx, by] = toMap(220, -260);
         c.fillRect(bx, by, m2p(70), m2p(50));
+      }
+      c.fillStyle = '#4a7a3a';
+      for (const [tx, ty] of [[-40, 115], [-20, 135], [235, -245], [260, -235], [250, -225]]) {
+        const [mx, mz] = toMap(tx, ty);
+        c.beginPath(); c.arc(mx, mz, 3, 0, Math.PI * 2); c.fill();
       }
       // stadium: white oval with a gray ring
       {
@@ -344,15 +348,11 @@ export function initHud(G) {
       // minor streets first (thin, under the majors)
       c.lineWidth = 2;
       for (const [ax, az, bx, bz] of MINOR_SEGS) strokePts([[ax, az], [bx, bz]], 2);
-      // freeway ring (thick black band with a gray median)
+      // freeway ring: thin, like any other avenue — it must not dominate
       {
         const pts = FREEWAY.pts.map((p) => [p.x, p.z]);
         pts.push(pts[0]);
-        strokePts(pts, 6);
-        c.strokeStyle = '#8a8a8a'; c.lineWidth = 2;
-        c.beginPath();
-        pts.forEach(([x, z], i) => { const [mx, mz] = toMap(x, z); if (i === 0) c.moveTo(mx, mz); else c.lineTo(mx, mz); });
-        c.stroke();
+        strokePts(pts, 3);
       }
       // major avenues
       for (const road of ROADS.ns) {
@@ -378,37 +378,49 @@ export function initHud(G) {
         c.strokeStyle = '#7a2a2a'; c.lineWidth = 3;
         c.beginPath(); c.moveTo(ax, ay); c.lineTo(bx, by); c.stroke();
       }
-      // --- District labels: bold white with a black outline. Narrow
-      // districts (the beach strips) get their label shifted right into
-      // the land instead of centred off the edge.
+      // District labels, hand-placed in open space — never on the centre
+      // cluster, never on a blip or the GPS route. Beach strips vertical.
       c.textAlign = 'center'; c.textBaseline = 'middle';
-      for (const [x0, z0, x1, z1, name] of DISTRICTS) {
-        const [ax, ay] = toMap(x0, z0);
-        const [bx, by] = toMap(x1, z1);
-        const w = bx - ax;
-        const cx = w < 70 ? bx + 34 : (ax + bx) / 2;
-        c.font = `bold ${w < 90 ? 10 : 13}px Verdana`;
+      const dlabel = (x, z, name, size = 13) => {
+        const [mx, mz] = toMap(x, z);
+        c.font = `bold ${size}px Verdana`;
         c.lineWidth = 4; c.strokeStyle = '#111111';
-        c.strokeText(name.toUpperCase(), cx, (ay + by) / 2);
+        c.strokeText(name, mx, mz);
         c.fillStyle = '#ffffff';
-        c.fillText(name.toUpperCase(), cx, (ay + by) / 2);
-      }
-      // --- Markers + labels (white with black outline). ---
+        c.fillText(name, mx, mz);
+      };
+      dlabel(-240, -330, 'OLD TOWN');
+      dlabel(40, -320, 'GLASS MILE');
+      dlabel(320, -320, 'NORTHGATE');
+      dlabel(-240, -100, 'MARINA POINT');
+      dlabel(40, -150, 'DOWNTOWN CORE');
+      dlabel(320, -60, 'HILLCREST');
+      dlabel(-240, 100, 'SUNSET ROW');
+      dlabel(-240, 265, 'HOODSIDE');
+      dlabel(-240, 395, 'CORAL ROW');
+      dlabel(40, 320, 'CENTRAL AVENUES');
+      dlabel(320, 160, 'CRANESIDE');
+      dlabel(340, 300, 'PORT EMBER');
+      const vlabel = (x, z, name) => {
+        const [mx, mz] = toMap(x, z);
+        c.save(); c.translate(mx, mz); c.rotate(-Math.PI / 2);
+        c.font = 'bold 11px Verdana';
+        c.lineWidth = 3; c.strokeStyle = '#111111';
+        c.strokeText(name, 0, 0);
+        c.fillStyle = '#ffffff';
+        c.fillText(name, 0, 0);
+        c.restore();
+      };
+      vlabel(-420, -230, 'PALMS BEACH');
+      vlabel(-420, 230, 'BOARDWALK');
+      // --- Markers, icons only — the LEGEND panel names them, so no
+      // blip text ever collides with a district label. ---
       const dot = (x, z, color, r = 5) => {
         const [mx, mz] = toMap(x, z);
         c.fillStyle = color;
         c.beginPath(); c.arc(mx, mz, r, 0, Math.PI * 2); c.fill();
         c.strokeStyle = '#111111'; c.lineWidth = 2; c.stroke();
       };
-      const label = (x, z, text, dy = -10) => {
-        const [mx, mz] = toMap(x, z);
-        c.font = 'bold 10px Verdana';
-        c.lineWidth = 3; c.strokeStyle = '#111111';
-        c.strokeText(text, mx, mz + dy);
-        c.fillStyle = '#ffffff';
-        c.fillText(text, mx, mz + dy);
-      };
-      // green safehouse icons (house = square + roof triangle)
       const house = (x, z) => {
         const [mx, mz] = toMap(x, z);
         c.fillStyle = '#7dff5e';
@@ -416,24 +428,22 @@ export function initHud(G) {
         c.beginPath(); c.moveTo(mx - 6, mz - 2); c.lineTo(mx, mz - 8); c.lineTo(mx + 6, mz - 2); c.closePath(); c.fill();
         c.strokeStyle = '#111111'; c.lineWidth = 1.5; c.stroke();
       };
-      house(-300, 300); label(-300, 300, 'SAFEHOUSE');
-      house(200, -300); label(200, -300, 'SAFEHOUSE');
-      dot(150, 150, '#ff9de2'); label(150, 150, 'EMBER ARMS');
-      dot(-100, 300, '#2fd8ff'); label(-100, 300, 'SPRAY & GO');
-      dot(350, -350, '#ffd24d', 6); label(350, -350, 'MIDNIGHT MILE');
-      dot(0, 200, '#ffffff'); label(0, 200, 'EMBER GENERAL');
-      dot(0, 0, '#6ec6ff'); label(0, 0, 'EBPD HQ');
-      dot(-60, -60, '#ffe14d', 6); label(-60, -60, "MARA'S BAR", 16);
-      // v10: more blips — the map is busy like top-1's (dots scattered
-      // across the city): races, weapons, hospital, property, police.
-      dot(-280, -280, '#ffd24d'); label(-280, -280, 'STREET RACE', 16);
-      dot(280, 280, '#ff9de2'); label(280, 280, 'WEAPONS', 16);
-      dot(-350, 50, '#ffffff'); label(-350, 50, 'HOSPITAL', 16);
-      dot(120, -280, '#c07dff'); label(120, -280, 'PROPERTY', 16);
-      dot(320, 60, '#6ec6ff'); label(320, 60, 'POLICE', 16);
-      dot(-120, -350, '#ff6fa5'); label(-120, -350, 'SUNSET TAPE', 16);
-      dot(60, 350, '#ffd24d'); label(60, 350, 'STREET RACE', 16);
-      dot(220, 120, '#2fd8ff'); label(220, 120, 'RESPRAY', 16);
+      house(-340, 320);
+      house(200, -300);
+      dot(150, 150, '#ff9de2');
+      dot(-100, 300, '#2fd8ff');
+      dot(400, -120, '#ffd24d', 6);
+      dot(0, 200, '#ffffff');
+      dot(0, 0, '#6ec6ff');
+      dot(-60, -60, '#ffe14d', 6);
+      dot(-280, -280, '#ffd24d');
+      dot(260, 230, '#ff9de2');
+      dot(-350, 50, '#ffffff');
+      dot(140, -260, '#c07dff');
+      dot(320, 60, '#6ec6ff');
+      dot(-120, -350, '#ff6fa5');
+      dot(140, 400, '#ffd24d');
+      dot(220, 120, '#2fd8ff');
       // v10: grid letters/numbers on the map edges, like top-1's map.
       c.font = 'bold 12px Verdana'; c.textAlign = 'center'; c.textBaseline = 'middle';
       c.fillStyle = '#9ab8c8';
@@ -447,16 +457,28 @@ export function initHud(G) {
         const [mx, mz] = toMap(t.x, t.z);
         c.fillRect(mx - 3, mz - 3, 6, 6);
       }
-      // route: player -> objective
+      // GPS route: Manhattan along the roads, never a diagonal through
+      // labels — player to the nearest avenue, across on it, then down
+      // a clear corridor to the objective. White halo + yellow dashes.
       const obj = G.missions.active && G.missions.marker
         ? [G.missions.marker.position.x, G.missions.marker.position.z]
         : null;
       if (obj) {
-        const [px, pz] = toMap(G.playerPos.x, G.playerPos.z);
+        const px = G.playerPos.x, pz = G.playerPos.z;
+        const midZ = ROADS.ew.reduce((best, r) => Math.abs(ewPlain(r, px) - pz) < Math.abs(ewPlain(best, px) - pz) ? r : best).base;
+        const corX = obj[0] >= px ? 240 : -240;
+        const pts = [[px, pz], [px, midZ], [corX, midZ], [corX, obj[1]], [obj[0], obj[1]]];
+        const trace = (width, style, dash) => {
+          c.strokeStyle = style; c.lineWidth = width; c.lineJoin = 'round';
+          c.setLineDash(dash || []);
+          c.beginPath();
+          pts.forEach(([x, z], i) => { const [mx, mz] = toMap(x, z); if (i === 0) c.moveTo(mx, mz); else c.lineTo(mx, mz); });
+          c.stroke();
+        };
+        trace(5, '#ffffff');
+        trace(3, '#ffd24d', [8, 5]);
+        c.setLineDash([]);
         const [ox2, oz2] = toMap(obj[0], obj[1]);
-        c.strokeStyle = '#ffd24d'; c.lineWidth = 3;
-        c.beginPath(); c.moveTo(px, pz);
-        c.lineTo((px + ox2) / 2, (pz + oz2) / 2 - 20); c.lineTo(ox2, oz2); c.stroke();
         c.fillStyle = '#ffe14d';
         c.beginPath(); c.moveTo(ox2, oz2 - 8); c.lineTo(ox2 + 6, oz2); c.lineTo(ox2, oz2 + 8); c.lineTo(ox2 - 6, oz2); c.closePath(); c.fill();
       }
