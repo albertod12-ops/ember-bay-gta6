@@ -288,10 +288,10 @@ function pyramidRoof(w, d, h, color, x, y, z, parent) {
   return m;
 }
 
-function makePalm(rng, x, z, parent, scale = 1) {
+function makePalm(rng, x, z, parent, scale = 1, trunkColor = 0x8a6b46, trunkScale = 1) {
   const g = new THREE.Group();
   const lean = rng.range(-0.12, 0.12);
-  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.35 * scale, 0.55 * scale, 7 * scale, 6), mat(0x8a6b46));
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.35 * scale * trunkScale, 0.55 * scale * trunkScale, 7 * scale, 6), mat(trunkColor));
   trunk.position.y = 3.5 * scale; trunk.rotation.z = lean;
   trunk.castShadow = true;
   g.add(trunk);
@@ -533,13 +533,18 @@ export function buildCity(G) {
     p.position.y = 0.7;
   }
 
-  // Crosswalks at four main intersections (not the roundabout).
+  // Crosswalks at eight main intersections (was four — v10: more
+  // crossings so the streets read busy, and more traffic lights too).
   const crossMat = mat(0xe8e8e8);
   const crossPts = [
     crossing(ROADS.ns[1], ROADS.ew[1]),
     crossing(ROADS.ns[4], ROADS.ew[3]),
     crossing(ROADS.ns[2], ROADS.ew[3]),
     crossing(ROADS.ns[4], ROADS.ew[1]),
+    crossing(ROADS.ns[1], ROADS.ew[3]),
+    crossing(ROADS.ns[2], ROADS.ew[1]),
+    crossing(ROADS.ns[4], ROADS.ew[0]),
+    crossing(ROADS.ns[5], ROADS.ew[3]),
   ];
   for (const c of crossPts) {
     for (let i = -2; i <= 2; i++) {
@@ -557,14 +562,30 @@ export function buildCity(G) {
   const winTexA = windowTexture('#3a4a63', '#ffd9a0');
   const winTexB = windowTexture('#5a3a4a', '#ffe9b0');
   const winTexC = windowTexture('#6a4a3a', '#ffd9a0');
-  const towerMat = (tex) => new THREE.MeshStandardMaterial({
-    map: tex, emissiveMap: tex, emissive: 0xff9a40, emissiveIntensity: 0.5,
-    roughness: 0.4, metalness: 0.35,
-  });
+  // v10: TILE the window texture per building size — a stretched
+  // 64x128 texture over a 190 m tower made the windows 19 m tall, so
+  // close towers read as giant blank walls. Cloning + repeating keeps
+  // every window ~13 m of facade, at any height.
+  const towerMat = (tex, w = 20, h = 40) => {
+    const t = tex.clone();
+    t.wrapS = THREE.RepeatWrapping;
+    t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(Math.max(1, Math.round(w / 13)), Math.max(1, Math.round(h / 13)));
+    t.needsUpdate = true;
+    return new THREE.MeshStandardMaterial({
+      map: t, emissiveMap: t, emissive: 0xff9a40, emissiveIntensity: 0.5,
+      roughness: 0.4, metalness: 0.35,
+    });
+  };
   const hoodColors = [0xd98a5f, 0xc9b458, 0x9ab87a, 0xb06a8a, 0x7fa8b8];
   const pastel = [0xffc9d6, 0xa8e6e0, 0xffe9a8, 0xd6c2ff, 0xffd0a8];
   const slabTones = [0xc4beb0, 0xbcb6a8, 0xcdc7b8];
-  const plazas = new Set(['3,1', '3,2']);
+  // v10: plazas sit AWAY from the staging avenue — '3,1'/'3,2' were the
+  // two blocks immediately east of the chase avenue, so every shot
+  // showed a giant empty tan slab on the right (a plaza is just a slab
+  // + fountain, no buildings). Moved to Old Town north-west and Port
+  // Ember south-east, where an open square reads as intentional.
+  const plazas = new Set(['1,0', '4,4']);
   const parks = new Set(['1,2', '4,1']);
   const blockCenters = [];
   for (let ix = 0; ix < ROADS.ns.length - 1; ix++) {
@@ -671,31 +692,42 @@ export function buildCity(G) {
         return true;
       };
       if (d.type === 'downtown') {
-        // v7: dense core — six towers on a 3x2 grid plus two mid-rise
-        // slabs filling the gaps, so the block reads packed from above.
-        for (let i = 0; i < 6; i++) {
-          const w = rng.range(16, 26), dep = rng.range(16, 26), hgt = rng.range(40, 120);
-          const hx = cx + ((i % 3) - 1) * slabW / 3 + rng.range(-5, 5);
-          const hz = cz + (i < 3 ? -1 : 1) * slabD / 4 + rng.range(-5, 5);
+        // v10 LIVING CITY: eight towers on a 4x2 grid (was six), much
+        // taller (70-190 m, was 40-120) with varied heights, rooftop
+        // AC boxes and antennas on the tallest — the skyline reads as a
+        // real city wall from the street, not a toy town. Plus two
+        // mid-rise slabs filling the gaps.
+        for (let i = 0; i < 8; i++) {
+          const w = rng.range(16, 26), dep = rng.range(16, 26), hgt = rng.range(70, 190);
+          const hx = cx + ((i % 4) - 1.5) * slabW / 4 + rng.range(-5, 5);
+          const hz = cz + (i < 4 ? -1 : 1) * slabD / 4 + rng.range(-5, 5);
           if (!place(hx, hz)) continue;
           const t = new THREE.Mesh(
             new THREE.BoxGeometry(w, hgt, dep),
-            towerMat(rng.chance(0.5) ? winTexA : winTexB),
+            towerMat(rng.chance(0.5) ? winTexA : winTexB, w, hgt),
           );
           t.position.set(hx, hgt / 2 + 0.4, hz);
           t.rotation.y = diagNear ? Math.PI / 4 : rng.range(-0.06, 0.06);
           t.castShadow = true; t.receiveShadow = true;
           root.add(t);
           box(w + 2, 3, dep + 2, mat(0x2a2a33), hx, hgt + 1.5, hz, root);
+          // Rooftop detail: AC boxes + a mast on the tallest towers.
+          box(rng.range(3, 5), 1.6, rng.range(3, 5), mat(0x8a8a8a), hx + rng.range(-4, 4), hgt + 3.6, hz + rng.range(-4, 4), root);
+          if (hgt > 140) {
+            const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.5, 14, 6), mat(0x555555));
+            mast.position.set(hx, hgt + 10, hz); mast.castShadow = true; root.add(mast);
+            const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.7, 8, 6), new THREE.MeshStandardMaterial({ color: 0xff2211, emissive: 0xff2211, emissiveIntensity: 1.5 }));
+            beacon.position.set(hx, hgt + 17.5, hz); root.add(beacon);
+          }
         }
         for (let i = 0; i < 2; i++) {
-          const w = rng.range(20, 26), dep = rng.range(14, 18), hgt = rng.range(18, 30);
+          const w = rng.range(20, 26), dep = rng.range(14, 18), hgt = rng.range(30, 55);
           const hx = cx + (i === 0 ? -slabW / 3 : slabW / 3) + rng.range(-4, 4);
           const hz = cz + rng.range(-6, 6);
           if (!place(hx, hz)) continue;
           const m = new THREE.Mesh(
             new THREE.BoxGeometry(w, hgt, dep),
-            towerMat(rng.chance(0.5) ? winTexA : winTexC),
+            towerMat(rng.chance(0.5) ? winTexA : winTexC, w, hgt),
           );
           m.position.set(hx, hgt / 2 + 0.4, hz);
           m.rotation.y = diagNear ? Math.PI / 4 : rng.range(-0.06, 0.06);
@@ -752,14 +784,15 @@ export function buildCity(G) {
         const roofCols = [0xa03a2a, 0x3a5a8a, 0x4a7a3a, 0xd8a03c, 0x2a8a8a, 0x8a8a8a, 0xe8dcc0, 0xc94f3d];
         for (let i = 0; i < 30; i++) {
           const col = i % 5, row = Math.floor(i / 5);
-          const w = rng.range(15, 21), dep = rng.range(14, 18), hgt = d.type === 'brick' ? rng.range(12, 22) : rng.range(6, 10);
+          const w = rng.range(15, 21), dep = rng.range(14, 18), hgt = d.type === 'brick' ? rng.range(18, 30) : rng.range(6, 10);
           const hx = cx + (col - 2) * slabW / 5 + rng.range(-3, 3);
           const hz = cz + (row - 2.5) * slabD / 6 + rng.range(-3, 3);
           if (!place(hx, hz)) continue;
           const colr = d.type === 'hood' ? rng.pick(hoodColors) : d.type === 'brick' ? 0x9a5a44 : rng.pick(pastel);
           let b;
           if (d.type === 'brick') {
-            b = new THREE.Mesh(new THREE.BoxGeometry(w, hgt, dep), towerMat(winTexC));
+            // v10: Old Town brick blocks taller (18-30 m, was 12-22).
+            b = new THREE.Mesh(new THREE.BoxGeometry(w, hgt, dep), towerMat(winTexC, w, hgt));
             b.position.set(hx, hgt / 2 + 0.4, hz);
             root.add(b);
           } else {
@@ -770,16 +803,17 @@ export function buildCity(G) {
           if (d.type !== 'brick') pyramidRoof(w, dep, rng.range(3, 5), rng.pick(roofCols), hx, hgt + 0.4, hz, root);
           else box(w + 1, 1.2, dep + 1, mat(0x5a3a30), hx, hgt + 1, hz, root);
         }
-        // v7: four mid-rise apartment blocks per residential block.
+        // v10: six mid-rise apartment blocks per residential block
+        // (was four), taller (22-34 m, was 13-18) — no more flat roofs.
         if (d.type === 'residential' || d.type === 'marina') {
-          for (let i = 0; i < 4; i++) {
-            const w = rng.range(20, 26), dep = rng.range(15, 18), hgt = rng.range(13, 18);
+          for (let i = 0; i < 6; i++) {
+            const w = rng.range(20, 26), dep = rng.range(15, 18), hgt = rng.range(22, 34);
             const hx = cx + (i % 2 === 0 ? -slabW / 2 + 14 : slabW / 2 - 14);
-            const hz = cz + (i < 2 ? slabD / 2 - 12 : -slabD / 2 + 12);
+            const hz = cz + (Math.floor(i / 2) - 1) * slabD / 3;
             if (!place(hx, hz)) continue;
             const m = new THREE.Mesh(
               new THREE.BoxGeometry(w, hgt, dep),
-              towerMat(rng.chance(0.5) ? winTexA : winTexB),
+              towerMat(rng.chance(0.5) ? winTexA : winTexB, w, hgt),
             );
             m.position.set(hx, hgt / 2 + 0.4, hz);
             m.rotation.y = diagNear ? Math.PI / 4 : localAngle + rng.range(-0.05, 0.05);
@@ -977,7 +1011,7 @@ export function buildCity(G) {
     }
   }
 
-  // Traffic lights at four intersections (never at the roundabout).
+  // Traffic lights at eight intersections (never at the roundabout).
   for (const c of crossPts) {
     const g = new THREE.Group();
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 7, 6), mat(0x2a2a2a));
@@ -992,6 +1026,102 @@ export function buildCity(G) {
     g.position.set(c.x + 9, 0, c.z + 9);
     root.add(g);
     out.lights.push({ pos: new THREE.Vector3(c.x + 9, 0, c.z + 9), axis: 'ns', phase: rng.range(0, 12), lamps, head });
+  }
+
+  // v10 STREET LIFE — the staging avenue reads like top-1's boulevard:
+  // a row of BIG palms with red trunks down both sides, parked cars
+  // lining the curbs, bus-stop shelters, and two more neon signs.
+  const stageRoad = ROADS.ns[3];
+  const nearCrossing = (x, z, m = 16) => crossPts.some((c) => Math.hypot(x - c.x, z - c.z) < m);
+  for (let z = -400; z <= 400; z += 34) {
+    for (const side of [-1, 1]) {
+      const x = nsPlain(stageRoad, z) + side * 12;
+      if (Math.hypot(x - RBX, z - RBZ) < 34) continue;
+      if (nearCrossing(x, z)) continue;
+      if (DIAGONALS.some(([ax, az, bx, bz]) => distToSegment(x, z, ax, az, bx, bz) < 12)) continue;
+      // v10: slender red trunks (trunkScale 0.55) — the fat trunks read
+      // as giant red columns when the chase camera passes close by.
+      makePalm(rng, x, z, root, rng.range(1.15, 1.45), 0xc23a2e, 0.55);
+    }
+  }
+  // Lightweight parked car (~10 meshes): body + cabin + 4 wheels +
+  // lamps. Static — never updated by traffic.
+  const parkedColors = [0x2a6fd8, 0xd83a2a, 0xcccccc, 0x222831, 0xff6a00, 0x2fd05a, 0xe8b820, 0x8a6fd8];
+  const makeParkedCar = (x, z, heading, color) => {
+    const g = new THREE.Group();
+    const paint = mat(color, { roughness: 0.45, metalness: 0.35 });
+    const glass = mat(0x14202e, { roughness: 0.12, metalness: 0.65 });
+    const dark = mat(0x1a1a1a, { roughness: 0.8 });
+    box(2.0, 0.55, 4.6, paint, 0, 0.55, 0, g);
+    box(1.75, 0.55, 2.0, glass, 0, 1.08, -0.3, g);
+    box(1.8, 0.08, 1.9, paint, 0, 1.38, -0.3, g);
+    for (const [wx, wz] of [[-1.0, 1.45], [1.0, 1.45], [-1.0, -1.45], [1.0, -1.45]]) {
+      const w = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.3, 10), dark);
+      w.rotation.z = Math.PI / 2; w.position.set(wx, 0.42, wz); g.add(w);
+    }
+    box(0.55, 0.14, 0.08, mat(0xfff2b0, { emissive: 0xffe9a0, emissiveIntensity: 0.8 }), -0.65, 0.62, 2.32, g);
+    box(0.55, 0.14, 0.08, mat(0xfff2b0, { emissive: 0xffe9a0, emissiveIntensity: 0.8 }), 0.65, 0.62, 2.32, g);
+    box(0.6, 0.14, 0.08, mat(0xd81a1a, { emissive: 0xaa0000, emissiveIntensity: 0.8 }), -0.65, 0.62, -2.32, g);
+    box(0.6, 0.14, 0.08, mat(0xd81a1a, { emissive: 0xaa0000, emissiveIntensity: 0.8 }), 0.65, 0.62, -2.32, g);
+    g.position.set(x, 0, z);
+    g.rotation.y = heading;
+    g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+    root.add(g);
+    return g;
+  };
+  // Parked rows along the staging avenue curbs (both sides, gaps at
+  // intersections and the roundabout), plus a few on the cross avenues.
+  const parkOnRoad = (axis, road, from, to, step) => {
+    for (let a = from; a <= to; a += step) {
+      const p = axis === 'ns'
+        ? { x: nsPlain(road, a), z: a, h: 0 }
+        : { x: a, z: ewPlain(road, a), h: Math.PI / 2 };
+      for (const side of [-1, 1]) {
+        if (rng.chance(0.25)) continue; // gaps in the row
+        const off = 9.6;
+        const x = axis === 'ns' ? p.x + side * off : p.x;
+        const z = axis === 'ns' ? p.z : p.z + side * off;
+        if (Math.hypot(x - RBX, z - RBZ) < 34) continue;
+        if (nearCrossing(x, z, 20)) continue;
+        if (DIAGONALS.some(([ax, az, bx, bz]) => distToSegment(x, z, ax, az, bx, bz) < 12)) continue;
+        const heading = p.h + (side < 0 ? Math.PI : 0) + rng.range(-0.03, 0.03);
+        makeParkedCar(x, z, heading, rng.pick(parkedColors));
+      }
+    }
+  };
+  parkOnRoad('ns', ROADS.ns[3], -420, 420, 26);
+  parkOnRoad('ns', ROADS.ns[2], -420, 420, 52);
+  parkOnRoad('ns', ROADS.ns[4], -420, 420, 52);
+  parkOnRoad('ew', ROADS.ew[1], -420, 420, 52);
+  parkOnRoad('ew', ROADS.ew[3], -420, 420, 52);
+  // Bus-stop shelters at four intersections.
+  for (const c of [crossPts[0], crossPts[1], crossPts[4], crossPts[5]]) {
+    const g = new THREE.Group();
+    box(0.25, 3, 0.25, mat(0x3a3a3a), -2.2, 1.5, 0, g);
+    box(0.25, 3, 0.25, mat(0x3a3a3a), 2.2, 1.5, 0, g);
+    box(5.2, 0.25, 2.2, mat(0x2a6fd8), 0, 3.1, 0, g);
+    box(4.6, 0.5, 1.0, mat(0x6b4a2a), 0, 0.7, 0, g);
+    g.position.set(c.x + 11, 0, c.z + 11);
+    g.rotation.y = rng.range(0, Math.PI);
+    g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+    root.add(g);
+  }
+  // Two more neon signs on the staging avenue (v8 had five).
+  const NEON_EXTRA = [
+    ['EMBER TACOS', '#ff5e2d', -190, 8],
+    ['HOTEL CORALIE', '#2fd8ff', 190, 8],
+  ];
+  for (const [text, color, z, y] of NEON_EXTRA) {
+    const sx = nsPlain(ROADS.ns[3], z) + 11;
+    const sign = new THREE.Mesh(
+      new THREE.PlaneGeometry(13, 3.2),
+      new THREE.MeshBasicMaterial({ map: neonTexture(text, color) }),
+    );
+    sign.position.set(sx, y, z);
+    sign.rotation.y = -Math.PI / 2;
+    root.add(sign);
+    const back = box(13.4, 3.6, 0.3, mat(0x0a0614), sx + 0.2, y, z, root);
+    back.rotation.y = -Math.PI / 2;
   }
 
   return out;

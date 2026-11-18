@@ -228,14 +228,15 @@ export function initHud(G) {
       H.drawMap();
     },
     drawMap() {
-      // v9 SA-style map: the graphic itself reads like GTA San Andreas'
+      // v9 SA-style map: the graphic itself reads like a classic
+      // open-world crime game's city map — green land, white blocks,
       // in-game map — white building blocks filling the land, black road
       // lines with a clear hierarchy (thick majors, thin minors), green
       // parks, blue water + tan beach on the west edge, bold white district
       // labels with a black outline, safehouse / blip icons, player arrow.
       const c = mapCtx;
       const W = el.mapCanvas.width, Ht = el.mapCanvas.height;
-      const S = 600, ox = (W - S) / 2, oy = (Ht - S) / 2;
+      const S = 580, ox = (W - S) / 2, oy = (Ht - S) / 2;
       const toMap = (x, z) => [ox + ((x + 460) / 920) * S, oy + ((z + 460) / 920) * S];
       const m2p = (m) => (m / 920) * S; // metres -> map pixels
       c.clearRect(0, 0, W, Ht);
@@ -283,10 +284,26 @@ export function initHud(G) {
           c.fillStyle = '#f4f4f4'; c.fill();
           poly(insetPoly(pts, 20));
           c.fillStyle = '#dcdcdc'; c.fill();
-          // tiny roof details: two small gray squares inside the block
-          const in1 = insetPoly(pts, 34);
-          poly([in1[0], { x: in1[0].x + 14, z: in1[0].z }, { x: in1[0].x + 14, z: in1[0].z + 14 }, { x: in1[0].x, z: in1[0].z + 14 }]);
-          c.fillStyle = '#c4c4c4'; c.fill();
+          // v10: FILL the block — a 3x3 grid of small building rects
+          // with varied shades, clipped to the block shape, so the map
+          // reads as a busy city like top-1's (no more blank white
+          // slabs). Deterministic shades from the block indices.
+          const inner = insetPoly(pts, 26);
+          poly(inner);
+          c.save();
+          c.clip();
+          const mpts = inner.map((p) => toMap(p.x, p.z));
+          const minX = Math.min(...mpts.map((p) => p[0])), maxX = Math.max(...mpts.map((p) => p[0]));
+          const minY = Math.min(...mpts.map((p) => p[1])), maxY = Math.max(...mpts.map((p) => p[1]));
+          const shades = ['#c9c9c9', '#b5b5b5', '#d4c9a8', '#a9b8a8', '#c4b8a8', '#dcdcdc'];
+          for (let gx = 0; gx < 3; gx++) {
+            for (let gy = 0; gy < 3; gy++) {
+              const bw = (maxX - minX) / 3, bh = (maxY - minY) / 3;
+              c.fillStyle = shades[(ix * 7 + iz * 3 + gx * 2 + gy) % shades.length];
+              c.fillRect(minX + gx * bw + 2, minY + gy * bh + 2, bw - 4, bh - 4);
+            }
+          }
+          c.restore();
         }
       }
       // --- Parks + golf + stadium. ---
@@ -407,6 +424,23 @@ export function initHud(G) {
       dot(0, 200, '#ffffff'); label(0, 200, 'EMBER GENERAL');
       dot(0, 0, '#6ec6ff'); label(0, 0, 'EBPD HQ');
       dot(-60, -60, '#ffe14d', 6); label(-60, -60, "MARA'S BAR", 16);
+      // v10: more blips — the map is busy like top-1's (dots scattered
+      // across the city): races, weapons, hospital, property, police.
+      dot(-280, -280, '#ffd24d'); label(-280, -280, 'STREET RACE', 16);
+      dot(280, 280, '#ff9de2'); label(280, 280, 'WEAPONS', 16);
+      dot(-350, 50, '#ffffff'); label(-350, 50, 'HOSPITAL', 16);
+      dot(120, -280, '#c07dff'); label(120, -280, 'PROPERTY', 16);
+      dot(320, 60, '#6ec6ff'); label(320, 60, 'POLICE', 16);
+      dot(-120, -350, '#ff6fa5'); label(-120, -350, 'SUNSET TAPE', 16);
+      dot(60, 350, '#ffd24d'); label(60, 350, 'STREET RACE', 16);
+      dot(220, 120, '#2fd8ff'); label(220, 120, 'RESPRAY', 16);
+      // v10: grid letters/numbers on the map edges, like top-1's map.
+      c.font = 'bold 12px Verdana'; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillStyle = '#9ab8c8';
+      for (let i = 0; i < 6; i++) {
+        c.fillText(String.fromCharCode(65 + i), ox + (i + 0.5) * (S / 6), oy - 10);
+        c.fillText(String(i + 1), ox - 12, oy + (i + 0.5) * (S / 6));
+      }
       // remaining tapes
       c.fillStyle = '#ff6fa5';
       for (const t of G.tapes.items.slice(0, 6)) {

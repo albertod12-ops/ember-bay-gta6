@@ -1,5 +1,5 @@
 // Ember Bay v5 — recorded re-apply under R7; behaviour unchanged
-// Traffic v7: 24 cars (mostly sports cars), 8 race bikes, 48 pedestrians.
+// Traffic v10: 48 cars, 12 race bikes, 90 pedestrians — a living city.
 // Cars follow the curved roads, turn at intersections and stop at red
 // lights. At the roundabout they swing around the island and carry on —
 // nobody turns on the ring.
@@ -7,8 +7,9 @@ import * as THREE from 'three';
 import { makeCar, makeBike } from './vehicles.js';
 import { ROADS, ROUNDABOUT, nsPlain, ewPlain, nsCenter, ewCenter, nsHeading, ewHeading } from './city.js';
 
-// v7: most traffic cars are sports cars; van/pickup stay for variety.
-const KINDS = ['sport', 'sport', 'sport', 'taxi', 'van', 'pickup', 'sport'];
+// v10: most traffic cars are sports cars; van/pickup/truck stay for
+// variety — a truck in the lanes reads as heavy traffic.
+const KINDS = ['sport', 'sport', 'sport', 'taxi', 'van', 'pickup', 'sport', 'sedan', 'sport', 'truck'];
 
 // Left-hand traffic (Indonesia): the lane offset is on the left of the
 // direction of travel.
@@ -66,8 +67,8 @@ export function initTraffic(G) {
     return { x: along, z, heading: ewHeading(road, along, dir), axis: 'ew', road, dir };
   };
 
-  // v7: 24 sports-heavy cars, 8 race bikes.
-  for (let i = 0; i < 24; i++) {
+  // v10: 48 sports-heavy cars, 12 race bikes.
+  for (let i = 0; i < 48; i++) {
     const kind = rng.pick(KINDS);
     const v = makeCar(G, kind, rng.int(0, 3));
     const s = spawnOnRoad();
@@ -80,7 +81,7 @@ export function initTraffic(G) {
       decidedAt: -1, pendingAxis: null, turnRoad: null,
     });
   }
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 12; i++) {
     const v = makeBike(G, rng.pick([0xffd400, 0x2a6fd8, 0xff6a00]));
     const s = spawnOnRoad();
     v.group.position.set(s.x, 0, s.z);
@@ -92,14 +93,30 @@ export function initTraffic(G) {
       decidedAt: -1, pendingAxis: null, turnRoad: null,
     });
   }
+  // v10: pedestrians stroll on the SIDEWALKS — 90 of them (was 48,
+  // scattered anywhere). Most spawn just off a road edge (9-13 m from
+  // the centreline, i.e. on the sidewalk); the rest wander the blocks.
   const pedSpot = () => {
     let x, z;
-    do {
+    if (rng.chance(0.7)) {
+      const alongNS = rng.chance(0.5);
+      const along = rng.range(-430, 430);
+      const side = rng.chance(0.5) ? 1 : -1;
+      const off = rng.range(9, 13) * side;
+      if (alongNS) {
+        const road = rng.pick(ROADS.ns);
+        x = nsPlain(road, along) + off; z = along;
+      } else {
+        const road = rng.pick(ROADS.ew);
+        x = along; z = ewPlain(road, along) + off;
+      }
+    } else {
       x = rng.range(-430, 430); z = rng.range(-430, 430);
-    } while (Math.hypot(x - ROUNDABOUT.cx, z - ROUNDABOUT.cz) < 26);
+    }
+    if (Math.hypot(x - ROUNDABOUT.cx, z - ROUNDABOUT.cz) < 26) return pedSpot();
     return [x, z];
   };
-  for (let i = 0; i < 48; i++) {
+  for (let i = 0; i < 90; i++) {
     const [x, z] = pedSpot();
     const p = pedFigure(G, x, z);
     scene.add(p.group);

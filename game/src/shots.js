@@ -72,6 +72,10 @@ export function stageShot(G, name) {
     G.scene.fog.near = 1500;
     G.scene.fog.far = 5000;
     // Full city map overlay (the M-key screen) — the map shot.
+    // v10: start mission 1 first, so the GPS route line draws and the
+    // CURRENT JOB panel fills in — the map reads like a live job, not
+    // an empty diagram.
+    G.missions.startId(1);
     G.hud.showMap(true);
     return;
   }
@@ -176,6 +180,21 @@ export function updateShot(G, dt) {
         h.cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().negate());
         h.cone.scale.set(1, len / 42, 1);
       }
+      // v10: busy street behind the menu — four traffic cars ahead in
+      // both lanes, so the title background reads as a living city,
+      // not one car on an empty road.
+      const tSports = G.traffic.cars.filter((c) => c.kind === 'sport' && c.color !== 0xffc21c);
+      const tOthers = G.traffic.cars.filter((c) => c.kind !== 'sport' || c.color === 0xffc21c);
+      const tHeld = [...tSports, ...tOthers];
+      const tSlots = [[24, -3.5], [30, 3.5], [42, -3.5], [52, 3.5]];
+      tSlots.forEach(([fwd, side], i) => {
+        const tc = tHeld[i];
+        if (!tc) return;
+        tc.pos.set(car.pos.x + rx * side + fx * fwd, 0, car.pos.z + rz * side + fz * fwd);
+        tc.heading = car.heading;
+        tc.group.position.copy(tc.pos);
+        tc.group.rotation.y = car.heading;
+      });
       // Rear three-quarter chase camera, closer in so the red car is
       // the hero: the interceptors flank the sightline instead of
       // blocking it, road + sunset city ahead.
@@ -203,15 +222,28 @@ export function updateShot(G, dt) {
       car.group.position.copy(car.pos);
       car.group.rotation.y = ph;
     };
-    // Hold two SPORT traffic cars + all police cars in frame so the
-    // street reads alive. Sports skip yellow (a yellow car + a police
-    // light bar behind it reads as the old yellow taxi); every police
-    // car unit is held in a spread, so none hides behind a sport car
-    // with only its light bar showing over the roof.
+    // Hold four traffic cars + two bikes in frame so the street reads
+    // alive. Sports skip yellow (a yellow car + a police light bar
+    // behind it reads as the old yellow taxi); every police car unit
+    // is held in a spread, so none hides behind a sport car with only
+    // its light bar showing over the roof.
     const sports = G.traffic.cars.filter((c) => c.kind === 'sport' && c.color !== 0xffc21c);
-    const held = sports.length >= 2 ? sports : G.traffic.cars.filter((c) => c.kind === 'sport');
-    holdTraffic(held[0] || G.traffic.cars[0], 22, -12);
-    holdTraffic(held[1] || G.traffic.cars[1], 16, 13);
+    const others = G.traffic.cars.filter((c) => c.kind !== 'sport' || c.color === 0xffc21c);
+    const held = [...sports, ...others];
+    holdTraffic(held[0], 22, -12);
+    holdTraffic(held[1], 16, 13);
+    holdTraffic(held[2], 30, -5);
+    holdTraffic(held[3], 38, 7);
+    const bikeA = G.traffic.bikes[0];
+    if (bikeA) {
+      bikeA.pos.set(pp.x + rx * 18, 0, pp.z + rz * 18 + fz * 26);
+      bikeA.heading = ph; bikeA.group.position.copy(bikeA.pos); bikeA.group.rotation.y = ph;
+    }
+    const bikeB = G.traffic.bikes[1];
+    if (bikeB) {
+      bikeB.pos.set(pp.x - rx * 20, 0, pp.z - rz * 20 + fz * 20);
+      bikeB.heading = ph; bikeB.group.position.copy(bikeB.pos); bikeB.group.rotation.y = ph;
+    }
     const cars = P.units.filter((u) => u.kind === 'car');
     const carSlots = [[-24, 14], [24, 14], [-26, 26], [26, 26], [-18, 32], [18, 32], [-30, 8], [30, 8]];
     cars.forEach((c, i) => {
@@ -262,7 +294,9 @@ export function updateShot(G, dt) {
   const ph = G.playerHeading;
   const fx = Math.sin(ph), fz = Math.cos(ph);
   const rx = Math.cos(ph), rz = -Math.sin(ph); // right vector
-  // Hold two traffic cars in frame so the street reads as alive.
+  // v10 LIVING CITY: hold a BUSY road in frame — six traffic cars ahead
+  // in both lanes at staggered distances (sports first, non-yellow), so
+  // the street never reads empty, plus two police cars and two bikes.
   const holdTraffic = (car, fwd, side) => {
     if (!car) return;
     car.pos.set(pp.x + rx * side + fx * fwd, 0, pp.z + rz * side + fz * fwd);
@@ -270,12 +304,13 @@ export function updateShot(G, dt) {
     car.group.position.copy(car.pos);
     car.group.rotation.y = ph;
   };
-  // Cover shot fallthrough: hold two (non-yellow) SPORT traffic cars
+  // Cover shot fallthrough: hold six (non-yellow) SPORT traffic cars
   // in frame so the street reads as alive.
   const sports = G.traffic.cars.filter((c) => c.kind === 'sport' && c.color !== 0xffc21c);
-  const held = sports.length >= 2 ? sports : G.traffic.cars.filter((c) => c.kind === 'sport');
-  holdTraffic(held[0] || G.traffic.cars[0], 22, -12);
-  holdTraffic(held[1] || G.traffic.cars[1], 16, 13);
+  const others = G.traffic.cars.filter((c) => c.kind !== 'sport' || c.color === 0xffc21c);
+  const held = [...sports, ...others];
+  const slots = [[22, -3.5], [26, 3.5], [34, -3.5], [40, 3.5], [50, -3.5], [58, 3.5]];
+  slots.forEach(([fwd, side], i) => holdTraffic(held[i], fwd, side));
   const cars = P.units.filter((u) => u.kind === 'car');
   if (cars[0]) {
     cars[0].pos.set(pp.x - rx * 15 + fx * 20, 0, pp.z - rz * 15 + fz * 20);
@@ -289,6 +324,11 @@ export function updateShot(G, dt) {
   if (bike) {
     bike.pos.set(pp.x + rx * 14, 0, pp.z + rz * 14 + fz * 32);
     bike.heading = ph; bike.group.position.copy(bike.pos); bike.group.rotation.y = ph;
+  }
+  const bike2 = G.traffic.bikes[1];
+  if (bike2) {
+    bike2.pos.set(pp.x - rx * 10, 0, pp.z - rz * 10 + fz * 46);
+    bike2.heading = ph; bike2.group.position.copy(bike2.pos); bike2.group.rotation.y = ph;
   }
   if (P.heli) P.heli.group.position.set(pp.x + fx * 26, 24, pp.z + fz * 26);
 }
