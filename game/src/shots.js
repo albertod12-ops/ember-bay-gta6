@@ -1,7 +1,12 @@
 // Shot staging for screenshots/ and the headless debug API. A shot is
 // staged from the ?shot= URL parameter; the debug API lets a driver start
 // the game, force wanted levels, enter vehicles and start missions.
+// Every shot is staged at golden hour (17:45), on the curved coast-side
+// avenue, so the screenshots show the real city in evening light.
 import { makeCar, makeBike, createDrive } from './vehicles.js';
+import { ROADS, roadPoint, nsCenter, nsHeading } from './city.js';
+
+const STAGE_ROAD = 3; // NS avenue past the roundabout (base -20)
 
 function enterLowrider(G, x, z, heading, speed) {
   const v = makeCar(G, 'lowrider', 0);
@@ -26,7 +31,7 @@ function enterBike(G, x, z, heading, speed) {
 export function stageShot(G, name) {
   G.shot = name;
   if (name === 'title') {
-    G.setClock(18.5);
+    G.setClock(17.75);
     G.mode = 'menu';
     G.hud.setMenu(true);
     // fixed diagonal along the shoreline: ocean left, sand centre, palms right
@@ -35,18 +40,22 @@ export function stageShot(G, name) {
   }
   G.mode = 'playing';
   G.hud.setMenu(false);
+  const pt = roadPoint('ns', STAGE_ROAD, -30, 1);
   if (name === 'cover') {
-    G.setClock(18.5);
-    enterLowrider(G, 0, 60, 0, 38);
+    G.setClock(17.75);
+    enterLowrider(G, pt.x, pt.z, pt.heading, 38);
     G.police.setWanted(3);
   } else if (name === 'combat') {
-    G.setClock(23.2);
-    enterBike(G, 0, 60, 0, 40);
+    G.setClock(17.75);
+    enterBike(G, pt.x, pt.z, pt.heading, 40);
     G.police.setWanted(4);
   } else if (name === 'map') {
-    G.setClock(14);
+    G.setClock(17.75);
     G.camOverride = { pos: [-100, 850, 80], look: [-100, 0, 0] };
-    G.scene.fog.far = 3200;
+    // Lift the haze for the top-down view so the organic street layout
+    // reads clearly instead of drowning in golden fog.
+    G.scene.fog.near = 1500;
+    G.scene.fog.far = 5000;
     G.hud.banner('EMBER BAY', '14 DISTRICTS · 8 STORY JOBS · TAPES 0/20', true);
   }
 }
@@ -55,12 +64,35 @@ export function stageShot(G, name) {
 export function updateShot(G, dt) {
   if (!G.shot || G.shot === 'title' || G.shot === 'map') return;
   const P = G.police;
+  // Glue the staged vehicle to the curving avenue (and around the
+  // roundabout): steer onto the road tangent, hold the lane.
+  const road = ROADS.ns[STAGE_ROAD];
+  if (G.vehicle) {
+    G.vehicle.speed = G.shot === 'combat' ? 40 : 38;
+    const t = nsHeading(road, G.vehicle.pos.z, 1);
+    let dh = t - G.vehicle.heading;
+    while (dh > Math.PI) dh -= Math.PI * 2;
+    while (dh < -Math.PI) dh += Math.PI * 2;
+    G.vehicle.heading += dh * Math.min(1, dt * 6);
+    G.vehicle.pos.x = nsCenter(road, G.vehicle.pos.z, 1) - 3.5;
+    G.vehicle.sync();
+    G.playerHeading = G.vehicle.heading;
+  }
   const pp = G.playerPos;
   const ph = G.playerHeading;
   const fx = Math.sin(ph), fz = Math.cos(ph);
   const rx = Math.cos(ph), rz = -Math.sin(ph); // right vector
+  // Hold two traffic cars in frame so the street reads as alive.
+  const holdTraffic = (car, fwd, side) => {
+    if (!car) return;
+    car.pos.set(pp.x + rx * side + fx * fwd, 0, pp.z + rz * side + fz * fwd);
+    car.heading = ph;
+    car.group.position.copy(car.pos);
+    car.group.rotation.y = ph;
+  };
+  holdTraffic(G.traffic.cars[0], 22, -12);
+  holdTraffic(G.traffic.cars[1], 16, 13);
   if (G.shot === 'cover') {
-    if (G.vehicle) G.vehicle.speed = 38;
     const cars = P.units.filter((u) => u.kind === 'car');
     if (cars[0]) {
       cars[0].pos.set(pp.x - rx * 15 + fx * 20, 0, pp.z - rz * 15 + fz * 20);
@@ -77,7 +109,6 @@ export function updateShot(G, dt) {
     }
     if (P.heli) P.heli.group.position.set(pp.x + fx * 26, 24, pp.z + fz * 26);
   } else if (G.shot === 'combat') {
-    if (G.vehicle) G.vehicle.speed = 40;
     const cars = P.units.filter((u) => u.kind === 'car');
     if (cars[0]) {
       cars[0].pos.set(pp.x - rx * 16 + fx * 26, 0, pp.z - rz * 16 + fz * 26);
@@ -126,6 +157,7 @@ export function installDebugApi(G) {
     },
     startMission() { return G.missions.startNext(); },
     setClock(h) { G.setClock(h); return G.clock; },
+    camPos() { return [Math.round(G.camera.position.x), Math.round(G.camera.position.y), Math.round(G.camera.position.z)]; },
   };
   window.addEventListener('error', (e) => window.__ember.errors.push(String(e.message || e.error)));
   window.addEventListener('unhandledrejection', (e) => window.__ember.errors.push('rejection: ' + String(e.reason)));

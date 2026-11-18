@@ -3,7 +3,7 @@
 // 8 story missions, wanted level with police + helicopter, motorbikes.
 import * as THREE from 'three';
 import { makeRng, hashStr } from './rng.js';
-import { buildCity, districtAt } from './city.js';
+import { buildCity, districtAt, roadPoint } from './city.js';
 import { createPlayer } from './player.js';
 import { makeCar, makeBike, createDrive } from './vehicles.js';
 import { initTraffic } from './traffic.js';
@@ -19,7 +19,7 @@ const seed = parseInt(params.get('seed') || '1', 10) || 1;
 const shotName = params.get('shot');
 const rng = makeRng((seed ^ hashStr('ember-bay')) >>> 0);
 
-const SAVE_KEY = 'ember-bay-v4';
+const SAVE_KEY = 'ember-bay-v5';
 function loadSave() {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
@@ -30,21 +30,29 @@ function loadSave() {
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.domElement.classList.add('webgl');
 document.getElementById('app').appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0xe8906a, 420, 1500);
+scene.fog = new THREE.Fog(0xe07a45, 320, 1300);
 const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 4000);
 
-const hemi = new THREE.HemisphereLight(0xffd9a0, 0x3a2a4a, 0.85);
-const sun = new THREE.DirectionalLight(0xffb36b, 1.6);
-sun.position.set(-400, 320, 120);
-scene.add(hemi, sun);
+const hemi = new THREE.HemisphereLight(0xffd9a0, 0x4a3a55, 0.7);
+const sun = new THREE.DirectionalLight(0xff8a3d, 1.9);
+sun.position.set(-850, 130, 320);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = -420; sun.shadow.camera.right = 420;
+sun.shadow.camera.top = 420; sun.shadow.camera.bottom = -420;
+sun.shadow.camera.near = 10; sun.shadow.camera.far = 2600;
+sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.5;
+scene.add(hemi, sun, sun.target);
 
 const G = {
   scene, camera, renderer, rng, seed,
-  time: 0, clock: 18.5, day: 1,
+  time: 0, clock: 17.75, day: 1,
   money: 500, health: 100, armour: 50, respect: 0,
   weaponIdx: 1, mode: 'menu',
   vehicle: null, parked: [], camOverride: null, shot: null,
@@ -58,22 +66,26 @@ if (G.save) {
 
 G.setClock = (h) => {
   G.clock = ((h % 24) + 24) % 24;
-  const night = G.clock >= 19 || G.clock < 6;
+  const night = G.clock >= 19.5 || G.clock < 6;
   const sunset = !night && G.clock >= 16.5;
   if (night) {
+    sun.position.set(300, 400, -200);
     sun.intensity = 0.35; sun.color.setHex(0x8aa0ff);
     hemi.intensity = 0.35;
-    scene.fog.color.setHex(0x14142e);
+    scene.fog.color.setHex(0x14142e); scene.fog.near = 200; scene.fog.far = 900;
     if (G.city?.sky) G.city.sky.material.color.setHex(0x35355e);
   } else if (sunset) {
-    sun.intensity = 1.6; sun.color.setHex(0xffb36b);
-    hemi.intensity = 0.85;
-    scene.fog.color.setHex(0xe8906a);
+    // Golden hour: low warm sun in the west, long shadows, warm haze.
+    sun.position.set(-850, 130, 320);
+    sun.intensity = 1.9; sun.color.setHex(0xff8a3d);
+    hemi.intensity = 0.7;
+    scene.fog.color.setHex(0xe07a45); scene.fog.near = 320; scene.fog.far = 1300;
     if (G.city?.sky) G.city.sky.material.color.setHex(0xffffff);
   } else {
+    sun.position.set(-400, 500, 250);
     sun.intensity = 1.4; sun.color.setHex(0xfff0c0);
     hemi.intensity = 0.9;
-    scene.fog.color.setHex(0xcfd8e8);
+    scene.fog.color.setHex(0xcfd8e8); scene.fog.near = 420; scene.fog.far = 1500;
     if (G.city?.sky) G.city.sky.material.color.setHex(0xffffff);
   }
 };
@@ -105,7 +117,9 @@ G.damage = (amount, cause) => {
 // Build the world.
 G.city = buildCity(G);
 G.player = createPlayer(G);
-G.player.place(0, 40, 0);
+const startPt = roadPoint('ns', 3, -60);
+G.player.place(startPt.x, startPt.z, startPt.heading);
+G.playerHeading = startPt.heading;
 G.playerPos = G.player.pos;
 G.playerHeading = 0;
 G.traffic = initTraffic(G);
@@ -115,20 +129,34 @@ G.hud = initHud(G);
 G.audio = initAudio(G);
 G.tapes = initTapes(G);
 
-// Parked cars along the roads, ready to steal.
-const PARKED_SPOTS = [
-  [-400, 30, 0], [-300, -60, Math.PI / 2], [100, 120, 0], [200, -140, -Math.PI / 2],
-  [0, -260, Math.PI], [-200, 240, Math.PI / 2], [300, 60, 0], [-100, -20, Math.PI],
+// Parked cars along the roads, ready to steal — each on a real road.
+const PARKED_DEFS = [
+  ['ns', 0, 120, 1], ['ns', 1, -200, -1], ['ns', 2, 300, 1], ['ns', 3, 150, -1],
+  ['ns', 4, -80, 1], ['ns', 5, 220, -1], ['ew', 0, -100, 1], ['ew', 1, 260, -1],
+  ['ew', 2, -300, 1], ['ew', 3, 80, -1], ['ew', 4, -180, 1], ['ns', 1, 60, 1],
 ];
-const PARKED_KINDS = ['sedan', 'lowrider', 'taxi', 'pickup', 'sedan', 'van', 'sedan', 'lowrider'];
-PARKED_SPOTS.forEach(([x, z, h], i) => {
+const PARKED_KINDS = ['sedan', 'lowrider', 'taxi', 'pickup', 'sedan', 'van', 'sedan', 'lowrider', 'sedan', 'taxi', 'pickup', 'sedan'];
+PARKED_DEFS.forEach(([axis, idx, along, dir], i) => {
+  const pt = roadPoint(axis, idx, along, dir);
   const v = makeCar(G, PARKED_KINDS[i], i % 3);
   G.scene.add(v.group);
   const d = createDrive(G, v, {});
-  d.place(x, z, h);
+  // park on the right-hand side of the road
+  const side = axis === 'ns' ? (dir > 0 ? 5.5 : -5.5) : 0;
+  const sideZ = axis === 'ew' ? (dir > 0 ? -5.5 : 5.5) : 0;
+  d.place(pt.x + (axis === 'ns' ? side : 0), pt.z + (axis === 'ew' ? sideZ : 0), pt.heading);
   d.owned = false;
   G.parked.push(d);
 });
+// One lowrider parked on the Sunset Diagonal.
+{
+  const v = makeCar(G, 'lowrider', 1);
+  G.scene.add(v.group);
+  const d = createDrive(G, v, {});
+  d.place(-138, 8, Math.PI * 3 / 4);
+  d.owned = false;
+  G.parked.push(d);
+}
 
 G.enterVehicle = (drive) => {
   if (G.vehicle) return false;
@@ -240,7 +268,10 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// Camera.
+// Camera. The lerp uses REAL frame time (rawDt), not the clamped game dt:
+// at 1 fps in a headless renderer the clamped dt would leave the camera
+// stranded far from the player for seconds; real time converges in ~0.5 s
+// at any frame rate, and is identical at 60 fps.
 const desired = new THREE.Vector3();
 function updateCamera(dt) {
   if (G.camOverride) {
@@ -258,11 +289,11 @@ function updateCamera(dt) {
   }
   const h = G.playerHeading;
   const fx = Math.sin(h), fz = Math.cos(h);
-  const dist = G.vehicle ? 10.5 : 8;
-  const height = G.vehicle ? 4.2 : 3.6;
+  const dist = G.vehicle ? 8 : 6.5;
+  const height = G.vehicle ? 2.8 : 2.6;
   desired.set(pp.x - fx * dist, height, pp.z - fz * dist);
   camera.position.lerp(desired, 1 - Math.pow(0.001, dt));
-  camera.lookAt(pp.x + fx * 10, 1.6, pp.z + fz * 10);
+  camera.lookAt(pp.x + fx * 10, 1.8, pp.z + fz * 10);
   const top = G.vehicle ? G.vehicle.topSpeed : 0;
   const targetFov = 62 + (G.vehicle ? (Math.abs(G.vehicle.speed) / top) * 12 : 0);
   if (Math.abs(camera.fov - targetFov) > 0.05) {
@@ -276,7 +307,8 @@ const clockT = new THREE.Clock();
 let firstFrame = true;
 function loop() {
   requestAnimationFrame(loop);
-  const dt = Math.min(clockT.getDelta(), 0.05);
+  const rawDt = clockT.getDelta();
+  const dt = Math.min(rawDt, 0.05);
   G.time += dt;
   G.clock += dt / 150;
   if (G.clock >= 24) { G.clock -= 24; G.day++; }
@@ -300,7 +332,7 @@ function loop() {
     updateShot(G, dt);
   }
   G.hud.update(dt);
-  updateCamera(dt);
+  updateCamera(rawDt);
   renderer.render(scene, camera);
   if (firstFrame) {
     firstFrame = false;
@@ -310,6 +342,6 @@ function loop() {
 }
 
 installDebugApi(G);
-if (shotName) stageShot(G, shotName);
 G.setClock(G.clock);
+if (shotName) stageShot(G, shotName);
 loop();

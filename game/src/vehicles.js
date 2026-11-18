@@ -85,7 +85,7 @@ export function makeCar(G, kind, colorIdx = 0) {
   const tail = std(0xd81a1a, { emissive: 0xaa0000, emissiveIntensity: 0.9 });
   box(0.42, 0.22, 0.08, tail, -0.7, 0.85, -2.32, g);
   box(0.42, 0.22, 0.08, tail, 0.7, 0.85, -2.32, g);
-  g.traverse((o) => { if (o.isMesh) o.castShadow = false; });
+  g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; } });
   return { group: g, kind, wheels, color };
 }
 

@@ -1,10 +1,19 @@
-// Traffic: 16 cars, 3 motorbikes and 36 pedestrians, all seeded.
-// Cars follow the road grid, turn at intersections and stop at red lights.
+// Traffic v5: 22 cars, 7 motorbikes and 48 pedestrians, all seeded.
+// Cars follow the curved roads, turn at intersections and stop at red
+// lights. At the roundabout they swing around the island and carry on —
+// nobody turns on the ring.
 import * as THREE from 'three';
 import { makeCar, makeBike } from './vehicles.js';
-import { WORLD } from './city.js';
+import { ROADS, ROUNDABOUT, nsPlain, ewPlain, nsCenter, ewCenter, nsHeading, ewHeading } from './city.js';
 
 const KINDS = ['sedan', 'sedan', 'taxi', 'van', 'pickup', 'sedan', 'lowrider'];
+
+// Left-hand traffic (Indonesia): the lane offset is on the left of the
+// direction of travel.
+function laneOffset(axis, dir) {
+  if (axis === 'ns') return dir > 0 ? -3.5 : 3.5;
+  return dir > 0 ? 3.5 : -3.5;
+}
 
 function pedFigure(G, x, z) {
   const rng = G.rng;
@@ -40,18 +49,22 @@ function lightState(light, t) {
 export function initTraffic(G) {
   const { scene, rng, city } = G;
   const T = { cars: [], bikes: [], peds: [] };
-  const roadLines = WORLD.roadAt;
 
   const spawnOnRoad = () => {
     const alongNS = rng.chance(0.5);
-    const line = rng.pick(roadLines);
-    const along = rng.range(-430, 430);
     const dir = rng.chance(0.5) ? 1 : -1;
-    if (alongNS) return { x: line + (dir > 0 ? -3.5 : 3.5), z: along, heading: dir > 0 ? 0 : Math.PI, axis: 'ns', dir };
-    return { x: along, z: line + (dir > 0 ? 3.5 : -3.5), heading: dir > 0 ? Math.PI / 2 : -Math.PI / 2, axis: 'ew', dir };
+    const along = rng.range(-430, 430);
+    if (alongNS) {
+      const road = rng.pick(ROADS.ns);
+      const x = nsCenter(road, along, dir) + laneOffset('ns', dir);
+      return { x, z: along, heading: nsHeading(road, along, dir), axis: 'ns', road, dir };
+    }
+    const road = rng.pick(ROADS.ew);
+    const z = ewCenter(road, along, dir) + laneOffset('ew', dir);
+    return { x: along, z, heading: ewHeading(road, along, dir), axis: 'ew', road, dir };
   };
 
-  for (let i = 0; i < 16; i++) {
+  for (let i = 0; i < 22; i++) {
     const kind = rng.pick(KINDS);
     const v = makeCar(G, kind, rng.int(0, 3));
     const s = spawnOnRoad();
@@ -60,11 +73,11 @@ export function initTraffic(G) {
     scene.add(v.group);
     T.cars.push({
       ...v, pos: v.group.position, heading: s.heading, targetHeading: s.heading,
-      axis: s.axis, dir: s.dir, speed: rng.range(10, 16), cruise: rng.range(11, 17),
-      decidedAt: -1,
+      axis: s.axis, road: s.road, dir: s.dir, speed: rng.range(10, 16), cruise: rng.range(11, 17),
+      decidedAt: -1, pendingAxis: null, turnRoad: null,
     });
   }
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 7; i++) {
     const v = makeBike(G, rng.pick([0xd81a1a, 0x2a6fd8, 0x222831]));
     const s = spawnOnRoad();
     v.group.position.set(s.x, 0, s.z);
@@ -72,16 +85,25 @@ export function initTraffic(G) {
     scene.add(v.group);
     T.bikes.push({
       ...v, pos: v.group.position, heading: s.heading, targetHeading: s.heading,
-      axis: s.axis, dir: s.dir, speed: rng.range(14, 20), cruise: rng.range(15, 21), decidedAt: -1,
+      axis: s.axis, road: s.road, dir: s.dir, speed: rng.range(14, 20), cruise: rng.range(15, 21),
+      decidedAt: -1, pendingAxis: null, turnRoad: null,
     });
   }
-  for (let i = 0; i < 36; i++) {
-    const p = pedFigure(G, rng.range(-430, 430), rng.range(-430, 430));
+  const pedSpot = () => {
+    let x, z;
+    do {
+      x = rng.range(-430, 430); z = rng.range(-430, 430);
+    } while (Math.hypot(x - ROUNDABOUT.cx, z - ROUNDABOUT.cz) < 26);
+    return [x, z];
+  };
+  for (let i = 0; i < 48; i++) {
+    const [x, z] = pedSpot();
+    const p = pedFigure(G, x, z);
     scene.add(p.group);
     T.peds.push(p);
   }
 
-  const nearestLight = (x, z, axis) => {
+  const nearestLight = (x, z) => {
     let best = null; let bestD = 1e9;
     for (const l of city.lights) {
       const dx = l.pos.x - x, dz = l.pos.z - z;
@@ -91,45 +113,72 @@ export function initTraffic(G) {
     return { light: best, dist: bestD };
   };
 
+  // Keep a car glued to its road centreline (curves included).
+  const snapToRoad = (c) => {
+    if (c.axis === 'ns') {
+      c.pos.x = nsCenter(c.road, c.pos.z, c.dir) + laneOffset('ns', c.dir);
+      c.heading = nsHeading(c.road, c.pos.z, c.dir);
+    } else {
+      c.pos.z = ewCenter(c.road, c.pos.x, c.dir) + laneOffset('ew', c.dir);
+      c.heading = ewHeading(c.road, c.pos.x, c.dir);
+    }
+    c.targetHeading = c.heading;
+  };
+
   T.update = (dt, time) => {
     const stepCar = (c) => {
       // find next intersection ahead along current axis
       const fx = Math.sin(c.heading), fz = Math.cos(c.heading);
       let distToCross = 1e9;
-      for (const line of roadLines) {
-        const d = c.axis === 'ns' ? (line - c.pos.z) * c.dir : (line - c.pos.x) * c.dir;
-        if (d > 2 && d < distToCross) distToCross = d;
+      let nextRoad = null;
+      if (c.axis === 'ns') {
+        for (const road of ROADS.ew) {
+          const d = (ewPlain(road, c.pos.x) - c.pos.z) * c.dir;
+          if (d > 2 && d < distToCross) { distToCross = d; nextRoad = road; }
+        }
+      } else {
+        for (const road of ROADS.ns) {
+          const d = (nsPlain(road, c.pos.z) - c.pos.x) * c.dir;
+          if (d > 2 && d < distToCross) { distToCross = d; nextRoad = road; }
+        }
       }
-      // decide a turn once per intersection
+      // decide a turn once per intersection — never on the roundabout ring
       const crossKey = Math.round((c.axis === 'ns' ? c.pos.z : c.pos.x) / 100);
-      if (distToCross < 10 && c.decidedAt !== crossKey) {
+      const isRbCross = c.road.rb && nextRoad && nextRoad.rb;
+      if (distToCross < 10 && c.decidedAt !== crossKey && !c.pendingAxis) {
         c.decidedAt = crossKey;
-        const roll = rng.next();
-        let turn = 0; // 0 straight, -1 left, +1 right
-        if (roll > 0.62) turn = rng.chance(0.5) ? -1 : 1;
-        if (turn !== 0) {
-          c.targetHeading = c.heading + turn * Math.PI / 2;
-          // axis flips after the turn completes
-          c.pendingAxis = c.axis === 'ns' ? 'ew' : 'ns';
+        if (!isRbCross) {
+          const roll = rng.next();
+          let turn = 0; // 0 straight, -1 left, +1 right
+          if (roll > 0.62) turn = rng.chance(0.5) ? -1 : 1;
+          if (turn !== 0 && nextRoad) {
+            c.targetHeading = c.heading + turn * Math.PI / 2;
+            c.pendingAxis = c.axis === 'ns' ? 'ew' : 'ns';
+            c.turnRoad = nextRoad;
+          }
         }
       }
       // steer toward target heading
       let dh = c.targetHeading - c.heading;
       while (dh > Math.PI) dh -= Math.PI * 2;
       while (dh < -Math.PI) dh += Math.PI * 2;
-      c.heading += dh * Math.min(1, dt * 3);
+      const turning = !!c.pendingAxis;
+      if (turning) c.heading += dh * Math.min(1, dt * 3);
       if (Math.abs(dh) < 0.05 && c.pendingAxis) {
         c.axis = c.pendingAxis; c.pendingAxis = null;
-        // recompute travel direction from the new heading
+        c.road = c.turnRoad; c.turnRoad = null;
         if (c.axis === 'ns') c.dir = Math.cos(c.heading) >= 0 ? 1 : -1;
         else c.dir = Math.sin(c.heading) >= 0 ? 1 : -1;
+        snapToRoad(c);
+      } else if (!turning) {
+        snapToRoad(c);
       }
       // red light ahead?
       let want = c.cruise;
-      const { light, dist } = nearestLight(c.pos.x + fx * 14, c.pos.z + fz * 14, c.axis);
+      const { light, dist } = nearestLight(c.pos.x + fx * 14, c.pos.z + fz * 14);
       if (light && dist < 26) {
-        const st = lightState(light, time).ns;
-        const my = c.axis === 'ns' ? st : lightState(light, time).ew;
+        const st = lightState(light, time);
+        const my = c.axis === 'ns' ? st.ns : st.ew;
         if (my !== 'green' && distToCross < 24) want = 0;
       }
       c.speed += (want - c.speed) * Math.min(1, dt * (want > c.speed ? 1.2 : 4));
@@ -146,12 +195,16 @@ export function initTraffic(G) {
     };
     for (const c of T.cars) stepCar(c);
     for (const c of T.bikes) stepCar(c);
-    // pedestrians: stroll between sidewalk waypoints
+    // pedestrians: stroll between sidewalk waypoints (never on the island)
     for (const p of T.peds) {
       const dx = p.target.x - p.pos.x, dz = p.target.z - p.pos.z;
       const d = Math.hypot(dx, dz);
       if (d < 2) {
-        p.target.set(rng.range(-430, 430), 0, rng.range(-430, 430));
+        let tx, tz;
+        do {
+          tx = rng.range(-430, 430); tz = rng.range(-430, 430);
+        } while (Math.hypot(tx - ROUNDABOUT.cx, tz - ROUNDABOUT.cz) < 26);
+        p.target.set(tx, 0, tz);
       } else {
         const vx = dx / d, vz = dz / d;
         p.pos.x += vx * p.speed * dt;

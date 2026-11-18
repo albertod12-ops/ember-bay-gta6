@@ -1,6 +1,6 @@
 // HUD: money, stars, weapons, bars, EBPD panel, mission line, speed and the
 // round minimap with compass, district label and unit markers.
-import { WORLD, districtAt } from './city.js';
+import { ROADS, DIAGONALS, ROUNDABOUT, nsPlain, ewPlain, crossing, districtAt } from './city.js';
 
 const WEAPONS = [
   { key: '1', name: 'FISTS' },
@@ -80,22 +80,44 @@ export function initHud(G) {
       const toMap = (x, z) => [((x + 460) / W2) * S, ((z + 460) / W2) * S];
       mm.clearRect(0, 0, S, S);
       mm.fillStyle = '#0c2b12'; mm.fillRect(0, 0, S, S);
-      // ocean strip on the west
-      mm.fillStyle = '#1a7f8e'; mm.fillRect(0, 0, ((0) / W2) * S + 4, S);
-      // blocks
+      // ocean strip on the west edge
+      mm.fillStyle = '#1a7f8e'; mm.fillRect(0, 0, 5, S);
+      // blocks (irregular quadrilaterals between the curved roads)
       mm.fillStyle = '#3a4a2f';
-      for (let ix = 0; ix < WORLD.roadAt.length - 1; ix++) {
-        for (let iz = 0; iz < WORLD.roadAt.length - 1; iz++) {
-          const [x0, z0] = toMap(WORLD.roadAt[ix] + 7, WORLD.roadAt[iz] + 7);
-          const [x1, z1] = toMap(WORLD.roadAt[ix + 1] - 7, WORLD.roadAt[iz + 1] - 7);
-          mm.fillRect(x0, z0, x1 - x0, z1 - z0);
+      for (let ix = 0; ix < ROADS.ns.length - 1; ix++) {
+        for (let iz = 0; iz < ROADS.ew.length - 1; iz++) {
+          const c00 = crossing(ROADS.ns[ix], ROADS.ew[iz]);
+          const c01 = crossing(ROADS.ns[ix], ROADS.ew[iz + 1]);
+          const c10 = crossing(ROADS.ns[ix + 1], ROADS.ew[iz]);
+          const c11 = crossing(ROADS.ns[ix + 1], ROADS.ew[iz + 1]);
+          const p = [c00, c10, c11, c01].map((c) => toMap(c.x, c.z));
+          mm.beginPath();
+          mm.moveTo(p[0][0], p[0][1]);
+          for (let i = 1; i < 4; i++) mm.lineTo(p[i][0], p[i][1]);
+          mm.closePath(); mm.fill();
         }
       }
-      // roads
+      // roads: curved polylines, diagonals, roundabout ring
       mm.strokeStyle = '#c9b458'; mm.lineWidth = 2;
-      for (const line of WORLD.roadAt) {
-        const [ax] = toMap(line, 0); mm.beginPath(); mm.moveTo(ax, 0); mm.lineTo(ax, S); mm.stroke();
-        const [, bz] = toMap(0, line); mm.beginPath(); mm.moveTo(0, bz); mm.lineTo(S, bz); mm.stroke();
+      const strokeRoad = (pts) => {
+        mm.beginPath();
+        pts.forEach(([x, z], i) => { const [mx, mz] = toMap(x, z); if (i === 0) mm.moveTo(mx, mz); else mm.lineTo(mx, mz); });
+        mm.stroke();
+      };
+      for (const road of ROADS.ns) {
+        const pts = [];
+        for (let z = -460; z <= 460; z += 20) pts.push([nsPlain(road, z), z]);
+        strokeRoad(pts);
+      }
+      for (const road of ROADS.ew) {
+        const pts = [];
+        for (let x = -460; x <= 460; x += 20) pts.push([x, ewPlain(road, x)]);
+        strokeRoad(pts);
+      }
+      for (const [ax, az, bx, bz] of DIAGONALS) strokeRoad([[ax, az], [bx, bz]]);
+      {
+        const [rx, rz] = toMap(ROUNDABOUT.cx, ROUNDABOUT.cz);
+        mm.beginPath(); mm.arc(rx, rz, (ROUNDABOUT.r / W2) * S, 0, Math.PI * 2); mm.stroke();
       }
       // mission marker
       if (G.missions.active && G.missions.marker) {
