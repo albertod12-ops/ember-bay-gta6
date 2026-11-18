@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ember Bay — open-world crime game</title>
+<style>
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#1a0f2e;font-family:Verdana,Geneva,sans-serif;color:#fff}
+  #app{position:fixed;inset:0}
+  canvas.webgl{display:block;width:100%;height:100%}
+  .hidden{display:none!important}
+  #hud{position:absolute;inset:0;pointer-events:none;z-index:5}
+  .panel{background:rgba(10,6,20,.62);border-left:3px solid #ff2d55;border-radius:2px;padding:6px 9px;font-size:12px;line-height:1.5}
+  #ebpd{position:absolute;top:10px;left:10px;min-width:210px}
+  #ebpd .unit{white-space:nowrap}
+  #ebpd .unit b{color:#ffd24d}
+  #mission{position:absolute;top:10px;left:50%;transform:translateX(-50%);color:#ffe14d;font-weight:bold;font-size:15px;text-shadow:0 2px 4px #000;text-align:center;max-width:60%}
+  #topright{position:absolute;top:10px;right:12px;text-align:right}
+  #clock{font-size:13px;color:#fff;text-shadow:0 1px 3px #000}
+  #money{font-size:26px;font-weight:bold;color:#39d353;text-shadow:0 2px 4px #000}
+  #stars{font-size:22px;letter-spacing:2px;text-shadow:0 2px 4px #000}
+  #stars .on{color:#ffd24d}#stars .off{color:rgba(255,255,255,.28)}
+  #weapons{margin-top:4px;font-size:11px}
+  #weapons span{border:1px solid rgba(255,255,255,.4);padding:2px 5px;margin-left:3px;border-radius:2px;background:rgba(0,0,0,.35)}
+  #weapons span.sel{border-color:#ffd24d;color:#ffd24d;background:rgba(0,0,0,.6)}
+  #minimapWrap{position:absolute;left:12px;bottom:12px;text-align:center}
+  #minimap{border:2px solid rgba(255,255,255,.55);border-radius:50%;background:#0c2b12;display:block}
+  #district{font-size:12px;font-weight:bold;text-shadow:0 1px 3px #000;margin-top:2px}
+  #tapes{font-size:11px;color:#ff9de2;text-shadow:0 1px 3px #000}
+  #bars{position:absolute;left:12px;bottom:190px;width:180px;font-size:11px;text-shadow:0 1px 2px #000}
+  .bar{height:9px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.5);margin:2px 0 4px}
+  .bar>i{display:block;height:100%}
+  #healthBar>i{background:#7dff5e}#armourBar>i{background:#6ec6ff}#respectBar>i{background:#c07dff}
+  #speed{position:absolute;right:16px;bottom:14px;font-size:30px;font-weight:bold;text-shadow:0 2px 5px #000}
+  #speed small{font-size:14px}
+  #speedlines{position:absolute;inset:0;pointer-events:none;opacity:0;background:radial-gradient(ellipse at center,transparent 55%,rgba(255,255,255,.28) 78%,transparent 82%)}
+  #banner{position:absolute;top:38%;left:50%;transform:translate(-50%,-50%);text-align:center;font-size:26px;font-weight:bold;letter-spacing:3px;color:#fff;text-shadow:0 3px 8px #000}
+  #banner small{display:block;font-size:13px;letter-spacing:2px;color:#ffd24d;margin-top:6px}
+  #toast{position:absolute;bottom:120px;left:50%;transform:translateX(-50%);font-size:14px;color:#ffe14d;text-shadow:0 2px 4px #000}
+  #title{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(180deg,rgba(20,8,40,.25) 0%,rgba(20,8,40,0) 35%,rgba(20,8,40,0) 60%,rgba(20,8,40,.55) 100%)}
+  #title h1{font-size:84px;margin:0;letter-spacing:10px;background:linear-gradient(180deg,#ffe14d 15%,#ff7a3d 55%,#ff2d55 100%);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 6px 24px rgba(0,0,0,.45);font-style:italic}
+  #title .sub{font-size:15px;letter-spacing:6px;color:#fff;text-shadow:0 2px 6px #000;margin:4px 0 26px}
+  #title button{display:block;width:280px;margin:7px 0;padding:12px;font-size:16px;font-weight:bold;color:#fff;background:rgba(10,6,20,.72);border:2px solid #ff2d55;border-radius:4px;cursor:pointer;pointer-events:auto}
+  #title button:hover{background:#ff2d55}
+  #title .controls{margin-top:22px;font-size:12px;line-height:1.7;text-align:center;color:#fff;text-shadow:0 1px 3px #000;background:rgba(10,6,20,.5);padding:10px 18px;border-radius:4px}
+  #title .foot{margin-top:14px;font-size:11px;color:#ffd24d;text-shadow:0 1px 3px #000}
+</style>
+<script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
+</head>
+<body>
+<div id="app"></div>
+<div id="hud" class="hidden">
+  <div id="ebpd" class="panel hidden"></div>
+  <div id="mission"></div>
+  <div id="topright">
+    <div id="clock">DAY 1 · 18:32 · BAY FM 98.2 — Sunset Drive</div>
+    <div id="money">$500</div>
+    <div id="stars"></div>
+    <div id="weapons"></div>
+  </div>
+  <div id="minimapWrap"><canvas id="minimap" width="170" height="170"></canvas><div id="district">Central Avenues</div><div id="tapes">Sunset Tapes 0/20</div></div>
+  <div id="bars">
+    <div>HEALTH <span id="healthTxt">100</span></div><div class="bar" id="healthBar"><i style="width:100%"></i></div>
+    <div>ARMOUR <span id="armourTxt">50</span></div><div class="bar" id="armourBar"><i style="width:50%"></i></div>
+    <div>RESPECT <span id="respectTxt">0%</span></div><div class="bar" id="respectBar"><i style="width:0%"></i></div>
+  </div>
+  <div id="speed">0 <small>km/h</small></div>
+  <div id="speedlines"></div>
+  <div id="banner" class="hidden"></div>
+  <div id="toast"></div>
+</div>
+<div id="title">
+  <h1>EMBER BAY</h1>
+  <div class="sub">OPEN-WORLD CRIME · 14 DISTRICTS · 8 STORY MISSIONS</div>
+  <button id="btnStart">START GAME</button>
+  <button id="btnContinue" class="hidden">CONTINUE — DAY <span id="contDay">1</span> · $<span id="contMoney">0</span></button>
+  <div class="controls">WASD / ARROWS — walk &amp; drive &nbsp;·&nbsp; E — enter / exit / steal car &amp; bike<br>M — start mission &nbsp;·&nbsp; SPACE — handbrake &nbsp;·&nbsp; SHIFT — run &nbsp;·&nbsp; R — radio</div>
+  <div class="foot">BAY FM 98.2 — SUNSET DRIVE · SAVE: AUTO ON MISSION &amp; TAPE</div>
+</div>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
