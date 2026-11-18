@@ -120,8 +120,8 @@ export function updateShot(G, dt) {
     if (car) {
       const t = nsHeading(road, car.pos.z, 1);
       car.speed = 38;
-      car.heading = t + 0.35;
-      car.pos.x = nsCenter(road, car.pos.z, 1) - 3.5;
+      car.heading = t + 0.12;
+      car.pos.x = nsCenter(road, car.pos.z, 1) - 2.5;
       car.sync();
       const d = car.drift;
       d.active = true;
@@ -142,7 +142,7 @@ export function updateShot(G, dt) {
       const rx = Math.cos(car.heading), rz = -Math.sin(car.heading);
       const flash = Math.sin(G._titleT * 14) > 0;
       G._titleCops.forEach((cop, i) => {
-        const back = -(8 + i * 5);
+        const back = -(6 + i * 4);
         const side = i === 0 ? 2 : 4.5;
         cop.group.position.set(car.pos.x - fx * back + rx * side, 0, car.pos.z - fz * back + rz * side);
         cop.group.rotation.y = car.heading;
@@ -151,9 +151,9 @@ export function updateShot(G, dt) {
       });
       const h = G._titleHeli;
       if (h) {
-        const hx = car.pos.x + fx * 30 + rx * 6;
-        const hz = car.pos.z + fz * 30 + rz * 6;
-        h.group.position.set(hx, 26 + Math.sin(G._titleT * 0.8) * 1.5, hz);
+        const hx = car.pos.x + fx * 40 + rx * 4;
+        const hz = car.pos.z + fz * 40 + rz * 4;
+        h.group.position.set(hx, 19 + Math.sin(G._titleT * 0.8) * 1.5, hz);
         h.group.rotation.y = Math.atan2(car.pos.x - hx, car.pos.z - hz);
         h.rotor.rotation.y += dt * 22;
         h.tailRotor.rotation.x += dt * 30;
@@ -182,8 +182,8 @@ export function updateShot(G, dt) {
       G.traffic.cars.forEach((c, i) => { if (!tHeld.includes(c)) parkFar(c, i); });
       G.traffic.bikes.forEach((c, i) => parkFar(c, i));
       G.camOverride = {
-        pos: [car.pos.x - fx * 10 + rx * 4, 2.6, car.pos.z - fz * 10 + rz * 4],
-        look: [car.pos.x + fx * 8, 1.2, car.pos.z + fz * 8],
+        pos: [car.pos.x - fx * 18 + rx * 2, 4.2, car.pos.z - fz * 18 + rz * 2],
+        look: [car.pos.x + fx * 10, 1.8, car.pos.z + fz * 10],
       };
       G.playerHeading = car.heading;
     }
