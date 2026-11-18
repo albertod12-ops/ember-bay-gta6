@@ -67,19 +67,20 @@ export function stageShot(G, name) {
     G.police.setWanted(3);
   } else if (name === 'combat') {
     G.setClock(21.7);
-    G.player.place(pt.x, pt.z, pt.heading);
+    const cpt = roadPoint('ns', STAGE_ROAD, -30, -1);
+    G.player.place(cpt.x, cpt.z, cpt.heading);
     G.playerPos = G.player.pos;
-    G.playerHeading = pt.heading;
-    const fx = Math.sin(pt.heading), fz = Math.cos(pt.heading);
-    const rx = Math.cos(pt.heading), rz = -Math.sin(pt.heading);
-    G.spawnCrew(pt.x + fx * 14, pt.z + fz * 14, 3);
+    G.playerHeading = cpt.heading;
+    const fx = Math.sin(cpt.heading), fz = Math.cos(cpt.heading);
+    const rx = Math.cos(cpt.heading), rz = -Math.sin(cpt.heading);
+    G.spawnCrew(cpt.x + fx * 14, cpt.z + fz * 14, 3);
     G.missions.startId(7);
     G.police.setWanted(4);
     G.hud.dialogue('VIC TORRES', 'CREW BOSS', 'You walked into the wrong street, kid. Boys — take him down.', 'vic', true);
     G._shotTimer = 0;
     G.camOverride = {
-      pos: [pt.x + rx * 5 - fx * 3, 2.4, pt.z + rz * 5 - fz * 3],
-      look: [pt.x + fx * 11, 1.5, pt.z + fz * 11],
+      pos: [cpt.x - fx * 4.5, 2.6, cpt.z - fz * 4.5],
+      look: [cpt.x + fx * 16, 1.4, cpt.z + fz * 16],
     };
   }
 }
@@ -199,6 +200,8 @@ export function updateShot(G, dt) {
       c.pos.set(pp.x + rx * side + fx * fwd, 0, pp.z + rz * side + fz * fwd);
       c.heading = ph; c.group.position.copy(c.pos); c.group.rotation.y = ph;
     });
+    const pb = P.units.find((u) => u.kind === 'bike');
+    if (pb) { pb.pos.set(pp.x - rx * 6 + fx * 18, 0, pp.z - rz * 6 + fz * 18); pb.heading = ph; pb.group.position.copy(pb.pos); pb.group.rotation.y = ph; }
     if (P.heli) P.heli.group.position.set(pp.x + fx * 24, 24, pp.z + fz * 24);
     return;
   }
