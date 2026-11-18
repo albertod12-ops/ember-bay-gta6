@@ -50,6 +50,11 @@ export function createPlayer(G) {
       const s = Math.sin(P.walkPhase);
       hipL.rotation.x = s * swing; hipR.rotation.x = -s * swing;
       shL.rotation.x = -s * swing * 0.8; shR.rotation.x = s * swing * 0.8;
+      if (G._aimPose) {
+        shL.rotation.x = -1.35; shR.rotation.x = -1.25;
+        shL.rotation.z = 0.3; shR.rotation.z = -0.3;
+        hipL.rotation.x = 0.15; hipR.rotation.x = -0.12;
+      }
       P.pos.x = Math.max(-455, Math.min(455, P.pos.x));
       P.pos.z = Math.max(-455, Math.min(455, P.pos.z));
       P.sync();

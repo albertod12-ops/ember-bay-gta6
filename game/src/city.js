@@ -1127,6 +1127,7 @@ export function buildCity(G) {
     box(0.6, 0.14, 0.08, mat(0xd81a1a, { emissive: 0xaa0000, emissiveIntensity: 0.8 }), 0.65, 0.62, -2.32, g);
     g.position.set(x, 0, z);
     g.rotation.y = heading;
+    g.userData.parkedCar = true;
     g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
     root.add(g);
     return g;

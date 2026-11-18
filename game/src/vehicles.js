@@ -113,7 +113,7 @@ export function sportWheel(r = 0.46, caliperColor = 0xffc21c) {
 export function makeCar(G, kind, colorIdx = 0) {
   const g = new THREE.Group();
   const color = (CAR_COLORS[kind] || CAR_COLORS.sedan)[colorIdx % (CAR_COLORS[kind] || []).length];
-  const paint = std(color);
+  const paint = std(color, { roughness: 0.3, metalness: 0.55 });
   const glass = std(0x14202e, { roughness: 0.12, metalness: 0.65 });
   const dark = std(0x1a1a1a, { roughness: 0.8, metalness: 0.1 });
   const chrome = std(0xd8d8d8, { metalness: 0.9, roughness: 0.2 });
@@ -141,6 +141,8 @@ export function makeCar(G, kind, colorIdx = 0) {
     lamps(g, 3.74, -4.22, 0.95);
   } else if (kind === 'van') {
     box(2.3, 1.9, 5.4, paint, 0, 1.35, 0, g);
+    box(2.34, 0.1, 5.2, paint, 0, 1.0, 0, g);
+    box(2.2, 0.16, 5.2, dark, 0, 0.42, 0, g);
     box(2.0, 0.8, 0.9, glass, 0, 1.85, 2.0, g, 0.28, 0, 0);
     box(0.06, 0.7, 3.0, glass, -1.16, 1.55, -0.4, g);
     box(0.06, 0.7, 3.0, glass, 1.16, 1.55, -0.4, g);
@@ -158,6 +160,8 @@ export function makeCar(G, kind, colorIdx = 0) {
     lamps(g, 2.72, -2.72, 0.95);
   } else if (kind === 'pickup') {
     box(2.3, 0.85, 5.2, paint, 0, 0.8, 0, g);
+    box(2.34, 0.12, 5.0, paint, 0, 1.02, 0, g);
+    box(2.2, 0.16, 5.0, dark, 0, 0.42, 0, g);
     box(2.2, 0.1, 1.4, paint, 0, 1.28, 1.6, g, 0.1, 0, 0);
     box(1.95, 0.75, 1.5, glass, 0, 1.65, 1.55, g);
     box(2.0, 0.08, 1.45, paint, 0, 2.06, 1.55, g);
@@ -183,7 +187,12 @@ export function makeCar(G, kind, colorIdx = 0) {
     };
     box(2.2, 0.42, 4.8, paint, 0, 0.52, 0, g);
     box(2.1, 0.3, 1.3, paint, 0, 0.48, 1.85, g, -0.16, 0, 0);
+    box(1.9, 0.3, 0.7, paint, 0, 0.4, 2.2, g, -0.32, 0, 0);
+    box(1.95, 0.22, 0.25, dark, 0, 0.3, 2.42, g);
+    box(2.24, 0.12, 4.5, paint, 0, 0.74, 0, g);
+    box(2.0, 0.16, 4.5, dark, 0, 0.26, 0, g);
     box(2.15, 0.34, 0.9, paint, 0, 0.6, -1.95, g);
+    box(2.1, 0.2, 0.2, dark, 0, 0.36, -2.4, g);
     box(2.22, 0.12, 4.6, dark, 0, 0.3, 0, g);
     box(0.06, 0.3, 0.8, dark, -1.11, 0.6, -0.9, g);
     box(0.06, 0.3, 0.8, dark, 1.11, 0.6, -0.9, g);
@@ -192,9 +201,10 @@ export function makeCar(G, kind, colorIdx = 0) {
     box(0.06, 0.1, 0.9, chrome, -1.07, 0.88, -0.55, g);
     box(0.06, 0.1, 0.9, chrome, 1.07, 0.88, -0.55, g);
     box(1.7, 0.38, 1.5, glass, 0, 0.95, -0.15, g);
-    box(1.75, 0.07, 1.4, dark, 0, 1.16, -0.2, g);
+    box(1.6, 0.07, 1.3, dark, 0, 1.16, -0.2, g);
     box(1.66, 0.05, 0.9, glass, 0, 0.92, 0.62, g, 0.55, 0, 0);
     box(1.66, 0.05, 0.7, glass, 0, 0.9, -0.92, g, -0.5, 0, 0);
+    box(1.62, 0.1, 0.06, dark, 0, 0.78, -1.28, g);
     box(0.1, 0.22, 0.1, dark, -0.7, 0.95, -2.3, g);
     box(0.1, 0.22, 0.1, dark, 0.7, 0.95, -2.3, g);
     box(1.6, 0.08, 0.4, paint, 0, 1.24, -2.32, g);
@@ -211,7 +221,9 @@ export function makeCar(G, kind, colorIdx = 0) {
     box(0.3, 0.1, 0.08, head, -0.85, 0.52, 2.4, g, 0, -0.9, 0);
     box(0.3, 0.1, 0.08, head, 0.85, 0.52, 2.4, g, 0, 0.9, 0);
     const tailBar = std(0xd81a1a, { emissive: 0xaa0000, emissiveIntensity: 1.1 });
-    box(1.9, 0.12, 0.08, tailBar, 0, 0.72, -2.42, g);
+    box(1.9, 0.18, 0.08, tailBar, 0, 0.72, -2.42, g);
+    box(0.3, 0.18, 0.08, tailBar, -0.82, 0.72, -2.42, g);
+    box(0.3, 0.18, 0.08, tailBar, 0.82, 0.72, -2.42, g);
     box(0.05, 0.05, 0.2, dark, -1.06, 0.98, 0.55, g);
     box(0.05, 0.05, 0.2, dark, 1.06, 0.98, 0.55, g);
     box(0.16, 0.09, 0.18, paint, -1.12, 1.0, 0.55, g);
@@ -232,18 +244,22 @@ export function makeCar(G, kind, colorIdx = 0) {
     const bodyY = 0.52 - drop;
     box(2.0, 0.5, 4.6, paint, 0, bodyY, 0, g);
     box(2.04, 0.1, 4.4, dark, 0, bodyY - 0.26, 0, g);
-    box(1.95, 0.1, 1.5, paint, 0, bodyY + 0.3, 1.5, g, 0.1, 0, 0);
+    box(2.06, 0.12, 4.4, paint, 0, bodyY + 0.26, 0, g);
+    box(1.9, 0.16, 4.4, dark, 0, bodyY - 0.3, 0, g);
+    box(1.95, 0.1, 1.7, paint, 0, bodyY + 0.3, 1.5, g, 0.18, 0, 0);
+    box(1.85, 0.26, 0.5, paint, 0, bodyY + 0.22, 2.2, g, -0.28, 0, 0);
     box(2.0, 0.35, 0.35, dark, 0, bodyY - 0.12, 2.2, g);
     box(2.0, 0.35, 0.35, dark, 0, bodyY - 0.12, -2.2, g);
-    box(1.75, 0.55, 2.1, glass, 0, bodyY + 0.53, -0.35, g);
-    box(1.8, 0.08, 1.9, paint, 0, bodyY + 0.83, -0.35, g);
-    box(1.7, 0.05, 0.85, glass, 0, bodyY + 0.6, 0.68, g, 0.5, 0, 0);
-    box(1.7, 0.05, 0.8, glass, 0, bodyY + 0.58, -1.38, g, -0.42, 0, 0);
+    box(1.75, 0.48, 2.1, glass, 0, bodyY + 0.5, -0.35, g);
+    box(1.7, 0.08, 1.9, paint, 0, bodyY + 0.78, -0.35, g);
+    box(1.7, 0.05, 0.85, glass, 0, bodyY + 0.58, 0.68, g, 0.5, 0, 0);
+    box(1.7, 0.05, 0.8, glass, 0, bodyY + 0.56, -1.38, g, -0.42, 0, 0);
     box(0.08, 0.55, 0.1, dark, -0.88, bodyY + 0.53, -0.35, g);
     box(0.08, 0.55, 0.1, dark, 0.88, bodyY + 0.53, -0.35, g);
     box(0.1, 0.5, 0.1, dark, -0.85, bodyY + 0.55, 0.62, g, 0.5, 0, 0);
     box(0.1, 0.5, 0.1, dark, 0.85, bodyY + 0.55, 0.62, g, 0.5, 0, 0);
-    box(1.95, 0.42, 0.95, paint, 0, bodyY + 0.28, -1.82, g);
+    box(1.95, 0.42, 0.95, paint, 0, bodyY + 0.28, -1.82, g, -0.12, 0, 0);
+    box(1.9, 0.1, 0.3, paint, 0, bodyY + 0.5, -2.26, g, -0.12, 0, 0);
     box(1.95, 0.06, 0.2, paint, 0, bodyY + 0.5, -2.24, g);
     box(2.04, 0.06, 4.3, chrome, 0, bodyY + 0.22, 0, g);
     box(0.04, 0.05, 0.28, chrome, -1.01, bodyY + 0.36, 0.25, g);

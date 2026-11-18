@@ -40,9 +40,9 @@ export function makePerson(G, opts = {}) {
   const makeLeg = (side) => {
     const hip = new THREE.Group();
     hip.position.set(side * 0.1, 0.98, 0);
-    limb(0, 0, 0, 0, -0.46, 0, 0.08, pantsM, hip);
-    limb(0, -0.46, 0, 0, -0.88, 0.02, 0.062, pantsM, hip);
-    const knee = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), pantsM);
+    limb(0, 0, 0, 0, -0.46, 0, 0.085, pantsM, hip);
+    limb(0, -0.46, 0, 0, -0.88, 0.02, 0.066, pantsM, hip);
+    const knee = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 6), pantsM);
     knee.position.set(0, -0.46, 0.03); hip.add(knee);
     box(0.15, 0.08, 0.3, shoeM, 0, -0.93, 0.05, hip);
     box(0.16, 0.03, 0.31, soleM, 0, -0.97, 0.05, hip);
@@ -55,10 +55,20 @@ export function makePerson(G, opts = {}) {
   box(0.38, 0.18, 0.22, pantsM, 0, 1.04, 0, g);
   box(0.4, 0.06, 0.24, std(0x3a2a1a, { roughness: 0.6 }), 0, 1.14, 0, g);
   box(0.08, 0.05, 0.03, std(0xd8d8d8, { metalness: 0.8, roughness: 0.3 }), 0, 1.14, 0.13, g);
-  const chest = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.2, 0.42, 8), shirtM);
+  const chest = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.19, 0.42, 10), shirtM);
   chest.position.set(0, 1.34, 0);
   chest.scale.set(1, 1, 0.62);
   g.add(chest);
+  const shoulderBar = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.46, 8), shirtM);
+  shoulderBar.rotation.z = Math.PI / 2;
+  shoulderBar.position.set(0, 1.52, 0);
+  shoulderBar.scale.set(1, 1, 0.7);
+  g.add(shoulderBar);
+  for (const sx of [-0.24, 0.24]) {
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 6), shirtM);
+    cap.position.set(sx, 1.52, 0);
+    g.add(cap);
+  }
   box(0.14, 0.1, 0.05, shirtM, -0.2, 1.52, 0.02, g, 0, 0, 0.3);
   box(0.14, 0.1, 0.05, shirtM, 0.2, 1.52, 0.02, g, 0, 0, -0.3);
   if (shirt2 !== null) {
@@ -99,9 +109,12 @@ export function makePerson(G, opts = {}) {
     const sh = new THREE.Group();
     sh.position.set(side * 0.27, 1.5, 0);
     sh.rotation.z = -side * 0.1;
-    limb(0, 0, 0, 0, -0.28, 0.01, 0.058, shirtM, sh);
-    limb(0, -0.28, 0.01, 0, -0.56, 0.02, 0.047, armM, sh);
-    box(0.08, 0.11, 0.04, skinM, 0, -0.62, 0.02, sh);
+    limb(0, 0, 0, 0, -0.28, 0.01, 0.062, shirtM, sh);
+    const elbow = new THREE.Mesh(new THREE.SphereGeometry(0.058, 8, 6), shirtM);
+    elbow.position.set(0, -0.28, 0.01);
+    sh.add(elbow);
+    limb(0, -0.28, 0.01, 0, -0.56, 0.02, 0.05, armM, sh);
+    box(0.09, 0.12, 0.05, skinM, 0, -0.62, 0.02, sh);
     g.add(sh);
     return sh;
   };
@@ -117,6 +130,12 @@ export function makePerson(G, opts = {}) {
   jaw.position.set(0, -0.06, 0.02);
   jaw.scale.set(0.85, 0.7, 0.9);
   head.add(jaw);
+  for (const ex of [-0.108, 0.108]) {
+    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.028, 8, 6), skinM);
+    ear.position.set(ex, -0.01, 0);
+    ear.scale.set(0.5, 1, 0.8);
+    head.add(ear);
+  }
   const eyeM = std(0x141414, { roughness: 0.4 });
   box(0.026, 0.018, 0.012, eyeM, -0.042, 0.015, 0.108, head);
   box(0.026, 0.018, 0.012, eyeM, 0.042, 0.015, 0.108, head);

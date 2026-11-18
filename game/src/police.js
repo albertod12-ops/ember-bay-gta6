@@ -28,14 +28,21 @@ export function makePoliceCar(G) {
   };
   box(2.2, 0.42, 4.8, black, 0, 0.52, 0, g);
   box(2.1, 0.3, 1.3, black, 0, 0.48, 1.85, g, -0.16, 0, 0);
+  box(1.9, 0.3, 0.7, black, 0, 0.4, 2.2, g, -0.32, 0, 0);
+  box(1.95, 0.22, 0.25, dark, 0, 0.3, 2.42, g);
+  box(2.24, 0.12, 4.5, black, 0, 0.74, 0, g);
+  box(2.0, 0.16, 4.5, dark, 0, 0.26, 0, g);
   box(2.15, 0.34, 0.9, black, 0, 0.6, -1.95, g);
+  box(2.1, 0.2, 0.2, dark, 0, 0.36, -2.4, g);
+  box(2.0, 0.18, 0.1, white, 0, 0.42, -2.46, g);
   box(2.22, 0.12, 4.6, dark, 0, 0.3, 0, g);
   box(0.06, 0.46, 2.4, white, -1.06, 0.72, 0.15, g);
   box(0.06, 0.46, 2.4, white, 1.06, 0.72, 0.15, g);
   box(0.065, 0.08, 2.4, dark, -1.07, 0.5, 0.15, g);
   box(0.065, 0.08, 2.4, dark, 1.07, 0.5, 0.15, g);
   box(1.7, 0.38, 1.5, glass, 0, 0.95, -0.15, g);
-  box(1.75, 0.07, 1.4, black, 0, 1.16, -0.2, g);
+  box(1.6, 0.07, 1.3, black, 0, 1.16, -0.2, g);
+  box(1.62, 0.1, 0.06, dark, 0, 0.78, -1.28, g);
   box(1.66, 0.05, 0.9, glass, 0, 0.92, 0.62, g, 0.55, 0, 0);
   box(1.66, 0.05, 0.7, glass, 0, 0.9, -0.92, g, -0.5, 0, 0);
   box(0.08, 0.38, 0.1, dark, -0.86, 0.95, -0.15, g);
@@ -68,7 +75,9 @@ export function makePoliceCar(G) {
   box(0.6, 0.12, 0.08, head, -0.7, 0.62, 2.42, g, 0, -0.45, 0);
   box(0.6, 0.12, 0.08, head, 0.7, 0.62, 2.42, g, 0, 0.45, 0);
   const tailBar = std(0xd81a1a, { emissive: 0xaa0000, emissiveIntensity: 1.1 });
-  box(1.9, 0.12, 0.08, tailBar, 0, 0.72, -2.42, g);
+  box(1.9, 0.18, 0.08, tailBar, 0, 0.72, -2.42, g);
+  box(0.3, 0.18, 0.08, tailBar, -0.82, 0.72, -2.42, g);
+  box(0.3, 0.18, 0.08, tailBar, 0.82, 0.72, -2.42, g);
   g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; } });
   return { group: g, red, blue, wheels };
 }
