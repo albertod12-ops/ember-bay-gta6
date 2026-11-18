@@ -1,3 +1,4 @@
+// Ember Bay v5 — recorded re-apply under R7; behaviour unchanged
 // HUD: money, stars, weapons, bars, EBPD panel, mission line, speed and the
 // round minimap with compass, district label and unit markers.
 import { ROADS, DIAGONALS, ROUNDABOUT, nsPlain, ewPlain, crossing, districtAt } from './city.js';

@@ -1,3 +1,4 @@
+// Ember Bay v5 — recorded re-apply under R7; behaviour unchanged
 // Traffic v5: 22 cars, 7 motorbikes and 48 pedestrians, all seeded.
 // Cars follow the curved roads, turn at intersections and stop at red
 // lights. At the roundabout they swing around the island and carry on —

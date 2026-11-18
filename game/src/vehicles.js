@@ -1,3 +1,4 @@
+// Ember Bay v5 — recorded re-apply under R7; behaviour unchanged
 // Vehicles: 6 car kinds + motorbikes, built from boxes, wheels, glass and
 // lights, with simple arcade driving physics. Car top speed ~38, bike ~52.
 import * as THREE from 'three';

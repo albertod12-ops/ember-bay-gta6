@@ -1,3 +1,4 @@
+// Ember Bay v5 — recorded re-apply under R7; behaviour unchanged
 // Ember Bay — open-world crime game. Boot, game loop, camera, input, save.
 // Built fresh for the gta6-01 bounty: Three.js open world, 14 districts,
 // 8 story missions, wanted level with police + helicopter, motorbikes.

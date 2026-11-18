@@ -1,3 +1,4 @@
+// Ember Bay v5 — recorded re-apply under R7; behaviour unchanged
 // Shot staging for screenshots/ and the headless debug API. A shot is
 // staged from the ?shot= URL parameter; the debug API lets a driver start
 // the game, force wanted levels, enter vehicles and start missions.

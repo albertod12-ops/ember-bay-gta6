@@ -1,3 +1,4 @@
+// Ember Bay v5 — recorded re-apply under R7; behaviour unchanged
 // Ember Bay city v5: an organic coastal city — curved avenues, diagonal
 // boulevards, a curved coast road, a roundabout, plazas, varied blocks.
 // Everything is built from a seeded RNG, so a fixed seed builds the same city.
