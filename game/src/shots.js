@@ -1,13 +1,3 @@
-// Ember Bay v8 — shot staging for screenshots/ and the headless debug API.
-// Every shot is staged from the ?shot= URL parameter; the debug API lets a
-// driver start the game, force wanted levels, enter vehicles, start
-// missions, drift and shoot.
-// 1-cover: sunset chase in the red Ember GT, drifting (real handbrake
-// drift: W + Space + steer, smoke + skid marks + drift points live).
-// 2-title: title screen (logo, CONTINUE, HOW TO PLAY, crew portraits).
-// 3-combat: on-foot NIGHT fight on the neon avenue — crew ahead, boss
-// dialogue from Vic Torres, muzzle flash staged.
-// 4-map: the full city map overlay (M key screen).
 import * as THREE from 'three';
 import { makeCar, makeBike, createDrive } from './vehicles.js';
 import { makePoliceCar, makeHeli } from './police.js';
@@ -16,8 +6,6 @@ import { ROADS, roadPoint, nsCenter, nsHeading } from './city.js';
 const STAGE_ROAD = 3; // NS avenue past the roundabout (base -20)
 
 function enterSportCar(G, x, z, heading, speed) {
-  // v7: the cover car is a red sports car (red survives the orange
-  // sunset light; orange washed out to pale yellow in the first render).
   const v = makeCar(G, 'sport', 2);
   G.scene.add(v.group);
   const d = createDrive(G, v, {});
@@ -40,11 +28,6 @@ function enterBike(G, x, z, heading, speed) {
 export function stageShot(G, name) {
   G.shot = name;
   if (name === 'title') {
-    // v9: the title background is a LIVE chase, not an empty beach —
-    // the red Ember GT drifts down the coast avenue with tire smoke,
-    // two EBPD interceptors on its tail with flashing light bars and
-    // the heli overhead, palms and the sunset city behind. The logo and
-    // menu sit on top of the action (key-art composition).
     G.setClock(17.75);
     G.mode = 'playing';
     G.hud.setMenu(true);
@@ -71,10 +54,6 @@ export function stageShot(G, name) {
     G.camOverride = { pos: [-100, 700, 80], look: [-100, 0, 0] };
     G.scene.fog.near = 1500;
     G.scene.fog.far = 5000;
-    // Full city map overlay (the M-key screen) — the map shot.
-    // v10: start mission 1 first, so the GPS route line draws and the
-    // CURRENT JOB panel fills in — the map reads like a live job, not
-    // an empty diagram.
     G.missions.startId(1);
     G.hud.showMap(true);
     return;
@@ -87,7 +66,6 @@ export function stageShot(G, name) {
     enterSportCar(G, pt.x, pt.z, pt.heading, 38);
     G.police.setWanted(3);
   } else if (name === 'combat') {
-    // Night, on foot, on the neon avenue: crew ahead, boss line on screen.
     G.setClock(21.7);
     G.player.place(pt.x, pt.z, pt.heading);
     G.playerPos = G.player.pos;
@@ -99,8 +77,6 @@ export function stageShot(G, name) {
     G.police.setWanted(4);
     G.hud.dialogue('VIC TORRES', 'CREW BOSS', 'You walked into the wrong street, kid. Boys — take him down.', 'vic', true);
     G._shotTimer = 0;
-    // Over-shoulder angle: player left of frame, crew ahead centre —
-    // the dialogue box at bottom-centre does not cover the player.
     G.camOverride = {
       pos: [pt.x + rx * 5 - fx * 3, 2.4, pt.z + rz * 5 - fz * 3],
       look: [pt.x + fx * 11, 1.5, pt.z + fz * 11],
@@ -108,24 +84,14 @@ export function stageShot(G, name) {
   }
 }
 
-// Per-frame holds for staged shots: keep the staged vehicles in frame.
 export function updateShot(G, dt) {
   if (!G.shot || G.shot === 'map') return;
   const P = G.police;
   if (G.shot === 'title') {
-    // Live chase behind the title menu: the Ember GT drifts down the
-    // avenue (real handbrake drift from the main loop), two interceptors
-    // trail it with flashing light bars, the heli orbits overhead, and
-    // the camera tracks low from the front three-quarter — key-art framing.
     G._titleT = (G._titleT || 0) + dt;
     const road = ROADS.ns[STAGE_ROAD];
     const car = G.vehicle;
     if (car) {
-      // Same staging as the cover shot: pin speed, crab the car ~20 deg
-      // off the road tangent, hold the lane. The drift display values
-      // are staged like the cover's (the real drift system is verified
-      // separately with real keys in the playtest); the smoke and skid
-      // marks below are laid at the real rear wheels every frame.
       const t = nsHeading(road, car.pos.z, 1);
       car.speed = 38;
       car.heading = t + 0.35;
@@ -146,7 +112,6 @@ export function updateShot(G, dt) {
           G.driftFX.laySkid(wx, wz, Math.atan2(car.vel.x, car.vel.z));
         }
       }
-      // Two interceptors ahead of the car, light bars flashing.
       const fx = Math.sin(car.heading), fz = Math.cos(car.heading);
       const rx = Math.cos(car.heading), rz = -Math.sin(car.heading);
       const flash = Math.sin(G._titleT * 14) > 0;
@@ -158,9 +123,6 @@ export function updateShot(G, dt) {
         cop.red.material.emissiveIntensity = flash ? 2.4 : 0.25;
         cop.blue.material.emissiveIntensity = flash ? 0.25 : 2.4;
       });
-      // Heli pinned ahead-above the car (not orbiting — the orbit put it
-      // behind the camera half the time): always in frame, spotlight
-      // cone coming down onto the chase.
       const h = G._titleHeli;
       if (h) {
         const hx = car.pos.x + fx * 30 + rx * 6;
@@ -179,9 +141,6 @@ export function updateShot(G, dt) {
         h.cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().negate());
         h.cone.scale.set(1, len / 42, 1);
       }
-      // v10: busy street behind the menu — four traffic cars ahead in
-      // both lanes, so the title background reads as a living city,
-      // not one car on an empty road.
       const tSports = G.traffic.cars.filter((c) => c.kind === 'sport' && c.color !== 0xffc21c);
       const tOthers = G.traffic.cars.filter((c) => c.kind !== 'sport' || c.color === 0xffc21c);
       const tHeld = [...tSports, ...tOthers];
@@ -194,9 +153,6 @@ export function updateShot(G, dt) {
         tc.group.position.copy(tc.pos);
         tc.group.rotation.y = car.heading;
       });
-      // Rear three-quarter chase camera, closer in so the red car is
-      // the hero: the interceptors flank the sightline instead of
-      // blocking it, road + sunset city ahead.
       G.camOverride = {
         pos: [car.pos.x - fx * 10 + rx * 4, 2.6, car.pos.z - fz * 10 + rz * 4],
         look: [car.pos.x + fx * 8, 1.2, car.pos.z + fz * 8],
@@ -206,10 +162,8 @@ export function updateShot(G, dt) {
     return;
   }
   if (G.shot === 'combat') {
-    // Periodic shots so the muzzle flash + tracer read in the frame.
     G._shotTimer = (G._shotTimer || 0) + dt;
     if (G._shotTimer > 1.4) { G._shotTimer = 0; G.shoot(); }
-    // Hold two traffic cars + police in frame so the street reads alive.
     const pp = G.playerPos;
     const ph = G.playerHeading;
     const fx = Math.sin(ph), fz = Math.cos(ph);
@@ -221,11 +175,6 @@ export function updateShot(G, dt) {
       car.group.position.copy(car.pos);
       car.group.rotation.y = ph;
     };
-    // Hold four traffic cars + two bikes in frame so the street reads
-    // alive. Sports skip yellow (a yellow car + a police light bar
-    // behind it reads as the old yellow taxi); every police car unit
-    // is held in a spread, so none hides behind a sport car with only
-    // its light bar showing over the roof.
     const sports = G.traffic.cars.filter((c) => c.kind === 'sport' && c.color !== 0xffc21c);
     const others = G.traffic.cars.filter((c) => c.kind !== 'sport' || c.color === 0xffc21c);
     const held = [...sports, ...others];
@@ -253,8 +202,6 @@ export function updateShot(G, dt) {
     if (P.heli) P.heli.group.position.set(pp.x + fx * 24, 24, pp.z + fz * 24);
     return;
   }
-  // Glue the staged vehicle to the curving avenue (and around the
-  // roundabout): steer onto the road tangent, hold the lane.
   const road = ROADS.ns[STAGE_ROAD];
   if (G.vehicle) {
     G.vehicle.speed = 38;
@@ -268,8 +215,6 @@ export function updateShot(G, dt) {
     G.playerHeading = G.vehicle.heading;
   }
   if (G.shot === 'cover' && G.vehicle) {
-    // Stage the drift: crab the car ~20 deg off the road tangent, lay
-    // smoke + skid marks from the rear wheels, show live drift points.
     const t = nsHeading(road, G.vehicle.pos.z, 1);
     G.vehicle.heading = t + 0.35;
     G.vehicle.sync();
@@ -293,9 +238,6 @@ export function updateShot(G, dt) {
   const ph = G.playerHeading;
   const fx = Math.sin(ph), fz = Math.cos(ph);
   const rx = Math.cos(ph), rz = -Math.sin(ph); // right vector
-  // v10 LIVING CITY: hold a BUSY road in frame — six traffic cars ahead
-  // in both lanes at staggered distances (sports first, non-yellow), so
-  // the street never reads empty, plus two police cars and two bikes.
   const holdTraffic = (car, fwd, side) => {
     if (!car) return;
     car.pos.set(pp.x + rx * side + fx * fwd, 0, pp.z + rz * side + fz * fwd);
@@ -303,8 +245,6 @@ export function updateShot(G, dt) {
     car.group.position.copy(car.pos);
     car.group.rotation.y = ph;
   };
-  // Cover shot fallthrough: hold six (non-yellow) SPORT traffic cars
-  // in frame so the street reads as alive.
   const sports = G.traffic.cars.filter((c) => c.kind === 'sport' && c.color !== 0xffc21c);
   const others = G.traffic.cars.filter((c) => c.kind !== 'sport' || c.color === 0xffc21c);
   const held = [...sports, ...others];
@@ -388,7 +328,6 @@ export function installDebugApi(G) {
     camPos() { return [Math.round(G.camera.position.x), Math.round(G.camera.position.y), Math.round(G.camera.position.z)]; },
     shoot() { return G.shoot(); },
     showMap(open) { G.hud.showMap(open); return G.mapOpen; },
-    // DEBUG ONLY (shot driver): where every car is, to debug staging.
     dumpCars() {
       const out = [];
       for (const c of G.traffic.cars) out.push({ src: 'traffic', kind: c.kind, color: c.color, pos: [Math.round(c.pos.x), Math.round(c.pos.z)], heading: +c.heading.toFixed(2) });
@@ -396,7 +335,6 @@ export function installDebugApi(G) {
       if (G.police.roadblock) for (const c of G.police.roadblock.cars) out.push({ src: 'roadblock', pos: [Math.round(c.group.position.x), Math.round(c.group.position.z)], heading: +c.group.rotation.y.toFixed(2) });
       return out;
     },
-    // Hold real keys down (keydown/keyup on window) — used by the drift test.
     key(code, down) {
       window.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code, bubbles: true }));
       return true;

@@ -1,10 +1,6 @@
-// Story missions: 8 jobs with names, payouts and steps. M starts the next
-// job; finishing one pays out, adds respect and saves the game.
 import * as THREE from 'three';
 import { makeCar, makeBike } from './vehicles.js';
 
-// Original Ember Bay dialogue — spoken when a job starts. Mara Voss is
-// the fixer, Deke Ramos the wheelman, Vic Torres the crew boss.
 export const DIALOGUE = {
   1: { name: 'MARA VOSS', role: 'FIXER', line: 'Package goes to Port Ember. No stops, no questions — and don\'t scratch the paint.', who: 'mara' },
   2: { name: 'DEKE RAMOS', role: 'WHEELMAN', line: 'Fare\'s waiting at Marina Point. Drive like a cabbie, not a getaway man. Yet.', who: 'deke' },
@@ -59,7 +55,6 @@ export function initMissions(G) {
       if (!def) { G.toast('All 8 story missions complete — Ember Bay is yours'); return false; }
       return M.startId(def.id);
     },
-    // Start a specific job (used by the shot staging / debug API).
     startId(id) {
       const def = DEFS.find((d) => d.id === id);
       if (!def || M.active) return false;
@@ -149,8 +144,6 @@ export function initMissions(G) {
       M.clearMarker();
       M.active = null;
     },
-    // Data for the HUD mission banner: chapter, objective, hint, stage,
-    // next step, and the countdown for timed steps.
     banner() {
       const a = M.active;
       if (!a) return null;
@@ -211,7 +204,6 @@ export function initMissions(G) {
       } else if (step.type === 'chase' || step.type === 'boss') {
         const t = M.target;
         if (!t) { M.placeMarker(); return; }
-        // drive the target along its waypoints
         const wp = t.waypoints[t.wp];
         const dx = wp[0] - t.pos.x, dz = wp[1] - t.pos.z;
         const d = Math.hypot(dx, dz);

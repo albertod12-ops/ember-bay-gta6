@@ -1,6 +1,3 @@
-// Ember Bay v8 — drift effects: tire smoke sprites + skid mark quads.
-// Pooled, no per-frame allocation; all randomness comes from the seeded
-// game RNG so a fixed seed builds the same scene.
 import * as THREE from 'three';
 
 function smokeTexture() {
@@ -21,7 +18,6 @@ export function initDriftFX(G) {
   const { scene, rng } = G;
   const tex = smokeTexture();
 
-  // Tire smoke: pooled sprites, each lives ~1 s, grows and fades.
   const SMOKE_N = 140;
   const smoke = [];
   for (let i = 0; i < SMOKE_N; i++) {
@@ -35,7 +31,6 @@ export function initDriftFX(G) {
   }
   let si = 0;
 
-  // Skid marks: dark quads laid on the road, fade over ~25 s.
   const SKID_N = 260;
   const skidGeo = new THREE.PlaneGeometry(0.6, 1.7);
   const skids = [];

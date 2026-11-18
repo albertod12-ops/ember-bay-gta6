@@ -1,6 +1,3 @@
-// Police response: wanted level 0-5, chasing police cars and bikes, the
-// Police-Maverick-style helicopter at 3+ stars, roadblocks at 4+ stars, and
-// the EBPD RESPONSE panel data the HUD shows.
 import * as THREE from 'three';
 import { makeBike, sportWheel } from './vehicles.js';
 
@@ -16,18 +13,9 @@ function box(w, h, d, material, x, y, z, parent) {
   return m;
 }
 
-// Police interceptor — v9 sports-sedan rebuild: the same low wide wedge
-// as the v7 sports car (sloping nose, short rear deck, 7-spoke rims with
-// brake discs), in black with white doors, light bar, push bar and door
-// band. The old boxy sedan is gone — the unit now reads as a real
-// high-performance police car from every angle.
 export function makePoliceCar(G) {
   const g = new THREE.Group();
   const black = std(0x14161c);
-  // White doors: a cool emissive keeps them reading white under the
-  // warm night streetlights (without it they tinted yellow and the
-  // interceptor read as a taxi). Full-length panels, classic black-
-  // and-white.
   const white = std(0xf2f2f2, { roughness: 0.4, emissive: 0x8a94a8, emissiveIntensity: 0.25 });
   const glass = std(0x14202e, { roughness: 0.12, metalness: 0.65 });
   const dark = std(0x1a1a1a, { roughness: 0.8 });
@@ -38,46 +26,38 @@ export function makePoliceCar(G) {
     w.position.set(x, 0.46, z);
     g.add(w); wheels.push(w);
   };
-  // Low wedge body, like the sports car.
   box(2.2, 0.42, 4.8, black, 0, 0.55, 0, g); // main body
   box(2.1, 0.3, 1.3, black, 0, 0.5, 1.85, g, -0.16, 0, 0); // sloping nose
   box(2.15, 0.34, 0.9, black, 0, 0.62, -1.95, g); // rear deck
   box(2.22, 0.12, 4.6, dark, 0, 0.32, 0, g); // black side skirt / splitter
-  // White doors (the classic black-and-white) with a thin dark band.
   box(0.06, 0.46, 2.4, white, -1.06, 0.72, 0.15, g);
   box(0.06, 0.46, 2.4, white, 1.06, 0.72, 0.15, g);
   box(0.065, 0.08, 2.4, dark, -1.07, 0.5, 0.15, g);
   box(0.065, 0.08, 2.4, dark, 1.07, 0.5, 0.15, g);
-  // Low canopy: raked windshield, tinted glass, slim roof.
   box(1.7, 0.38, 1.5, glass, 0, 0.95, -0.15, g);
   box(1.75, 0.07, 1.4, black, 0, 1.16, -0.2, g); // roof
   box(1.66, 0.05, 0.9, glass, 0, 0.92, 0.62, g, 0.55, 0, 0); // windshield
   box(1.66, 0.05, 0.7, glass, 0, 0.9, -0.92, g, -0.5, 0, 0); // rear glass
   box(0.08, 0.38, 0.1, dark, -0.86, 0.95, -0.15, g); // B-pillar L
   box(0.08, 0.38, 0.1, dark, 0.86, 0.95, -0.15, g); // B-pillar R
-  // Slim mirrors on stalks + door handles.
   box(0.05, 0.05, 0.2, dark, -1.06, 0.98, 0.55, g);
   box(0.05, 0.05, 0.2, dark, 1.06, 0.98, 0.55, g);
   box(0.16, 0.09, 0.18, black, -1.12, 1.0, 0.55, g);
   box(0.16, 0.09, 0.18, black, 1.12, 1.0, 0.55, g);
   box(0.04, 0.05, 0.26, chrome, -1.06, 0.72, -0.1, g);
   box(0.04, 0.05, 0.26, chrome, 1.06, 0.72, -0.1, g);
-  // Push bar up front + grille slit.
   box(2.0, 0.5, 0.14, std(0x888888, { metalness: 0.8, roughness: 0.3 }), 0, 0.6, 2.4, g); // push bar
   box(1.0, 0.12, 0.08, dark, 0, 0.5, 2.44, g);
-  // Rear diffuser + twin exhausts.
   box(1.9, 0.24, 0.28, dark, 0, 0.34, -2.38, g);
   for (const ex of [-0.35, 0.35]) {
     const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.2, 8), chrome);
     tip.rotation.x = Math.PI / 2; tip.position.set(ex, 0.42, -2.5); g.add(tip);
   }
-  // light bar: red left, blue right, flashing
   const red = box(0.7, 0.22, 0.4, std(0xff2211, { emissive: 0xff2211, emissiveIntensity: 2 }), -0.45, 1.5, -0.2, g);
   const blue = box(0.7, 0.22, 0.4, std(0x2244ff, { emissive: 0x2244ff, emissiveIntensity: 2 }), 0.45, 1.5, -0.2, g);
   box(1.7, 0.1, 0.5, std(0x222222), 0, 1.38, -0.2, g);
   addSportWheel(-1.02, 1.5); addSportWheel(1.02, 1.5);
   addSportWheel(-1.02, -1.5); addSportWheel(1.02, -1.5);
-  // Y-shaped headlights + full-width rear light bar.
   const head = std(0xfff2b0, { emissive: 0xffe9a0, emissiveIntensity: 1.4 });
   box(0.6, 0.12, 0.08, head, -0.7, 0.62, 2.42, g, 0, -0.45, 0);
   box(0.6, 0.12, 0.08, head, 0.7, 0.62, 2.42, g, 0, 0.45, 0);
@@ -104,14 +84,11 @@ export function makeHeli(G) {
   const b2 = box(11, 0.08, 0.3, std(0x222222), 0, 0, 0, rotor);
   rotor.position.y = 1.25;
   g.add(rotor);
-  // skids
   for (const x of [-1.1, 1.1]) {
     box(0.14, 0.14, 4.6, std(0x888888, { metalness: 0.8 }), x, -1.25, 0, g);
     box(0.12, 0.9, 0.12, std(0x888888, { metalness: 0.8 }), x, -0.85, 1.2, g);
     box(0.12, 0.9, 0.12, std(0x888888, { metalness: 0.8 }), x, -0.85, -1.2, g);
   }
-  // searchlight: SpotLight + visible cone (the cone is placed in world
-  // space by the police update, so it is NOT parented to the heli group).
   const spot = new THREE.SpotLight(0xfff2b0, 900, 160, 0.32, 0.45, 1.2);
   spot.position.set(0, -1, 1.6);
   g.add(spot);
@@ -190,7 +167,6 @@ export function initPolice(G) {
       }
       P.roadblock = { cars, pos: new THREE.Vector3(cx, 0, cz), placedAt: G.time };
     },
-    // HUD data
     ebpd() {
       const rows = [];
       for (const u of P.units) {
@@ -206,7 +182,6 @@ export function initPolice(G) {
     },
     update(dt) {
       if (P.wanted === 0) return;
-      // match units to wanted level
       const wantCars = Math.min(P.wanted, 3) + (P.wanted >= 4 ? 1 : 0);
       const cars = P.units.filter((u) => u.kind === 'car').length;
       const bikes = P.units.filter((u) => u.kind === 'bike').length;
@@ -240,13 +215,11 @@ export function initPolice(G) {
           u.red.material.emissiveIntensity = flash ? 2.4 : 0.25;
           u.blue.material.emissiveIntensity = flash ? 0.25 : 2.4;
         }
-        // ram the player
         if (d < 7) {
           G.damage(4 * dt * 10, 'ram');
           if (G.vehicle) G.vehicle.speed *= Math.max(0, 1 - dt * 1.5);
         }
       }
-      // helicopter orbits the player, spotlight pinned on them
       if (P.heli) {
         const h = P.heli;
         const t = G.time * 0.45;
@@ -256,10 +229,8 @@ export function initPolice(G) {
         h.group.rotation.y = Math.atan2(G.playerPos.x - hx, G.playerPos.z - hz);
         h.rotor.rotation.y += dt * 22;
         h.tailRotor.rotation.x += dt * 30;
-        // spotlight target in world space
         h.spot.target.position.copy(G.playerPos);
         h.spot.target.updateMatrixWorld();
-        // cone: apex at the heli, base at the player — midpoint, stretched.
         const hp = h.group.position;
         const dir = new THREE.Vector3(G.playerPos.x - hp.x, -hp.y, G.playerPos.z - hp.z);
         const len = dir.length();
@@ -268,12 +239,10 @@ export function initPolice(G) {
         h.cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().negate());
         h.cone.scale.set(1, len / 42, 1);
       }
-      // roadblock: remove once the player is far past it
       if (P.roadblock && P.roadblock.pos.distanceTo(G.playerPos) > 140) {
         for (const c of P.roadblock.cars) scene.remove(c.group);
         P.roadblock = null;
       }
-      // evading / decay
       P.inSight = P.wanted > 0 && nearest < 60;
       if (nearest > 60) {
         P.evading = Math.min(100, P.evading + dt * 9);

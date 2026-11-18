@@ -1,6 +1,3 @@
-// The player on foot: Mara Voss — orange jacket over a dark tee, jeans,
-// red cap. Walk / run with leg swing, movement relative to the camera
-// heading. Figure built by makePerson (v9): real proportions, ~1.8 m.
 import * as THREE from 'three';
 import { makePerson } from './people.js';
 
@@ -26,7 +23,6 @@ export function createPlayer(G) {
       g.position.copy(P.pos);
       g.rotation.y = P.heading;
     },
-    // input: {f, b, l, r, run} in camera space; camHeading is the camera yaw.
     update(dt, input, camHeading) {
       let mx = 0, mz = 0;
       if (input.f) { mz -= 1; } if (input.b) { mz += 1; }
@@ -35,7 +31,6 @@ export function createPlayer(G) {
       const top = input.run ? 11 : 6.5;
       if (moving) {
         const len = Math.hypot(mx, mz); mx /= len; mz /= len;
-        // camera-relative: forward is (sin h, cos h), screen-right is (-cos h, sin h).
         const sin = Math.sin(camHeading), cos = Math.cos(camHeading);
         const wx = -mx * cos - mz * sin;
         const wz = mx * sin - mz * cos;

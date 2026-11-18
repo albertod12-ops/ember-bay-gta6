@@ -1,7 +1,3 @@
-// Ember Bay v5 — recorded re-apply under R7; behaviour unchanged
-// Ember Bay — open-world crime game. Boot, game loop, camera, input, save.
-// Built fresh for the gta6-01 bounty: Three.js open world, 14 districts,
-// 8 story missions, wanted level with police + helicopter, motorbikes.
 import * as THREE from 'three';
 import { makeRng, hashStr } from './rng.js';
 import { buildCity, districtAt, roadPoint } from './city.js';
@@ -62,7 +58,6 @@ const G = {
   save: loadSave(),
   tapesFound: 0,
   driftBanked: 0,
-  // mag / reserve ammo per weapon (index 1-4; fists need none)
   ammo: { 1: [12, 60], 2: [32, 160], 3: [30, 120], 4: [8, 24] },
   mapOpen: false, camClassic: false, soundOn: true,
   crew: [], // hostile crew NPCs (combat staging / boss fights)
@@ -83,7 +78,6 @@ G.setClock = (h) => {
     scene.fog.color.setHex(0x14142e); scene.fog.near = 200; scene.fog.far = 900;
     if (G.city?.sky) G.city.sky.material.color.setHex(0x35355e);
   } else if (sunset) {
-    // Golden hour: low warm sun in the west, long shadows, warm haze.
     sun.position.set(-850, 130, 320);
     sun.intensity = 1.9; sun.color.setHex(0xff8a3d);
     hemi.intensity = 0.7;
@@ -123,7 +117,6 @@ G.damage = (amount, cause) => {
   }
 };
 
-// Build the world.
 G.city = buildCity(G);
 G.player = createPlayer(G);
 G.scene.add(G.player.group);
@@ -140,7 +133,6 @@ G.audio = initAudio(G);
 G.tapes = initTapes(G);
 G.driftFX = initDriftFX(G);
 
-// Parked cars along the roads, ready to steal — each on a real road.
 const PARKED_DEFS = [
   ['ns', 0, 120, 1], ['ns', 1, -200, -1], ['ns', 2, 300, 1], ['ns', 3, 150, -1],
   ['ns', 4, -80, 1], ['ns', 5, 220, -1], ['ew', 0, -100, 1], ['ew', 1, 260, -1],
@@ -152,14 +144,12 @@ PARKED_DEFS.forEach(([axis, idx, along, dir], i) => {
   const v = makeCar(G, PARKED_KINDS[i], i % 3);
   G.scene.add(v.group);
   const d = createDrive(G, v, {});
-  // park on the right-hand side of the road
   const side = axis === 'ns' ? (dir > 0 ? 5.5 : -5.5) : 0;
   const sideZ = axis === 'ew' ? (dir > 0 ? -5.5 : 5.5) : 0;
   d.place(pt.x + (axis === 'ns' ? side : 0), pt.z + (axis === 'ew' ? sideZ : 0), pt.heading);
   d.owned = false;
   G.parked.push(d);
 });
-// One yellow sports car parked on the Sunset Diagonal.
 {
   const v = makeCar(G, 'sport', 1);
   G.scene.add(v.group);
@@ -203,17 +193,11 @@ G.tryEnterExit = () => {
   for (const c of G.traffic.cars) consider(c);
   for (const b of G.traffic.bikes) consider(b);
   if (!best) return 'nothing near';
-  // pull a traffic vehicle out of circulation
   G.traffic.cars = G.traffic.cars.filter((c) => c !== best);
   G.traffic.bikes = G.traffic.bikes.filter((b) => b !== best);
   G.parked = G.parked.filter((d) => d !== best);
   const stolen = !best.owned;
-  // kind lives at best.vehicle.kind for drive controllers and at best.kind
-  // for plain traffic vehicles.
   const kind = best.vehicle ? best.vehicle.kind : best.kind;
-  // Parked cars are already drive controllers; traffic cars/bikes are plain
-  // vehicle objects, so wrap them in a drive controller first — the game
-  // loop calls .update on whatever the player is driving.
   let drive = best;
   if (typeof best.update !== 'function') {
     drive = createDrive(G, best, {});
@@ -231,7 +215,6 @@ G.tryEnterExit = () => {
   return kind;
 };
 
-// Weapon lock thresholds (respect) — mirrors the HUD weapon list.
 const WEAPON_LOCKS = [0, 0, 20, 40, 60];
 const WEAPON_MAGS = [0, 12, 32, 30, 8];
 const WEAPON_NAMES = ['FISTS', 'PISTOL', 'SMG', 'RIFLE', 'SHOTGUN'];
@@ -266,7 +249,6 @@ G.reload = () => {
   G.toast(`Reloaded ${WEAPON_NAMES[idx]} — ${ammo[0]}/${ammo[1]}`);
 };
 
-// Muzzle flash + tracer, created once and reused.
 const flashLight = new THREE.PointLight(0xffe9a0, 0, 40);
 scene.add(flashLight);
 const tracerGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
@@ -275,8 +257,6 @@ tracer.visible = false;
 scene.add(tracer);
 G._flash = { light: flashLight, tracer, t: 0 };
 
-// Hostile crew NPCs — v9: real figures via makePerson (red shirts, caps,
-// varied skin/hair), ~1.8 m like the player instead of 2.5 m boxes.
 G.spawnCrew = (x, z, count = 3) => {
   const skins = [0xd9a066, 0xb07a4a, 0xe8b98a];
   const hairs = [0x14141c, 0x3a2a1a, 0x8a8a8a];
@@ -301,8 +281,6 @@ G.clearCrew = () => {
   G.crew = [];
 };
 
-// Shooting on foot: click fires the selected weapon — muzzle flash,
-// tracer, ammo, and a hit check against crew NPCs.
 G.shoot = () => {
   if (G.mode !== 'playing' || G.vehicle || G.mapOpen) return false;
   const idx = G.weaponIdx;
@@ -322,7 +300,6 @@ G.shoot = () => {
   tracer.material.opacity = 0.9;
   tracer.visible = true;
   G._flash.t = 0.12;
-  // hit check: crew within 40 m and within 2 m of the shot line
   for (const c of G.crew) {
     if (c.down) continue;
     const dx = c.pos.x - G.playerPos.x, dz = c.pos.z - G.playerPos.z;
@@ -377,7 +354,6 @@ document.getElementById('btnSettings').addEventListener('click', () => {
   document.getElementById('settingsState').textContent = on ? 'Sound: ON' : 'Sound: OFF';
 });
 
-// Input.
 const keys = new Set();
 const input = () => ({
   f: keys.has('KeyW') || keys.has('ArrowUp'),
@@ -414,10 +390,6 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// Camera. The lerp uses REAL frame time (rawDt), not the clamped game dt:
-// at 1 fps in a headless renderer the clamped dt would leave the camera
-// stranded far from the player for seconds; real time converges in ~0.5 s
-// at any frame rate, and is identical at 60 fps.
 const desired = new THREE.Vector3();
 function updateCamera(dt) {
   if (G.camOverride) {
@@ -435,9 +407,6 @@ function updateCamera(dt) {
   }
   const h = G.playerHeading;
   const fx = Math.sin(h), fz = Math.cos(h);
-  // Bikes are narrow, so the chase camera sits closer on a bike than in a
-  // car — the rider reads big in frame instead of a speck. V toggles the
-  // classic far camera.
   const isBike = G.vehicle && G.vehicle.vehicle && G.vehicle.vehicle.kind === 'bike';
   const dist = G.camClassic ? 16 : (G.vehicle ? (isBike ? 5.5 : 5.5) : 6.5);
   const height = G.camClassic ? 7 : (G.vehicle ? (isBike ? 2.2 : 2.2) : 2.6);
@@ -452,7 +421,6 @@ function updateCamera(dt) {
   }
 }
 
-// Main loop.
 const clockT = new THREE.Clock();
 let firstFrame = true;
 function loop() {
@@ -460,12 +428,12 @@ function loop() {
   const rawDt = clockT.getDelta();
   const dt = Math.min(rawDt, 0.05);
   G.time += dt;
+  if (G.city.wheel) G.city.wheel.rotation.x += dt * 0.06;
   G.clock += dt / 150;
   if (G.clock >= 24) { G.clock -= 24; G.day++; }
   const inp = input();
   if (G.mode === 'playing' && !G.mapOpen) {
     if (G.vehicle) {
-      // Cover / title shots: stage a real handbrake drift (W + Space + steer).
       const inp2 = (G.shot === 'cover' || G.shot === 'title') ? { ...inp, f: true, brake: true, l: true } : inp;
       G.vehicle.update(dt, inp2);
       G.playerHeading = G.vehicle.heading;
@@ -479,12 +447,10 @@ function loop() {
     G.missions.update(dt);
     G.tapes.update(dt);
     G.audio.update(dt);
-    // slow health regen when clean
     if (G.police.wanted === 0 && G.health < 100) G.health = Math.min(100, G.health + dt * 1.5);
     updateShot(G, dt);
   }
   if (G.driftFX) G.driftFX.update(dt);
-  // muzzle flash + tracer decay
   if (G._flash && G._flash.t > 0) {
     G._flash.t -= dt;
     G._flash.light.intensity = Math.max(0, G._flash.t * 650);

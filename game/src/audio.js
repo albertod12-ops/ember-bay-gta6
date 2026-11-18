@@ -1,6 +1,3 @@
-// WebAudio: Bay FM 98.2 "Sunset Drive" and Ember 101.5 "Midnight
-// Overdrive" synth radio, police sirens and an engine hum. Everything is
-// synthesized — no audio files, no network.
 export function initAudio(G) {
   const STATIONS = [
     { name: 'BAY FM 98.2', song: 'Sunset Drive', chords: [110.0, 87.31, 130.81, 98.0] },
@@ -29,7 +26,6 @@ export function initAudio(G) {
         A.master = A.ctx.createGain();
         A.master.gain.value = 0.5;
         A.master.connect(A.ctx.destination);
-        // siren: square wave, two tones
         A.sirenOsc = A.ctx.createOscillator();
         A.sirenOsc.type = 'square';
         A.sirenOsc.frequency.value = 720;
@@ -37,7 +33,6 @@ export function initAudio(G) {
         A.sirenGain.gain.value = 0;
         A.sirenOsc.connect(A.sirenGain); A.sirenGain.connect(A.master);
         A.sirenOsc.start();
-        // engine: saw through a lowpass
         A.engOsc = A.ctx.createOscillator();
         A.engOsc.type = 'sawtooth';
         A.engOsc.frequency.value = 55;
@@ -54,7 +49,6 @@ export function initAudio(G) {
       const s = A.station();
       G.toast(A.radioOn ? `${s.name} — ${s.song}` : 'Radio off');
     },
-    // chord roots (Hz): one bar each, 8th-note steps at 0.24 s
     get chords() { return A.station().chords; },
     note(freq, t, dur, type, vol) {
       const o = A.ctx.createOscillator();
@@ -68,7 +62,6 @@ export function initAudio(G) {
     },
     update(dt) {
       if (!A.ctx) return;
-      // radio sequencer
       if (A.radioOn) {
         while (A.nextTime < A.ctx.currentTime + 0.18) {
           const bar = Math.floor(A.step / 8) % 4;
@@ -85,7 +78,6 @@ export function initAudio(G) {
           A.nextTime += 0.24;
         }
       }
-      // siren two-tone
       const want = G.police.wanted > 0;
       if (want && A.ctx.currentTime >= A.sirenNext) {
         A.sirenHi = !A.sirenHi;
@@ -93,7 +85,6 @@ export function initAudio(G) {
         A.sirenNext = A.ctx.currentTime + 0.45;
       }
       A.sirenGain.gain.setTargetAtTime(want ? 0.035 : 0, A.ctx.currentTime, 0.1);
-      // engine hum follows speed
       const spd = G.vehicle ? Math.abs(G.vehicle.speed) : 0;
       A.engOsc.frequency.setTargetAtTime(52 + spd * 3.4, A.ctx.currentTime, 0.08);
       A.engGain.gain.setTargetAtTime(spd > 1 ? 0.045 : 0, A.ctx.currentTime, 0.12);

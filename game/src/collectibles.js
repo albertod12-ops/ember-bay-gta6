@@ -1,5 +1,3 @@
-// Sunset Tapes: 20 collectible tapes hidden around Ember Bay. Walk or
-// drive into one to collect it: +$50, +1 respect.
 import * as THREE from 'three';
 
 const SPOTS = [

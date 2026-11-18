@@ -1,18 +1,9 @@
-// Ember Bay v5 — recorded re-apply under R7; behaviour unchanged
-// Traffic v10: 48 cars, 12 race bikes, 90 pedestrians — a living city.
-// Cars follow the curved roads, turn at intersections and stop at red
-// lights. At the roundabout they swing around the island and carry on —
-// nobody turns on the ring.
 import * as THREE from 'three';
 import { makeCar, makeBike } from './vehicles.js';
 import { ROADS, ROUNDABOUT, nsPlain, ewPlain, nsCenter, ewCenter, nsHeading, ewHeading } from './city.js';
 
-// v10: most traffic cars are sports cars; van/pickup/truck stay for
-// variety — a truck in the lanes reads as heavy traffic.
 const KINDS = ['sport', 'sport', 'sport', 'taxi', 'van', 'pickup', 'sport', 'sedan', 'sport', 'truck'];
 
-// Left-hand traffic (Indonesia): the lane offset is on the left of the
-// direction of travel.
 function laneOffset(axis, dir) {
   if (axis === 'ns') return dir > 0 ? -3.5 : 3.5;
   return dir > 0 ? 3.5 : -3.5;
@@ -20,9 +11,6 @@ function laneOffset(axis, dir) {
 
 import { makePerson } from './people.js';
 
-// v9: peds built by makePerson — real proportions, varied skin / shirts /
-// hair / hats, sneakers with soles. Same pivot names (hipL/hipR) so the
-// walk swing below keeps working.
 function pedFigure(G, x, z) {
   const rng = G.rng;
   const fig = makePerson(G, {
@@ -42,7 +30,6 @@ function pedFigure(G, x, z) {
 }
 
 function lightState(light, t) {
-  // 12 s cycle: 0-5 NS green, 5-6 NS yellow, 6-11 EW green, 11-12 EW yellow.
   const c = (t + light.phase) % 12;
   const nsGreen = c < 5; const ewGreen = c >= 6 && c < 11;
   const nsYellow = c >= 5 && c < 6; const ewYellow = c >= 11;
@@ -67,7 +54,6 @@ export function initTraffic(G) {
     return { x: along, z, heading: ewHeading(road, along, dir), axis: 'ew', road, dir };
   };
 
-  // v10: 48 sports-heavy cars, 12 race bikes.
   for (let i = 0; i < 48; i++) {
     const kind = rng.pick(KINDS);
     const v = makeCar(G, kind, rng.int(0, 3));
@@ -93,9 +79,6 @@ export function initTraffic(G) {
       decidedAt: -1, pendingAxis: null, turnRoad: null,
     });
   }
-  // v10: pedestrians stroll on the SIDEWALKS — 90 of them (was 48,
-  // scattered anywhere). Most spawn just off a road edge (9-13 m from
-  // the centreline, i.e. on the sidewalk); the rest wander the blocks.
   const pedSpot = () => {
     let x, z;
     if (rng.chance(0.7)) {
@@ -133,7 +116,6 @@ export function initTraffic(G) {
     return { light: best, dist: bestD };
   };
 
-  // Keep a car glued to its road centreline (curves included).
   const snapToRoad = (c) => {
     if (c.axis === 'ns') {
       c.pos.x = nsCenter(c.road, c.pos.z, c.dir) + laneOffset('ns', c.dir);
@@ -147,7 +129,6 @@ export function initTraffic(G) {
 
   T.update = (dt, time) => {
     const stepCar = (c) => {
-      // find next intersection ahead along current axis
       const fx = Math.sin(c.heading), fz = Math.cos(c.heading);
       let distToCross = 1e9;
       let nextRoad = null;
@@ -162,7 +143,6 @@ export function initTraffic(G) {
           if (d > 2 && d < distToCross) { distToCross = d; nextRoad = road; }
         }
       }
-      // decide a turn once per intersection — never on the roundabout ring
       const crossKey = Math.round((c.axis === 'ns' ? c.pos.z : c.pos.x) / 100);
       const isRbCross = c.road.rb && nextRoad && nextRoad.rb;
       if (distToCross < 10 && c.decidedAt !== crossKey && !c.pendingAxis) {
@@ -178,7 +158,6 @@ export function initTraffic(G) {
           }
         }
       }
-      // steer toward target heading
       let dh = c.targetHeading - c.heading;
       while (dh > Math.PI) dh -= Math.PI * 2;
       while (dh < -Math.PI) dh += Math.PI * 2;
@@ -193,7 +172,6 @@ export function initTraffic(G) {
       } else if (!turning) {
         snapToRoad(c);
       }
-      // red light ahead?
       let want = c.cruise;
       const { light, dist } = nearestLight(c.pos.x + fx * 14, c.pos.z + fz * 14);
       if (light && dist < 26) {
@@ -204,7 +182,6 @@ export function initTraffic(G) {
       c.speed += (want - c.speed) * Math.min(1, dt * (want > c.speed ? 1.2 : 4));
       c.pos.x += Math.sin(c.heading) * c.speed * dt;
       c.pos.z += Math.cos(c.heading) * c.speed * dt;
-      // wrap around the map edges
       if (c.pos.x > 455) c.pos.x = -455;
       if (c.pos.x < -455) c.pos.x = 455;
       if (c.pos.z > 455) c.pos.z = -455;
@@ -215,7 +192,6 @@ export function initTraffic(G) {
     };
     for (const c of T.cars) stepCar(c);
     for (const c of T.bikes) stepCar(c);
-    // pedestrians: stroll between sidewalk waypoints (never on the island)
     for (const p of T.peds) {
       const dx = p.target.x - p.pos.x, dz = p.target.z - p.pos.z;
       const d = Math.hypot(dx, dz);
@@ -236,14 +212,12 @@ export function initTraffic(G) {
       }
       p.group.position.copy(p.pos);
     }
-    // traffic light lamps
     for (const l of city.lights) {
       const st = lightState(l, time);
       const setLamp = (i, color, on) => {
         l.lamps[i].material.emissive.setHex(on ? color : 0x111111);
         l.lamps[i].material.color.setHex(on ? color : 0x111111);
       };
-      // lamp order: red(0), yellow(1), green(2) — show NS state on this head
       const ns = st.ns;
       setLamp(0, 0xff2211, ns === 'red');
       setLamp(1, 0xffb020, ns === 'yellow');

@@ -1,6 +1,3 @@
-// Seeded random helpers. One small deterministic source drives the whole
-// city layout, traffic and pedestrians, so a fixed seed always builds the
-// same Ember Bay.
 export function mulberry32(seed) {
   let a = seed >>> 0;
   return function next() {

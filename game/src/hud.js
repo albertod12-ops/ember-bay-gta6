@@ -1,9 +1,5 @@
-// Ember Bay v8 — HUD: mission banner, EBPD panel, weapon slots with ammo
-// and locks, dialogue box with blocky portraits, car + radio panels,
-// drift panel, crosshair, and the full city map overlay (M key).
 import { ROADS, DIAGONALS, ROUNDABOUT, MINOR_SEGS, FREEWAY, GOLF_RECT, STADIUM, RAIL_X, nsPlain, ewPlain, crossing, districtAt } from './city.js';
 
-// Weapons: mag / reserve ammo, and the respect needed to unlock.
 const WEAPONS = [
   { key: '1', name: 'FISTS', mag: '∞', lock: 0 },
   { key: '2', name: 'PISTOL', mag: 12, reserve: 60, lock: 0 },
@@ -20,9 +16,6 @@ const CREW = [
   { who: 'kip', name: 'KIP MARLOWE', role: 'RUNNER' },
 ];
 
-// Character portraits, painted on a canvas — smooth vector faces now
-// (v9): round head, hair shapes, eyes with whites, brows, nose, lips,
-// collar and shading, one look per character.
 function drawPortrait(canvas, who) {
   const g = canvas.getContext('2d');
   const S = canvas.width;
@@ -38,13 +31,11 @@ function drawPortrait(canvas, who) {
   const cx = S / 2;
   const ell = (x, y, rx, ry, c) => { g.fillStyle = c; g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); g.fill(); };
   const rect = (x, y, w, h, c) => { g.fillStyle = c; g.fillRect(x, y, w, h); };
-  // background + soft vignette
   rect(0, 0, S, S, st.bg);
   const vg = g.createRadialGradient(cx, S * 0.4, S * 0.1, cx, S * 0.4, S * 0.7);
   vg.addColorStop(0, 'rgba(255,255,255,0.10)');
   vg.addColorStop(1, 'rgba(0,0,0,0.25)');
   g.fillStyle = vg; g.fillRect(0, 0, S, S);
-  // shoulders / top with collar
   g.fillStyle = st.top;
   g.beginPath();
   g.moveTo(u * 0.6, S);
@@ -52,19 +43,13 @@ function drawPortrait(canvas, who) {
   g.lineTo(u * 5.8, u * 6.2);
   g.quadraticCurveTo(u * 7.2, u * 6.1, u * 7.4, S);
   g.closePath(); g.fill();
-  // collar V
   g.fillStyle = st.acc;
   g.beginPath(); g.moveTo(u * 3.4, u * 6.2); g.lineTo(cx, u * 7.1); g.lineTo(u * 4.6, u * 6.2); g.closePath(); g.fill();
-  // neck
   rect(u * 3.4, u * 5.6, u * 1.2, u * 0.8, st.skin);
-  // head: round, slightly narrow chin
   ell(cx, u * 3.9, u * 1.85, u * 2.05, st.skin);
-  // side shading
   ell(cx + u * 0.9, u * 4.1, u * 0.7, u * 1.5, 'rgba(0,0,0,0.08)');
-  // ears
   ell(u * 2.05, u * 4.0, u * 0.28, u * 0.5, st.skin);
   ell(u * 5.95, u * 4.0, u * 0.28, u * 0.5, st.skin);
-  // hair
   g.fillStyle = st.hair;
   if (who === 'mara') {
     g.beginPath(); g.ellipse(cx, u * 2.2, u * 1.95, u * 1.15, 0, Math.PI, 0); g.fill();
@@ -77,7 +62,6 @@ function drawPortrait(canvas, who) {
   } else if (who === 'vic') {
     g.beginPath(); g.ellipse(cx, u * 2.35, u * 1.85, u * 0.7, 0, Math.PI, 0); g.fill();
     rect(u * 2.3, u * 5.9, u * 3.4, u * 0.6, '#dddddd'); // gray beard
-    // glasses
     g.strokeStyle = '#222222'; g.lineWidth = u * 0.14;
     g.strokeRect(u * 2.55, u * 3.5, u * 1.1, u * 0.9);
     g.strokeRect(u * 4.35, u * 3.5, u * 1.1, u * 0.9);
@@ -90,22 +74,17 @@ function drawPortrait(canvas, who) {
     g.beginPath(); g.ellipse(cx, u * 2.3, u * 1.9, u * 0.95, 0, Math.PI, 0); g.fill();
     rect(u * 2.2, u * 2.6, u * 3.6, u * 0.35, st.acc); // headband
   }
-  // eyes: white + pupil
   for (const ex of [u * 3.05, u * 4.55]) {
     ell(ex + u * 0.2, u * 3.9, u * 0.34, u * 0.28, '#ffffff');
     ell(ex + u * 0.2, u * 3.92, u * 0.16, u * 0.18, '#141414');
   }
-  // brows
   g.strokeStyle = st.hair; g.lineWidth = u * 0.14; g.lineCap = 'round';
   g.beginPath(); g.moveTo(u * 2.85, u * 3.45); g.lineTo(u * 3.65, u * 3.35); g.stroke();
   g.beginPath(); g.moveTo(u * 4.35, u * 3.35); g.lineTo(u * 5.15, u * 3.45); g.stroke();
-  // nose
   g.strokeStyle = 'rgba(0,0,0,0.35)'; g.lineWidth = u * 0.1;
   g.beginPath(); g.moveTo(cx, u * 4.1); g.lineTo(cx + u * 0.12, u * 4.75); g.lineTo(cx - u * 0.1, u * 4.8); g.stroke();
-  // mouth
   g.strokeStyle = '#8a3a2a'; g.lineWidth = u * 0.16; g.lineCap = 'round';
   g.beginPath(); g.moveTo(u * 3.35, u * 5.25); g.quadraticCurveTo(cx, u * 5.45, u * 4.65, u * 5.25); g.stroke();
-  // accessories
   if (who === 'mara' || who === 'rosa') {
     ell(u * 2.1, u * 4.9, u * 0.16, u * 0.16, st.acc);
     ell(u * 5.9, u * 4.9, u * 0.16, u * 0.16, st.acc);
@@ -137,7 +116,6 @@ export function initHud(G) {
   let toastTimer = 0;
   let dlgTimer = 0;
 
-  // Crew portraits on the title screen.
   for (const c of CREW) {
     const d = document.createElement('div');
     d.className = 'crew';
@@ -182,7 +160,6 @@ export function initHud(G) {
       if (open) H.renderMap();
     },
     renderMap() {
-      // Story job list.
       const M = G.missions;
       el.mapStoryList.innerHTML = '';
       const whoFor = { 1: 'mara', 2: 'deke', 3: 'deke', 4: 'mara', 5: 'mara', 6: 'deke', 7: 'vic', 8: 'mara' };
@@ -202,7 +179,6 @@ export function initHud(G) {
         row.append(cv, tx, pay);
         el.mapStoryList.appendChild(row);
       });
-      // Current job.
       if (M.active) {
         const b = M.banner();
         const d = Math.round(Math.hypot(G.playerPos.x - (M.marker ? M.marker.position.x : 0), G.playerPos.z - (M.marker ? M.marker.position.z : 0)));
@@ -210,7 +186,6 @@ export function initHud(G) {
       } else {
         el.mapJob.textContent = 'No job running — press E to start the next one.';
       }
-      // Legend.
       const legend = [
         ['#ff2d55', '▶', 'You are here'], ['#ffe14d', '●', 'Story contact'], ['#ffe14d', '◆', 'Job objective'],
         ['#7dff5e', '⌂', 'Safehouse'], ['#ff9de2', '✚', 'Weapons'], ['#2fd8ff', '◐', 'Respray (clears heat)'],
@@ -218,7 +193,6 @@ export function initHud(G) {
         ['#6ec6ff', '⬢', 'Police'], ['#ff6fa5', '▣', 'Sunset Tape'],
       ];
       el.mapLegend.innerHTML = legend.map(([c, s, t]) => `<div><span style="color:${c}">${s}</span> ${t}</div>`).join('');
-      // Stats.
       const lvl = 1 + Math.floor(G.respect / 20);
       el.mapStats.innerHTML =
         `Cash <span class="stat"><b>$${G.money}</b></span><br>` +
@@ -228,12 +202,6 @@ export function initHud(G) {
       H.drawMap();
     },
     drawMap() {
-      // v9 SA-style map: the graphic itself reads like a classic
-      // open-world crime game's city map — green land, white blocks,
-      // in-game map — white building blocks filling the land, black road
-      // lines with a clear hierarchy (thick majors, thin minors), green
-      // parks, blue water + tan beach on the west edge, bold white district
-      // labels with a black outline, safehouse / blip icons, player arrow.
       const c = mapCtx;
       const W = el.mapCanvas.width, Ht = el.mapCanvas.height;
       const S = 580, ox = (W - S) / 2, oy = (Ht - S) / 2;
@@ -241,17 +209,17 @@ export function initHud(G) {
       const m2p = (m) => (m / 920) * S; // metres -> map pixels
       c.clearRect(0, 0, W, Ht);
       c.fillStyle = '#0d1a20'; c.fillRect(0, 0, W, Ht);
-      // Land base (SA gray-green) over the whole city square.
       const [lx, ly] = toMap(-460, -460);
       c.fillStyle = '#98a684';
       c.fillRect(lx, ly, S, S);
-      // Ocean west of the land + tan beach strip on the edge.
       c.fillStyle = '#4d8fb5';
       c.fillRect(0, 0, lx, Ht);
       c.fillStyle = '#d9c08a';
       c.fillRect(lx, ly, m2p(40), S);
-      // --- Building blocks: one white block per road cell, inset by the
-      // road half-width, with a light-gray roof detail inside. ---
+      const [wx, wy] = toMap(-530, -20);
+      c.strokeStyle = '#2fd8ff'; c.lineWidth = 2;
+      c.beginPath(); c.arc(wx, wy, 5, 0, Math.PI * 2); c.stroke();
+      c.beginPath(); c.moveTo(wx - 5, wy); c.lineTo(wx + 5, wy); c.moveTo(wx, wy - 5); c.lineTo(wx, wy + 5); c.stroke();
       const cell = (ix, iz) => {
         const a = crossing(ROADS.ns[ix], ROADS.ew[iz]);
         const b = crossing(ROADS.ns[ix + 1], ROADS.ew[iz]);
@@ -276,7 +244,6 @@ export function initHud(G) {
       for (let ix = 0; ix < ROADS.ns.length - 1; ix++) {
         for (let iz = 0; iz < ROADS.ew.length - 1; iz++) {
           const pts = cell(ix, iz);
-          // skip the roundabout cell — the island reads as road, not block
           const midX = pts.reduce((s, p) => s + p.x, 0) / 4;
           const midZ = pts.reduce((s, p) => s + p.z, 0) / 4;
           if (Math.hypot(midX - ROUNDABOUT.cx, midZ - ROUNDABOUT.cz) < 55) continue;
@@ -284,7 +251,6 @@ export function initHud(G) {
           c.fillStyle = '#f4f4f4'; c.fill();
           poly(insetPoly(pts, 10));
           c.fillStyle = '#dcdcdc'; c.fill();
-          // Building rects, varied count and tone per block, clipped.
           const inner = insetPoly(pts, 14);
           poly(inner);
           c.save();
@@ -305,7 +271,6 @@ export function initHud(G) {
           c.restore();
         }
       }
-      // --- Parks + golf + stadium. ---
       c.fillStyle = '#5f9a4a';
       {
         const [ax, ay] = toMap(GOLF_RECT[0], GOLF_RECT[1]);
@@ -317,7 +282,6 @@ export function initHud(G) {
         c.beginPath(); c.arc(ax + 30, ay + 60, 6, 0, Math.PI * 2); c.fill();
         c.beginPath(); c.arc(bx - 30, by - 40, 6, 0, Math.PI * 2); c.fill();
       }
-      // two neighbourhood parks, with tree dots so they read as parks
       c.fillStyle = '#5f9a4a';
       {
         const [ax, ay] = toMap(-60, 100);
@@ -330,7 +294,6 @@ export function initHud(G) {
         const [mx, mz] = toMap(tx, ty);
         c.beginPath(); c.arc(mx, mz, 3, 0, Math.PI * 2); c.fill();
       }
-      // stadium: white oval with a gray ring
       {
         const [sx, sy] = toMap(STADIUM.x, STADIUM.z);
         c.fillStyle = '#f4f4f4';
@@ -338,23 +301,19 @@ export function initHud(G) {
         c.strokeStyle = '#9a9a9a'; c.lineWidth = 3;
         c.beginPath(); c.ellipse(sx, sy, m2p(STADIUM.r) * 0.6, m2p(STADIUM.r) * 0.45, 0, 0, Math.PI * 2); c.stroke();
       }
-      // --- Roads: black lines, hierarchy thick -> thin. ---
       const strokePts = (pts, width) => {
         c.strokeStyle = '#111111'; c.lineWidth = width; c.lineJoin = 'round';
         c.beginPath();
         pts.forEach(([x, z], i) => { const [mx, mz] = toMap(x, z); if (i === 0) c.moveTo(mx, mz); else c.lineTo(mx, mz); });
         c.stroke();
       };
-      // minor streets first (thin, under the majors)
       c.lineWidth = 2;
       for (const [ax, az, bx, bz] of MINOR_SEGS) strokePts([[ax, az], [bx, bz]], 2);
-      // freeway ring: thin, like any other avenue — it must not dominate
       {
         const pts = FREEWAY.pts.map((p) => [p.x, p.z]);
         pts.push(pts[0]);
         strokePts(pts, 3);
       }
-      // major avenues
       for (const road of ROADS.ns) {
         const pts = [];
         for (let z = -460; z <= 460; z += 20) pts.push([nsPlain(road, z), z]);
@@ -371,15 +330,12 @@ export function initHud(G) {
         c.strokeStyle = '#111111'; c.lineWidth = 5;
         c.beginPath(); c.arc(rx, rz, m2p(ROUNDABOUT.r), 0, Math.PI * 2); c.stroke();
       }
-      // rail line (dark red, like SA)
       {
         const [ax, ay] = toMap(RAIL_X, -460);
         const [bx, by] = toMap(RAIL_X, 460);
         c.strokeStyle = '#7a2a2a'; c.lineWidth = 3;
         c.beginPath(); c.moveTo(ax, ay); c.lineTo(bx, by); c.stroke();
       }
-      // District labels, hand-placed in open space — never on the centre
-      // cluster, never on a blip or the GPS route. Beach strips vertical.
       c.textAlign = 'center'; c.textBaseline = 'middle';
       const dlabel = (x, z, name, size = 13) => {
         const [mx, mz] = toMap(x, z);
@@ -413,8 +369,6 @@ export function initHud(G) {
       };
       vlabel(-420, -230, 'PALMS BEACH');
       vlabel(-420, 230, 'BOARDWALK');
-      // --- Markers, icons only — the LEGEND panel names them, so no
-      // blip text ever collides with a district label. ---
       const dot = (x, z, color, r = 5) => {
         const [mx, mz] = toMap(x, z);
         c.fillStyle = color;
@@ -444,22 +398,17 @@ export function initHud(G) {
       dot(-120, -350, '#ff6fa5');
       dot(140, 400, '#ffd24d');
       dot(220, 120, '#2fd8ff');
-      // v10: grid letters/numbers on the map edges, like top-1's map.
       c.font = 'bold 12px Verdana'; c.textAlign = 'center'; c.textBaseline = 'middle';
       c.fillStyle = '#9ab8c8';
       for (let i = 0; i < 6; i++) {
         c.fillText(String.fromCharCode(65 + i), ox + (i + 0.5) * (S / 6), oy - 10);
         c.fillText(String(i + 1), ox - 12, oy + (i + 0.5) * (S / 6));
       }
-      // remaining tapes
       c.fillStyle = '#ff6fa5';
       for (const t of G.tapes.items.slice(0, 6)) {
         const [mx, mz] = toMap(t.x, t.z);
         c.fillRect(mx - 3, mz - 3, 6, 6);
       }
-      // GPS route: Manhattan along the roads, never a diagonal through
-      // labels — player to the nearest avenue, across on it, then down
-      // a clear corridor to the objective. White halo + yellow dashes.
       const obj = G.missions.active && G.missions.marker
         ? [G.missions.marker.position.x, G.missions.marker.position.z]
         : null;
@@ -482,7 +431,6 @@ export function initHud(G) {
         c.fillStyle = '#ffe14d';
         c.beginPath(); c.moveTo(ox2, oz2 - 8); c.lineTo(ox2 + 6, oz2); c.lineTo(ox2, oz2 + 8); c.lineTo(ox2 - 6, oz2); c.closePath(); c.fill();
       }
-      // player arrow
       const [px, pz] = toMap(G.playerPos.x, G.playerPos.z);
       c.save();
       c.translate(px, pz);
@@ -512,7 +460,6 @@ export function initHud(G) {
       for (let i = 0; i < 5; i++) stars += `<span class="${i < G.police.wanted ? 'on' : 'off'}">★</span>`;
       el.stars.innerHTML = stars;
       el.insight.classList.toggle('hidden', !(G.police.wanted > 0 && G.police.inSight));
-      // weapons with ammo + locks
       el.weapons.innerHTML = WEAPONS.map((w, i) => {
         const locked = G.respect < w.lock;
         const ammo = G.ammo[i];
@@ -529,7 +476,6 @@ export function initHud(G) {
       el.respectLvl.textContent = lvl;
       el.respectTxt.textContent = `${Math.round(G.respect * 13)} / 1300`;
       el.tapes.textContent = `Sunset Tapes ${G.tapesFound}/20`;
-      // radio + car panels
       el.radioStation.textContent = station.name;
       el.radioSong.textContent = station.song;
       const veh = G.vehicle;
@@ -542,7 +488,6 @@ export function initHud(G) {
       el.carSpeed.innerHTML = `${kmh} <small>km/h</small>`;
       el.carGear.textContent = veh ? `G${gear}` : '';
       el.speedlines.style.opacity = veh && Math.abs(veh.speed) > 24 ? String(Math.min(0.8, (Math.abs(veh.speed) - 24) / 20)) : '0';
-      // drift panel
       const d = veh && veh.drift;
       if (d && (d.active || d.points > 0)) {
         el.driftPanel.classList.remove('hidden');
@@ -552,9 +497,7 @@ export function initHud(G) {
       } else {
         el.driftPanel.classList.add('hidden');
       }
-      // crosshair on foot only
       el.crosshair.classList.toggle('hidden', !(G.mode === 'playing' && !veh && !G.mapOpen));
-      // mission banner
       const b = G.missions.banner();
       if (b) {
         el.missionBanner.classList.remove('hidden');
@@ -568,7 +511,6 @@ export function initHud(G) {
       } else {
         el.missionBanner.classList.add('hidden');
       }
-      // EBPD panel
       const rows = G.police.ebpd();
       if (rows.length > 0) {
         el.ebpd.classList.remove('hidden');
@@ -581,7 +523,6 @@ export function initHud(G) {
       } else {
         el.ebpd.classList.add('hidden');
       }
-      // minimap
       const S = 170, W2 = 920;
       const toMap = (x, z) => [((x + 460) / W2) * S, ((z + 460) / W2) * S];
       mm.clearRect(0, 0, S, S);
@@ -648,7 +589,6 @@ export function initHud(G) {
       mm.fillText('N', S / 2, 12);
       const dist = districtAt(G.playerPos.x, G.playerPos.z);
       el.district.textContent = dist.name;
-      // keep the map overlay fresh while it is open
       if (G.mapOpen) H.drawMap();
     },
   };
