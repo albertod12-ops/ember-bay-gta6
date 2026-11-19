@@ -47,6 +47,18 @@ function enterBike(G, x, z, heading, speed) {
   return d;
 }
 
+function makeFlashSprite(G) {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 64;
+  const cx = cv.getContext('2d');
+  const g = cx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  g.addColorStop(0, 'rgba(255,255,230,1)');
+  g.addColorStop(0.35, 'rgba(255,205,80,0.95)');
+  g.addColorStop(1, 'rgba(255,130,0,0)');
+  cx.fillStyle = g; cx.fillRect(0, 0, 64, 64);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  s.visible = false; G.scene.add(s); return s;
+}
+
 export function stageShot(G, name) {
   G.shot = name;
   G._aimPose = false;
@@ -100,11 +112,12 @@ export function stageShot(G, name) {
     G.missions.startId(7);
     G.police.setWanted(4);
     G.hud.dialogue('VIC TORRES', 'CREW BOSS', 'You walked into the wrong street, kid. Boys — take him down.', 'vic', true);
-    G._shotTimer = 0;
+    G._shotTimer = 1.35;
     G._aimPose = true;
+    G._muzzle = makeFlashSprite(G);
     G.camOverride = {
-      pos: [cpt.x - fx * 2.2 - rx * 2.6, 1.9, cpt.z - fz * 2.2 - rz * 2.6],
-      look: [cpt.x + fx * 10, 1.3, cpt.z + fz * 10],
+      pos: [cpt.x - fx * 1.7 - rx * 2.0, 1.75, cpt.z - fz * 1.7 - rz * 2.0],
+      look: [cpt.x + fx * 8, 1.2, cpt.z + fz * 8],
     };
   }
 }
@@ -135,6 +148,7 @@ export function updateShot(G, dt) {
           const wx = car.pos.x - hx * 1.5 + rx * side;
           const wz = car.pos.z - hz * 1.5 + rz * side;
           G.driftFX.spawnSmoke(wx, 0.4, wz, 1);
+          G.driftFX.spawnSmoke(wx - hx * 0.7, 0.5, wz - hz * 0.7, 1);
           G.driftFX.laySkid(wx, wz, Math.atan2(car.vel.x, car.vel.z));
         }
       }
@@ -142,8 +156,8 @@ export function updateShot(G, dt) {
       const rx = Math.cos(car.heading), rz = -Math.sin(car.heading);
       const flash = Math.sin(G._titleT * 14) > 0;
       G._titleCops.forEach((cop, i) => {
-        const back = -(6 + i * 4);
-        const side = i === 0 ? 2 : 4.5;
+        const back = -(4 + i * 3);
+        const side = i === 0 ? 2 : -2;
         cop.group.position.set(car.pos.x - fx * back + rx * side, 0, car.pos.z - fz * back + rz * side);
         cop.group.rotation.y = car.heading;
         cop.red.material.emissiveIntensity = flash ? 2.4 : 0.25;
@@ -151,9 +165,9 @@ export function updateShot(G, dt) {
       });
       const h = G._titleHeli;
       if (h) {
-        const hx = car.pos.x + fx * 40 + rx * 4;
-        const hz = car.pos.z + fz * 40 + rz * 4;
-        h.group.position.set(hx, 19 + Math.sin(G._titleT * 0.8) * 1.5, hz);
+        const hx = car.pos.x + fx * 26 + rx * 4;
+        const hz = car.pos.z + fz * 26 + rz * 4;
+        h.group.position.set(hx, 15 + Math.sin(G._titleT * 0.8) * 1.2, hz);
         h.group.rotation.y = Math.atan2(car.pos.x - hx, car.pos.z - hz);
         h.rotor.rotation.y += dt * 22;
         h.tailRotor.rotation.x += dt * 30;
@@ -170,7 +184,7 @@ export function updateShot(G, dt) {
       const tSports = G.traffic.cars.filter((c) => c.kind === 'sport' && c.color !== 0xffc21c);
       const tOthers = G.traffic.cars.filter((c) => c.kind !== 'sport' || c.color === 0xffc21c);
       const tHeld = [...tSports, ...tOthers];
-      const tSlots = [[24, 0.5], [30, 4.5], [42, 0.5], [52, 4.5]];
+      const tSlots = [[16, 0.5], [22, 4.5], [32, 0.5], [42, 4.5]];
       tSlots.forEach(([fwd, side], i) => {
         const tc = tHeld[i];
         if (!tc) return;
@@ -182,8 +196,8 @@ export function updateShot(G, dt) {
       G.traffic.cars.forEach((c, i) => { if (!tHeld.includes(c)) parkFar(c, i); });
       G.traffic.bikes.forEach((c, i) => parkFar(c, i));
       G.camOverride = {
-        pos: [car.pos.x - fx * 18 + rx * 2, 4.2, car.pos.z - fz * 18 + rz * 2],
-        look: [car.pos.x + fx * 10, 1.8, car.pos.z + fz * 10],
+        pos: [car.pos.x - fx * 10 + rx * 1.2, 3.2, car.pos.z - fz * 10 + rz * 1.2],
+        look: [car.pos.x + fx * 8, 1.6, car.pos.z + fz * 8],
       };
       G.playerHeading = car.heading;
     }
@@ -192,10 +206,18 @@ export function updateShot(G, dt) {
   if (G.shot === 'combat') {
     G._shotTimer = (G._shotTimer || 0) + dt;
     if (G._shotTimer > 1.4) { G._shotTimer = 0; G.shoot(); }
+    if (G._flash && G._shotTimer < 0.6) G._flash.t = 0.12;
     const pp = G.playerPos;
     const ph = G.playerHeading;
     for (const g of cityParkedCars(G)) g.visible = Math.hypot(g.position.x - pp.x, g.position.z - pp.z) > 25;
     const fx = Math.sin(ph), fz = Math.cos(ph);
+    if (G._muzzle) {
+      const m = G._muzzle;
+      m.position.set(pp.x + fx * 1.4, 1.35, pp.z + fz * 1.4);
+      const on = G._shotTimer < 0.6;
+      m.visible = on;
+      if (on) { const sc = 1.9 - G._shotTimer * 1.6; m.scale.set(sc, sc, 1); }
+    }
     const rx = Math.cos(ph), rz = -Math.sin(ph);
     const holdTraffic = (car, fwd, side) => {
       if (!car) return;
@@ -224,7 +246,7 @@ export function updateShot(G, dt) {
     }
     G.traffic.bikes.forEach((c, i) => { if (c !== bikeA && c !== bikeB) parkFar(c, i); });
     const cars = P.units.filter((u) => u.kind === 'car');
-    const carSlots = [[-4, 12], [4, 16], [-3, 22], [3, 26], [-4, 30], [4, 34]];
+    const carSlots = [[-3, 9], [4, 14], [-3, 20], [3, 24], [-4, 28], [4, 32]];
     cars.forEach((c, i) => {
       const [side, fwd] = carSlots[i % carSlots.length];
       c.pos.set(pp.x + rx * side + fx * fwd, 0, pp.z + rz * side + fz * fwd);
