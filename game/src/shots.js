@@ -2,9 +2,7 @@ import * as THREE from 'three';
 import { makeCar, makeBike, createDrive } from './vehicles.js';
 import { makePoliceCar, makeHeli } from './police.js';
 import { ROADS, roadPoint, nsCenter, nsHeading, ewCenter, ewHeading } from './city.js';
-
 const STAGE_ROAD = 3;
-
 function parkFar(c, i) {
   const far = (i % 2 === 0 ? -1 : 1) * (380 + (i % 5) * 8);
   if (c.axis === 'ns') {
@@ -20,14 +18,12 @@ function parkFar(c, i) {
   c.group.position.copy(c.pos);
   c.group.rotation.y = c.heading;
 }
-
-let cityParked = null;
-function cityParkedCars(G) {
-  if (!cityParked) cityParked = G.city.root.children.filter((o) => o.userData && o.userData.parkedCar);
-  return cityParked;
+let parkedCache = null;
+function parkedCars(G) {
+  if (!parkedCache) parkedCache = G.city.root.children.filter((o) => o.userData && o.userData.parkedCar);
+  return parkedCache;
 }
-
-function enterSportCar(G, x, z, heading, speed) {
+function enterSport(G, x, z, heading, speed) {
   const v = makeCar(G, 'sport', 2);
   G.scene.add(v.group);
   const d = createDrive(G, v, {});
@@ -36,7 +32,6 @@ function enterSportCar(G, x, z, heading, speed) {
   G.enterVehicle(d);
   return d;
 }
-
 function enterBike(G, x, z, heading, speed) {
   const v = makeBike(G, 0xd81a1a);
   G.scene.add(v.group);
@@ -46,8 +41,7 @@ function enterBike(G, x, z, heading, speed) {
   G.enterVehicle(d);
   return d;
 }
-
-function makeFlashSprite(G) {
+function flashSprite(G) {
   const cv = document.createElement('canvas'); cv.width = cv.height = 64;
   const cx = cv.getContext('2d');
   const g = cx.createRadialGradient(32, 32, 0, 32, 32, 32);
@@ -58,7 +52,6 @@ function makeFlashSprite(G) {
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
   s.visible = false; G.scene.add(s); return s;
 }
-
 export function stageShot(G, name) {
   G.shot = name;
   G._aimPose = false;
@@ -68,7 +61,7 @@ export function stageShot(G, name) {
     G.hud.setMenu(true);
     G.player.group.visible = false;
     const pt = roadPoint('ns', STAGE_ROAD, -30, 1);
-    enterSportCar(G, pt.x, pt.z, pt.heading, 38);
+    enterSport(G, pt.x, pt.z, pt.heading, 38);
     G._titleCops = [];
     for (let i = 0; i < 2; i++) {
       const cop = makePoliceCar(G);
@@ -98,7 +91,7 @@ export function stageShot(G, name) {
   const pt = roadPoint('ns', STAGE_ROAD, -30, 1);
   if (name === 'cover') {
     G.setClock(17.75);
-    enterSportCar(G, pt.x, pt.z, pt.heading, 38);
+    enterSport(G, pt.x, pt.z, pt.heading, 38);
     G.police.setWanted(3);
   } else if (name === 'combat') {
     G.setClock(21.7);
@@ -114,18 +107,17 @@ export function stageShot(G, name) {
     G.hud.dialogue('VIC TORRES', 'CREW BOSS', 'You walked into the wrong street, kid. Boys — take him down.', 'vic', true);
     G._shotTimer = 1.35;
     G._aimPose = true;
-    G._muzzle = makeFlashSprite(G);
+    G._muzzle = flashSprite(G);
     G.camOverride = {
       pos: [cpt.x - fx * 1.7 - rx * 2.0, 1.75, cpt.z - fz * 1.7 - rz * 2.0],
       look: [cpt.x + fx * 8, 1.2, cpt.z + fz * 8],
     };
   }
 }
-
 export function updateShot(G, dt) {
   if (!G.shot || G.shot === 'map') return;
   const P = G.police;
-  if (G.shot !== 'combat') for (const g of cityParkedCars(G)) g.visible = true;
+  if (G.shot !== 'combat') for (const g of parkedCars(G)) g.visible = true;
   if (G.shot === 'title') {
     G._titleT = (G._titleT || 0) + dt;
     const road = ROADS.ns[STAGE_ROAD];
@@ -209,7 +201,7 @@ export function updateShot(G, dt) {
     if (G._flash && G._shotTimer < 0.6) G._flash.t = 0.12;
     const pp = G.playerPos;
     const ph = G.playerHeading;
-    for (const g of cityParkedCars(G)) g.visible = Math.hypot(g.position.x - pp.x, g.position.z - pp.z) > 25;
+    for (const g of parkedCars(G)) g.visible = Math.hypot(g.position.x - pp.x, g.position.z - pp.z) > 25;
     const fx = Math.sin(ph), fz = Math.cos(ph);
     if (G._muzzle) {
       const m = G._muzzle;
@@ -339,7 +331,6 @@ export function updateShot(G, dt) {
   G.traffic.bikes.forEach((c, i) => { if (c !== bike && c !== bike2) parkFar(c, i); });
   if (P.heli) P.heli.group.position.set(pp.x + fx * 26, 24, pp.z + fz * 26);
 }
-
 export function installDebugApi(G) {
   window.__ember = {
     errors: [],
@@ -411,4 +402,3 @@ export function installDebugApi(G) {
   window.addEventListener('error', (e) => window.__ember.errors.push(String(e.message || e.error)));
   window.addEventListener('unhandledrejection', (e) => window.__ember.errors.push('rejection: ' + String(e.reason)));
 }
-

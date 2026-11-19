@@ -10,8 +10,7 @@ function smokeTexture() {
   grad.addColorStop(1, 'rgba(200,200,200,0)');
   g.fillStyle = grad;
   g.fillRect(0, 0, 64, 64);
-  const t = new THREE.CanvasTexture(c);
-  return t;
+  return new THREE.CanvasTexture(c);
 }
 
 export function initDriftFX(G) {
@@ -45,7 +44,7 @@ export function initDriftFX(G) {
   }
   let ki = 0;
 
-  const FX = {
+  return {
     spawnSmoke(x, y, z, strength = 1) {
       const p = smoke[si];
       si = (si + 1) % SMOKE_N;
@@ -70,7 +69,11 @@ export function initDriftFX(G) {
       for (const p of smoke) {
         if (!p.s.visible) continue;
         p.life -= dt;
-        if (p.life <= 0) { p.s.visible = false; p.s.material.opacity = 0; continue; }
+        if (p.life <= 0) {
+          p.s.visible = false;
+          p.s.material.opacity = 0;
+          continue;
+        }
         const t = 1 - p.life / p.max;
         const sc = p.s.scale.x + p.grow * dt;
         p.s.scale.set(sc, sc, 1);
@@ -80,10 +83,13 @@ export function initDriftFX(G) {
       for (const k of skids) {
         if (!k.m.visible) continue;
         k.life -= dt;
-        if (k.life <= 0) { k.m.visible = false; k.m.material.opacity = 0; continue; }
+        if (k.life <= 0) {
+          k.m.visible = false;
+          k.m.material.opacity = 0;
+          continue;
+        }
         k.m.material.opacity = Math.min(0.5, k.life / 8);
       }
     },
   };
-  return FX;
 }

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { makeCar, makeBike } from './vehicles.js';
+import { makePerson } from './people.js';
 import { ROADS, ROUNDABOUT, nsPlain, ewPlain, nsCenter, ewCenter, nsHeading, ewHeading } from './city.js';
 
 const KINDS = ['sport', 'sport', 'sport', 'taxi', 'van', 'pickup', 'sport', 'sedan', 'sport', 'truck'];
@@ -8,8 +9,6 @@ function laneOffset(axis, dir) {
   if (axis === 'ns') return dir > 0 ? -3.5 : 3.5;
   return dir > 0 ? 3.5 : -3.5;
 }
-
-import { makePerson } from './people.js';
 
 function pedFigure(G, x, z) {
   const rng = G.rng;
@@ -31,14 +30,22 @@ function pedFigure(G, x, z) {
   });
   const g = fig.group;
   g.position.set(x, 0, z);
-  return { group: g, hipL: fig.hipL, hipR: fig.hipR, shL: fig.shL, shR: fig.shR, pos: new THREE.Vector3(x, 0, z), speed: rng.range(1.2, 2.4), phase: rng.range(0, 6) };
+  return {
+    group: g, hipL: fig.hipL, hipR: fig.hipR, shL: fig.shL, shR: fig.shR,
+    pos: new THREE.Vector3(x, 0, z), speed: rng.range(1.2, 2.4), phase: rng.range(0, 6),
+  };
 }
 
 function lightState(light, t) {
   const c = (t + light.phase) % 12;
-  const nsGreen = c < 5; const ewGreen = c >= 6 && c < 11;
-  const nsYellow = c >= 5 && c < 6; const ewYellow = c >= 11;
-  return { ns: nsGreen ? 'green' : nsYellow ? 'yellow' : 'red', ew: ewGreen ? 'green' : ewYellow ? 'yellow' : 'red' };
+  const nsGreen = c < 5;
+  const ewGreen = c >= 6 && c < 11;
+  const nsYellow = c >= 5 && c < 6;
+  const ewYellow = c >= 11;
+  return {
+    ns: nsGreen ? 'green' : nsYellow ? 'yellow' : 'red',
+    ew: ewGreen ? 'green' : ewYellow ? 'yellow' : 'red',
+  };
 }
 
 export function initTraffic(G) {
@@ -88,7 +95,10 @@ export function initTraffic(G) {
     const axis = rng.chance(0.5) ? 'ns' : 'ew';
     const road = rng.pick(ROADS[axis]);
     const side = rng.chance(0.5) ? 1 : -1;
-    return { axis, road, side, off: rng.range(7.6, 8.9) * side, along: rng.range(-430, 430), dir: rng.chance(0.5) ? 1 : -1, targetAlong: 0 };
+    return {
+      axis, road, side, off: rng.range(7.6, 8.9) * side,
+      along: rng.range(-430, 430), dir: rng.chance(0.5) ? 1 : -1, targetAlong: 0,
+    };
   };
   for (let i = 0; i < 90; i++) {
     const w = pedWalk();
@@ -102,7 +112,8 @@ export function initTraffic(G) {
   }
 
   const nearestLight = (x, z) => {
-    let best = null; let bestD = 1e9;
+    let best = null;
+    let bestD = 1e9;
     for (const l of city.lights) {
       const dx = l.pos.x - x, dz = l.pos.z - z;
       const d = Math.hypot(dx, dz);
@@ -159,8 +170,10 @@ export function initTraffic(G) {
       const turning = !!c.pendingAxis;
       if (turning) c.heading += dh * Math.min(1, dt * 5);
       if (Math.abs(dh) < 0.05 && c.pendingAxis) {
-        c.axis = c.pendingAxis; c.pendingAxis = null;
-        c.road = c.turnRoad; c.turnRoad = null;
+        c.axis = c.pendingAxis;
+        c.pendingAxis = null;
+        c.road = c.turnRoad;
+        c.turnRoad = null;
         if (c.axis === 'ns') c.dir = Math.cos(c.heading) >= 0 ? 1 : -1;
         else c.dir = Math.sin(c.heading) >= 0 ? 1 : -1;
         snapToRoad(c);
@@ -207,8 +220,10 @@ export function initTraffic(G) {
       }
       p.phase += dt * p.speed * 2.2;
       const s = Math.sin(p.phase) * 0.5;
-      p.hipL.rotation.x = s; p.hipR.rotation.x = -s;
-      p.shL.rotation.x = -s * 0.8; p.shR.rotation.x = s * 0.8;
+      p.hipL.rotation.x = s;
+      p.hipR.rotation.x = -s;
+      p.shL.rotation.x = -s * 0.8;
+      p.shR.rotation.x = s * 0.8;
       p.group.position.copy(p.pos);
     }
     for (const l of city.lights) {
@@ -225,4 +240,3 @@ export function initTraffic(G) {
   };
   return T;
 }
-

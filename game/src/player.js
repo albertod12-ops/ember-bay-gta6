@@ -17,7 +17,9 @@ export function createPlayer(G) {
     speed: 0,
     walkPhase: 0,
     place(x, z, heading = 0) {
-      P.pos.set(x, 0, z); P.heading = heading; P.sync();
+      P.pos.set(x, 0, z);
+      P.heading = heading;
+      P.sync();
     },
     sync() {
       g.position.copy(P.pos);
@@ -25,12 +27,15 @@ export function createPlayer(G) {
     },
     update(dt, input, camHeading) {
       let mx = 0, mz = 0;
-      if (input.f) { mz -= 1; } if (input.b) { mz += 1; }
-      if (input.l) { mx -= 1; } if (input.r) { mx += 1; }
+      if (input.f) mz -= 1;
+      if (input.b) mz += 1;
+      if (input.l) mx -= 1;
+      if (input.r) mx += 1;
       const moving = mx !== 0 || mz !== 0;
       const top = input.run ? 11 : 6.5;
       if (moving) {
-        const len = Math.hypot(mx, mz); mx /= len; mz /= len;
+        const len = Math.hypot(mx, mz);
+        mx /= len; mz /= len;
         const sin = Math.sin(camHeading), cos = Math.cos(camHeading);
         const wx = -mx * cos - mz * sin;
         const wz = mx * sin - mz * cos;
@@ -48,8 +53,10 @@ export function createPlayer(G) {
       }
       const swing = Math.min(1, P.speed / 6) * 0.7;
       const s = Math.sin(P.walkPhase);
-      hipL.rotation.x = s * swing; hipR.rotation.x = -s * swing;
-      shL.rotation.x = -s * swing * 0.8; shR.rotation.x = s * swing * 0.8;
+      hipL.rotation.x = s * swing;
+      hipR.rotation.x = -s * swing;
+      shL.rotation.x = -s * swing * 0.8;
+      shR.rotation.x = s * swing * 0.8;
       if (G._aimPose) {
         shL.rotation.x = -1.35; shR.rotation.x = -1.25;
         shL.rotation.z = 0.3; shR.rotation.z = -0.3;

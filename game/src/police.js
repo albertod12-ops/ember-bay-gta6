@@ -24,11 +24,12 @@ export function makePoliceCar(G) {
   const addSportWheel = (x, z) => {
     const w = sportWheel(0.46, 0xffc21c);
     w.position.set(x, 0.46, z);
-    g.add(w); wheels.push(w);
+    g.add(w);
+    wheels.push(w);
   };
   box(2.2, 0.42, 4.8, black, 0, 0.52, 0, g);
-  box(2.1, 0.3, 1.3, black, 0, 0.48, 1.85, g, -0.16, 0, 0);
-  box(1.9, 0.3, 0.7, black, 0, 0.4, 2.2, g, -0.32, 0, 0);
+  box(2.1, 0.3, 1.3, black, 0, 0.48, 1.85, g);
+  box(1.9, 0.3, 0.7, black, 0, 0.4, 2.2, g);
   box(1.95, 0.22, 0.25, dark, 0, 0.3, 2.42, g);
   box(2.24, 0.12, 4.5, black, 0, 0.74, 0, g);
   box(2.0, 0.16, 4.5, dark, 0, 0.26, 0, g);
@@ -43,8 +44,8 @@ export function makePoliceCar(G) {
   box(1.7, 0.38, 1.5, glass, 0, 0.95, -0.15, g);
   box(1.6, 0.07, 1.3, black, 0, 1.16, -0.2, g);
   box(1.62, 0.1, 0.06, dark, 0, 0.78, -1.28, g);
-  box(1.66, 0.05, 0.9, glass, 0, 0.92, 0.62, g, 0.55, 0, 0);
-  box(1.66, 0.05, 0.7, glass, 0, 0.9, -0.92, g, -0.5, 0, 0);
+  box(1.66, 0.05, 0.9, glass, 0, 0.92, 0.62, g);
+  box(1.66, 0.05, 0.7, glass, 0, 0.9, -0.92, g);
   box(0.08, 0.38, 0.1, dark, -0.86, 0.95, -0.15, g);
   box(0.08, 0.38, 0.1, dark, 0.86, 0.95, -0.15, g);
   box(0.05, 0.05, 0.2, dark, -1.06, 0.98, 0.55, g);
@@ -58,13 +59,17 @@ export function makePoliceCar(G) {
   box(1.9, 0.24, 0.28, dark, 0, 0.34, -2.38, g);
   for (const ex of [-0.35, 0.35]) {
     const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.2, 8), chrome);
-    tip.rotation.x = Math.PI / 2; tip.position.set(ex, 0.42, -2.5); g.add(tip);
+    tip.rotation.x = Math.PI / 2;
+    tip.position.set(ex, 0.42, -2.5);
+    g.add(tip);
   }
   const red = box(0.7, 0.22, 0.4, std(0xff2211, { emissive: 0xff2211, emissiveIntensity: 2 }), -0.45, 1.5, -0.2, g);
   const blue = box(0.7, 0.22, 0.4, std(0x2244ff, { emissive: 0x2244ff, emissiveIntensity: 2 }), 0.45, 1.5, -0.2, g);
   box(1.7, 0.1, 0.5, std(0x222222), 0, 1.38, -0.2, g);
-  addSportWheel(-1.02, 1.5); addSportWheel(1.02, 1.5);
-  addSportWheel(-1.02, -1.5); addSportWheel(1.02, -1.5);
+  addSportWheel(-1.02, 1.5);
+  addSportWheel(1.02, 1.5);
+  addSportWheel(-1.02, -1.5);
+  addSportWheel(1.02, -1.5);
   for (const w of wheels) arch(g, w.position.x, w.position.y, w.position.z, w.position.y + 0.12);
   for (const sx of [-1.11, 1.11]) {
     box(0.02, 0.42, 0.03, dark, sx, 0.72, 0.3, g);
@@ -72,13 +77,18 @@ export function makePoliceCar(G) {
   }
   for (const gx of [-0.3, 0, 0.3]) box(0.07, 0.1, 0.03, chrome, gx, 0.5, 2.46, g);
   const head = std(0xfff2b0, { emissive: 0xffe9a0, emissiveIntensity: 1.4 });
-  box(0.6, 0.12, 0.08, head, -0.7, 0.62, 2.42, g, 0, -0.45, 0);
-  box(0.6, 0.12, 0.08, head, 0.7, 0.62, 2.42, g, 0, 0.45, 0);
+  box(0.6, 0.12, 0.08, head, -0.7, 0.62, 2.42, g);
+  box(0.6, 0.12, 0.08, head, 0.7, 0.62, 2.42, g);
   const tailBar = std(0xd81a1a, { emissive: 0xaa0000, emissiveIntensity: 1.1 });
   box(1.9, 0.18, 0.08, tailBar, 0, 0.72, -2.42, g);
   box(0.3, 0.18, 0.08, tailBar, -0.82, 0.72, -2.42, g);
   box(0.3, 0.18, 0.08, tailBar, 0.82, 0.72, -2.42, g);
-  g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; } });
+  g.traverse((o) => {
+    if (o.isMesh) {
+      o.castShadow = true;
+      o.receiveShadow = false;
+    }
+  });
   return { group: g, red, blue, wheels };
 }
 
@@ -127,14 +137,20 @@ export function initPolice(G) {
     flashT: 0,
     setWanted(n) {
       P.wanted = Math.max(0, Math.min(5, Math.round(n)));
-      if (P.wanted === 0) { P.evading = 0; P.clearUnits(); }
+      if (P.wanted === 0) {
+        P.evading = 0;
+        P.clearUnits();
+      }
     },
     addHeat(n) { P.setWanted(P.wanted + n); },
     clearUnits() {
       for (const u of P.units) scene.remove(u.group);
       P.units = [];
       P.removeHeli();
-      if (P.roadblock) { for (const c of P.roadblock.cars) scene.remove(c.group); P.roadblock = null; }
+      if (P.roadblock) {
+        for (const c of P.roadblock.cars) scene.remove(c.group);
+        P.roadblock = null;
+      }
     },
     removeHeli() {
       if (!P.heli) return;
@@ -191,8 +207,12 @@ export function initPolice(G) {
         else if (d > 110) status = 'SEARCHING';
         rows.push({ callsign: u.callsign, dist: d, status });
       }
-      if (P.heli) rows.push({ callsign: 'KESTREL-AIR', dist: Math.round(P.heli.group.position.distanceTo(G.playerPos)), status: 'OVERHEAD' });
-      if (P.wanted >= 4) rows.push({ callsign: 'ROADBLOCK', dist: P.roadblock ? Math.round(P.roadblock.pos.distanceTo(G.playerPos)) : 0, status: 'BLOCKING' });
+      if (P.heli) {
+        rows.push({ callsign: 'KESTREL-AIR', dist: Math.round(P.heli.group.position.distanceTo(G.playerPos)), status: 'OVERHEAD' });
+      }
+      if (P.wanted >= 4) {
+        rows.push({ callsign: 'ROADBLOCK', dist: P.roadblock ? Math.round(P.roadblock.pos.distanceTo(G.playerPos)) : 0, status: 'BLOCKING' });
+      }
       return rows;
     },
     update(dt) {
@@ -204,7 +224,10 @@ export function initPolice(G) {
       if (P.wanted >= 2 && bikes < 1) P.spawnBike(CALLSIGNS[(P.units.length + 1) % CALLSIGNS.length]);
       if (P.wanted >= 3 && !P.heli) P.spawnHeli();
       if (P.wanted >= 4 && !P.roadblock) P.placeRoadblock();
-      if (P.wanted < 4 && P.roadblock) { for (const c of P.roadblock.cars) scene.remove(c.group); P.roadblock = null; }
+      if (P.wanted < 4 && P.roadblock) {
+        for (const c of P.roadblock.cars) scene.remove(c.group);
+        P.roadblock = null;
+      }
       if (P.wanted < 3 && P.heli) P.removeHeli();
 
       P.flashT += dt;
@@ -275,4 +298,3 @@ export function initPolice(G) {
   };
   return P;
 }
-

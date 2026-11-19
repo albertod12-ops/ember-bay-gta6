@@ -12,20 +12,15 @@ import { initTapes } from './collectibles.js';
 import { initDriftFX } from './drift.js';
 import { makePerson } from './people.js';
 import { stageShot, updateShot, installDebugApi } from './shots.js';
-
 const params = new URLSearchParams(location.search);
 const seed = parseInt(params.get('seed') || '1', 10) || 1;
 const shotName = params.get('shot');
 const rng = makeRng((seed ^ hashStr('ember-bay')) >>> 0);
-
 const SAVE_KEY = 'ember-bay-v5';
 function loadSave() {
-  try {
-    const raw = localStorage.getItem(SAVE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
+  try { const raw = localStorage.getItem(SAVE_KEY); return raw ? JSON.parse(raw) : null; }
+  catch { return null; }
 }
-
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -33,11 +28,9 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.domElement.classList.add('webgl');
 document.getElementById('app').appendChild(renderer.domElement);
-
 const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0xe07a45, 320, 1300);
 const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 4000);
-
 const hemi = new THREE.HemisphereLight(0xffd9a0, 0x4a3a55, 0.7);
 const sun = new THREE.DirectionalLight(0xff8a3d, 1.9);
 sun.position.set(-850, 130, 320);
@@ -48,7 +41,6 @@ sun.shadow.camera.top = 420; sun.shadow.camera.bottom = -420;
 sun.shadow.camera.near = 10; sun.shadow.camera.far = 2600;
 sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.5;
 scene.add(hemi, sun, sun.target);
-
 const G = {
   scene, camera, renderer, rng, seed,
   time: 0, clock: 17.75, day: 1,
@@ -62,11 +54,7 @@ const G = {
   mapOpen: false, camClassic: false, soundOn: true,
   crew: [],
 };
-if (G.save) {
-  G.money = G.save.money ?? 500;
-  G.day = G.save.day ?? 1;
-}
-
+if (G.save) { G.money = G.save.money ?? 500; G.day = G.save.day ?? 1; }
 G.setClock = (h) => {
   G.clock = ((h % 24) + 24) % 24;
   const night = G.clock >= 19.5 || G.clock < 6;
@@ -91,7 +79,6 @@ G.setClock = (h) => {
     if (G.city?.sky) G.city.sky.material.color.setHex(0xffffff);
   }
 };
-
 G.toast = (t) => { if (G.hud) G.hud.toast(t); };
 G.saveGame = () => {
   try {
@@ -116,13 +103,12 @@ G.damage = (amount, cause) => {
     G.toast('BUSTED — you woke up at the clinic, -$100');
   }
 };
-
 G.city = buildCity(G);
 G.player = createPlayer(G);
 G.scene.add(G.player.group);
-const startPt = roadPoint('ns', 3, -60);
-G.player.place(startPt.x, startPt.z, startPt.heading);
-G.playerHeading = startPt.heading;
+const sp = roadPoint('ns', 3, -60);
+G.player.place(sp.x, sp.z, sp.heading);
+G.playerHeading = sp.heading;
 G.playerPos = G.player.pos;
 G.playerHeading = 0;
 G.traffic = initTraffic(G);
@@ -132,16 +118,15 @@ G.hud = initHud(G);
 G.audio = initAudio(G);
 G.tapes = initTapes(G);
 G.driftFX = initDriftFX(G);
-
-const PARKED_DEFS = [
+const PDEFS = [
   ['ns', 0, 120, 1], ['ns', 1, -200, -1], ['ns', 2, 300, 1], ['ns', 3, 150, -1],
   ['ns', 4, -80, 1], ['ns', 5, 220, -1], ['ew', 0, -100, 1], ['ew', 1, 260, -1],
   ['ew', 2, -300, 1], ['ew', 3, 80, -1], ['ew', 4, -180, 1], ['ns', 1, 60, 1],
 ];
-const PARKED_KINDS = ['sport', 'sport', 'taxi', 'pickup', 'sport', 'van', 'sport', 'sport', 'sport', 'taxi', 'pickup', 'sport'];
-PARKED_DEFS.forEach(([axis, idx, along, dir], i) => {
+const PKINDS = ['sport', 'sport', 'taxi', 'pickup', 'sport', 'van', 'sport', 'sport', 'sport', 'taxi', 'pickup', 'sport'];
+PDEFS.forEach(([axis, idx, along, dir], i) => {
   const pt = roadPoint(axis, idx, along, dir);
-  const v = makeCar(G, PARKED_KINDS[i], i % 3);
+  const v = makeCar(G, PKINDS[i], i % 3);
   G.scene.add(v.group);
   const d = createDrive(G, v, {});
   const side = axis === 'ns' ? (dir > 0 ? 4.4 : -4.4) : 0;
@@ -158,7 +143,6 @@ PARKED_DEFS.forEach(([axis, idx, along, dir], i) => {
   d.owned = false;
   G.parked.push(d);
 }
-
 G.enterVehicle = (drive) => {
   if (G.vehicle) return false;
   G.vehicle = drive;
@@ -214,14 +198,12 @@ G.tryEnterExit = () => {
   }
   return kind;
 };
-
-const WEAPON_LOCKS = [0, 0, 20, 40, 60];
-const WEAPON_MAGS = [0, 12, 32, 30, 8];
-const WEAPON_NAMES = ['FISTS', 'PISTOL', 'SMG', 'RIFLE', 'SHOTGUN'];
-
+const WLOCK = [0, 0, 20, 40, 60];
+const WMAG = [0, 12, 32, 30, 8];
+const WNAME = ['FISTS', 'PISTOL', 'SMG', 'RIFLE', 'SHOTGUN'];
 G.selectWeapon = (i) => {
-  if (G.respect < WEAPON_LOCKS[i]) {
-    G.toast(`${WEAPON_NAMES[i]} locked — reach respect ${WEAPON_LOCKS[i]} to unlock`);
+  if (G.respect < WLOCK[i]) {
+    G.toast(`${WNAME[i]} locked — reach respect ${WLOCK[i]} to unlock`);
     return false;
   }
   G.weaponIdx = i;
@@ -241,22 +223,20 @@ G.reload = () => {
   if (idx === 0 || G.vehicle) return;
   const ammo = G.ammo[idx];
   if (!ammo) return;
-  const need = WEAPON_MAGS[idx] - ammo[0];
+  const need = WMAG[idx] - ammo[0];
   if (need <= 0) { G.toast('Magazine full'); return; }
   const take = Math.min(need, ammo[1]);
   if (take <= 0) { G.toast('No reserve ammo'); return; }
   ammo[0] += take; ammo[1] -= take;
-  G.toast(`Reloaded ${WEAPON_NAMES[idx]} — ${ammo[0]}/${ammo[1]}`);
+  G.toast(`Reloaded ${WNAME[idx]} — ${ammo[0]}/${ammo[1]}`);
 };
-
-const flashLight = new THREE.PointLight(0xffe9a0, 0, 40);
-scene.add(flashLight);
+const flash = new THREE.PointLight(0xffe9a0, 0, 40);
+scene.add(flash);
 const tracerGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
 const tracer = new THREE.Line(tracerGeo, new THREE.LineBasicMaterial({ color: 0xffe9a0, transparent: true, opacity: 0 }));
 tracer.visible = false;
 scene.add(tracer);
-G._flash = { light: flashLight, tracer, t: 0 };
-
+G._flash = { light: flash, tracer, t: 0 };
 G.spawnCrew = (x, z, count = 3) => {
   const skins = [0xd9a066, 0xb07a4a, 0xe8b98a];
   const hairs = [0x14141c, 0x3a2a1a, 0x8a8a8a];
@@ -280,7 +260,6 @@ G.clearCrew = () => {
   for (const c of G.crew) scene.remove(c.group);
   G.crew = [];
 };
-
 G.shoot = () => {
   if (G.mode !== 'playing' || G.vehicle || G.mapOpen) return false;
   const idx = G.weaponIdx;
@@ -291,8 +270,8 @@ G.shoot = () => {
   const h = G.playerHeading;
   const fx = Math.sin(h), fz = Math.cos(h);
   const gx = G.playerPos.x + fx * 1.4, gz = G.playerPos.z + fz * 1.4;
-  flashLight.position.set(gx, 1.35, gz);
-  flashLight.intensity = 80;
+  flash.position.set(gx, 1.35, gz);
+  flash.intensity = 80;
   const tp = tracer.geometry.attributes.position;
   tp.setXYZ(0, gx, 1.32, gz);
   tp.setXYZ(1, G.playerPos.x + fx * 50, 1.25, G.playerPos.z + fz * 50);
@@ -316,7 +295,6 @@ G.shoot = () => {
   }
   return true;
 };
-
 G.startGame = () => {
   G.mode = 'playing';
   G.camOverride = null;
@@ -353,7 +331,6 @@ document.getElementById('btnSettings').addEventListener('click', () => {
   G.audio.setSound(on);
   document.getElementById('settingsState').textContent = on ? 'Sound: ON' : 'Sound: OFF';
 });
-
 const keys = new Set();
 const input = () => ({
   f: keys.has('KeyW') || keys.has('ArrowUp'),
@@ -389,8 +366,7 @@ window.addEventListener('resize', () => {
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
-
-const desired = new THREE.Vector3();
+const des = new THREE.Vector3();
 function updateCamera(dt) {
   if (G.camOverride) {
     camera.position.set(...G.camOverride.pos);
@@ -410,8 +386,8 @@ function updateCamera(dt) {
   const isBike = G.vehicle && G.vehicle.vehicle && G.vehicle.vehicle.kind === 'bike';
   const dist = G.camClassic ? 16 : (G.vehicle ? (isBike ? 5.5 : 5.5) : 6.5);
   const height = G.camClassic ? 7 : (G.vehicle ? (isBike ? 2.2 : 2.2) : 2.6);
-  desired.set(pp.x - fx * dist, height, pp.z - fz * dist);
-  camera.position.lerp(desired, 1 - Math.pow(0.001, dt));
+  des.set(pp.x - fx * dist, height, pp.z - fz * dist);
+  camera.position.lerp(des, 1 - Math.pow(0.001, dt));
   camera.lookAt(pp.x + fx * 10, 1.8, pp.z + fz * 10);
   const top = G.vehicle ? G.vehicle.topSpeed : 0;
   const targetFov = 62 + (G.vehicle ? (Math.abs(G.vehicle.speed) / top) * 6 : 0);
@@ -420,12 +396,11 @@ function updateCamera(dt) {
     camera.updateProjectionMatrix();
   }
 }
-
-const clockT = new THREE.Clock();
-let firstFrame = true;
+const clk = new THREE.Clock();
+let first = true;
 function loop() {
   requestAnimationFrame(loop);
-  const rawDt = clockT.getDelta();
+  const rawDt = clk.getDelta();
   const dt = Math.min(rawDt, 0.05);
   G.time += dt;
   if (G.city.wheel) G.city.wheel.rotation.x += dt * 0.06;
@@ -460,15 +435,13 @@ function loop() {
   G.hud.update(dt);
   updateCamera(rawDt);
   renderer.render(scene, camera);
-  if (firstFrame) {
-    firstFrame = false;
+  if (first) {
+    first = false;
     window.__emberReady = true;
     if (window.__ember) window.__ember.ready = true;
   }
 }
-
 installDebugApi(G);
 G.setClock(G.clock);
 if (shotName) stageShot(G, shotName);
 loop();
-

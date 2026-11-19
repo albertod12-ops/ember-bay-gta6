@@ -1,8 +1,10 @@
 import * as THREE from 'three';
 
+
 function std(color, opts = {}) {
   return new THREE.MeshStandardMaterial({ color, roughness: 0.85, metalness: 0, ...opts });
 }
+
 function box(w, h, d, material, x, y, z, parent, rx = 0, ry = 0, rz = 0) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
   m.position.set(x, y, z);
@@ -10,6 +12,7 @@ function box(w, h, d, material, x, y, z, parent, rx = 0, ry = 0, rz = 0) {
   parent.add(m);
   return m;
 }
+
 function limb(ax, ay, az, bx, by, bz, r, material, parent, seg = 8) {
   const a = new THREE.Vector3(ax, ay, az);
   const b = new THREE.Vector3(bx, by, bz);
@@ -43,7 +46,8 @@ export function makePerson(G, opts = {}) {
     limb(0, 0, 0, 0, -0.46, 0, 0.085, pantsM, hip);
     limb(0, -0.46, 0, 0, -0.88, 0.02, 0.066, pantsM, hip);
     const knee = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 6), pantsM);
-    knee.position.set(0, -0.46, 0.03); hip.add(knee);
+    knee.position.set(0, -0.46, 0.03);
+    hip.add(knee);
     box(0.15, 0.08, 0.3, shoeM, 0, -0.93, 0.05, hip);
     box(0.16, 0.03, 0.31, soleM, 0, -0.97, 0.05, hip);
     g.add(hip);
@@ -183,7 +187,11 @@ export function makePerson(G, opts = {}) {
   g.add(head);
 
   g.scale.set(build, h / 1.8, build);
-  g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; } });
+  g.traverse((o) => {
+    if (o.isMesh) {
+      o.castShadow = true;
+      o.receiveShadow = false;
+    }
+  });
   return { group: g, hipL, hipR, shL, shR, head, height: h };
 }
-

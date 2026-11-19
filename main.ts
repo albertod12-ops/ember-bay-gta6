@@ -1,10 +1,10 @@
 // Ember Bay — make.fun gta6-01 entry program (Node 22, standard library only).
-// Hands the game in: copies game/ and screenshots/ from beside this file into
-// the output directory and writes /output/dossier.json with the vendored
-// make.fun library. Outside the grader, MAKEFUN_OUTPUT_DIR stands in for
-// /output:  mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
+// Copies game/ and screenshots/ from beside this file into the output
+// directory and writes /output/dossier.json with the vendored make.fun
+// library. Outside the grader, MAKEFUN_OUTPUT_DIR stands in for /output:
+//   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 
-import { cpSync, existsSync, mkdirSync, writeFileSync, readdirSync, statSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildDossier } from './vendor/makefun-game.ts';
@@ -13,8 +13,8 @@ const here = fileURLToPath(new URL('.', import.meta.url));
 const out = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
 
 mkdirSync(out, { recursive: true });
-// The grader mounts /output with a stale file left in it; clear the
-// directory's contents, never the directory itself — it is a mount point
+// The grader mounts /output with a stale file left in it. Empty the
+// directory's contents, never the directory itself — it is a mount point,
 // and deleting it breaks the mount.
 for (const entry of readdirSync(out)) {
   rmSync(join(out, entry), { recursive: true, force: true });
@@ -25,7 +25,7 @@ if (existsSync(join(here, 'screenshots'))) {
   cpSync(join(here, 'screenshots'), join(out, 'screenshots'), { recursive: true });
 }
 
-// Refuse early, with a plain message, when the entry would fail the
+// Fail early, with a plain message, when the entry would break the
 // scorer's caps: more than 4 screenshots, one over 256 KiB, or a game/
 // tree the scorer would refuse. buildDossier throws the same way, but
 // this names the offending file before anything is written.

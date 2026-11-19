@@ -647,4 +647,3 @@ export function initHud(G) {
   };
   return H;
 }
-

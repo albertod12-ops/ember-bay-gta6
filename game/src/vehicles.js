@@ -121,7 +121,8 @@ export function makeCar(G, kind, colorIdx = 0) {
   const addWheel = (x, z, r = 0.42) => {
     const w = wheel(r);
     w.position.set(x, r, z);
-    g.add(w); wheels.push(w);
+    g.add(w);
+    wheels.push(w);
   };
   const mirror = (x, z) => {
     box(0.05, 0.05, 0.22, dark, x * 1.0, 1.04, z, g);
@@ -134,10 +135,14 @@ export function makeCar(G, kind, colorIdx = 0) {
     box(1.6, 0.5, 0.1, dark, 0, 0.85, 3.72, g);
     box(2.4, 0.4, 0.3, dark, 0, 0.45, 3.68, g);
     box(2.5, 2.6, 5.2, std(0xd8d8d8, { roughness: 0.6, metalness: 0.2 }), 0, 1.9, -1.6, g);
-    mirror(-1, 3.1); mirror(1, 3.1);
-    addWheel(-1.15, 2.6); addWheel(1.15, 2.6);
-    addWheel(-1.15, -1.2); addWheel(1.15, -1.2);
-    addWheel(-1.15, -2.6); addWheel(1.15, -2.6);
+    mirror(-1, 3.1);
+    mirror(1, 3.1);
+    addWheel(-1.15, 2.6);
+    addWheel(1.15, 2.6);
+    addWheel(-1.15, -1.2);
+    addWheel(1.15, -1.2);
+    addWheel(-1.15, -2.6);
+    addWheel(1.15, -2.6);
     lamps(g, 3.74, -4.22, 0.95);
   } else if (kind === 'van') {
     box(2.3, 1.9, 5.4, paint, 0, 1.35, 0, g);
@@ -150,9 +155,12 @@ export function makeCar(G, kind, colorIdx = 0) {
     box(2.3, 0.35, 0.3, dark, 0, 0.45, 2.68, g);
     box(2.3, 0.35, 0.3, dark, 0, 0.45, -2.68, g);
     box(2.32, 0.08, 5.0, chrome, 0, 0.95, 0, g);
-    mirror(-1, 2.2); mirror(1, 2.2);
-    addWheel(-1.1, 1.8); addWheel(1.1, 1.8);
-    addWheel(-1.1, -1.8); addWheel(1.1, -1.8);
+    mirror(-1, 2.2);
+    mirror(1, 2.2);
+    addWheel(-1.1, 1.8);
+    addWheel(1.1, 1.8);
+    addWheel(-1.1, -1.8);
+    addWheel(1.1, -1.8);
     for (const sx of [-1.16, 1.16]) {
       box(0.02, 0.9, 0.03, dark, sx, 1.55, 0.9, g);
       box(0.02, 0.9, 0.03, dark, sx, 1.55, -1.6, g);
@@ -173,9 +181,12 @@ export function makeCar(G, kind, colorIdx = 0) {
     box(2.2, 0.08, 2.5, dark, 0, 0.82, -1.25, g);
     box(2.3, 0.35, 0.3, dark, 0, 0.45, 2.58, g);
     box(2.32, 0.06, 4.6, chrome, 0, 0.85, 0, g);
-    mirror(-1, 2.1); mirror(1, 2.1);
-    addWheel(-1.1, 1.8); addWheel(1.1, 1.8);
-    addWheel(-1.1, -1.8); addWheel(1.1, -1.8);
+    mirror(-1, 2.1);
+    mirror(1, 2.1);
+    addWheel(-1.1, 1.8);
+    addWheel(1.1, 1.8);
+    addWheel(-1.1, -1.8);
+    addWheel(1.1, -1.8);
     box(1.1, 0.16, 0.08, dark, 0, 0.85, 2.6, g);
     for (const gx of [-0.35, 0, 0.35]) box(0.07, 0.13, 0.03, chrome, gx, 0.85, 2.62, g);
     lamps(g, 2.62, -2.62, 0.9);
@@ -183,7 +194,8 @@ export function makeCar(G, kind, colorIdx = 0) {
     const addSportWheel = (x, z) => {
       const w = sportWheel(0.46, 0xffc21c);
       w.position.set(x, 0.46, z);
-      g.add(w); wheels.push(w);
+      g.add(w);
+      wheels.push(w);
     };
     box(2.2, 0.42, 4.8, paint, 0, 0.52, 0, g);
     box(2.1, 0.3, 1.3, paint, 0, 0.48, 1.85, g, -0.16, 0, 0);
@@ -213,7 +225,9 @@ export function makeCar(G, kind, colorIdx = 0) {
     box(1.9, 0.24, 0.28, dark, 0, 0.34, -2.38, g);
     for (const ex of [-0.35, 0.35]) {
       const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.2, 8), chrome);
-      tip.rotation.x = Math.PI / 2; tip.position.set(ex, 0.42, -2.5); g.add(tip);
+      tip.rotation.x = Math.PI / 2;
+      tip.position.set(ex, 0.42, -2.5);
+      g.add(tip);
     }
     const head = std(0xfff2b0, { emissive: 0xffe9a0, emissiveIntensity: 1.4 });
     box(0.6, 0.12, 0.08, head, -0.7, 0.62, 2.42, g, 0, -0.45, 0);
@@ -232,8 +246,10 @@ export function makeCar(G, kind, colorIdx = 0) {
     box(0.04, 0.05, 0.26, chrome, 1.06, 0.72, -0.1, g);
     box(1.0, 0.12, 0.08, dark, 0, 0.5, 2.44, g);
     for (const gx of [-0.3, 0, 0.3]) box(0.07, 0.1, 0.03, chrome, gx, 0.5, 2.46, g);
-    addSportWheel(-1.02, 1.5); addSportWheel(1.02, 1.5);
-    addSportWheel(-1.02, -1.5); addSportWheel(1.02, -1.5);
+    addSportWheel(-1.02, 1.5);
+    addSportWheel(1.02, 1.5);
+    addSportWheel(-1.02, -1.5);
+    addSportWheel(1.02, -1.5);
     for (const sx of [-1.11, 1.11]) {
       box(0.02, 0.42, 0.03, dark, sx, 0.72, 0.3, g);
       box(0.02, 0.42, 0.03, dark, sx, 0.72, -0.9, g);
@@ -266,7 +282,8 @@ export function makeCar(G, kind, colorIdx = 0) {
     box(0.04, 0.05, 0.28, chrome, 1.01, bodyY + 0.36, 0.25, g);
     box(0.04, 0.05, 0.28, chrome, -1.01, bodyY + 0.36, -0.85, g);
     box(0.04, 0.05, 0.28, chrome, 1.01, bodyY + 0.36, -0.85, g);
-    mirror(-1, 0.72); mirror(1, 0.72);
+    mirror(-1, 0.72);
+    mirror(1, 0.72);
     if (low) {
       box(2.06, 0.1, 4.66, chrome, 0, bodyY - 0.28, 0, g);
       box(1.1, 0.09, 0.5, dark, 0, bodyY + 0.38, 1.55, g);
@@ -276,8 +293,10 @@ export function makeCar(G, kind, colorIdx = 0) {
       box(2.02, 0.24, 4.62, dark, 0, bodyY - 0.02, 0, g);
     }
     const wr = low ? 0.38 : 0.42;
-    addWheel(-1.05, 1.45, wr); addWheel(1.05, 1.45, wr);
-    addWheel(-1.05, -1.45, wr); addWheel(1.05, -1.45, wr);
+    addWheel(-1.05, 1.45, wr);
+    addWheel(1.05, 1.45, wr);
+    addWheel(-1.05, -1.45, wr);
+    addWheel(1.05, -1.45, wr);
     for (const sx of [-1.01, 1.01]) {
       box(0.02, 0.5, 0.03, dark, sx, bodyY + 0.36, 0.25, g);
       box(0.02, 0.5, 0.03, dark, sx, bodyY + 0.36, -0.85, g);
@@ -286,7 +305,12 @@ export function makeCar(G, kind, colorIdx = 0) {
     for (const gx of [-0.28, 0, 0.28]) box(0.06, 0.12, 0.03, chrome, gx, bodyY + 0.24, 2.33, g);
     lamps(g, 2.32, -2.32, bodyY + 0.3);
   }
-  g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; } });
+  g.traverse((o) => {
+    if (o.isMesh) {
+      o.castShadow = true;
+      o.receiveShadow = false;
+    }
+  });
   for (const w of wheels) arch(g, w.position.x, w.position.y, w.position.z, w.position.y + 0.12);
   return { group: g, kind, wheels, color };
 }
@@ -325,9 +349,11 @@ export function makeBike(G, color = 0xd81a1a) {
     disc.rotation.z = Math.PI / 2;
     w.add(disc);
     w.position.set(0, 0.42, z);
-    g.add(w); wheels.push(w);
+    g.add(w);
+    wheels.push(w);
   };
-  mkWheel(0.95, 0.16); mkWheel(-0.95, 0.28);
+  mkWheel(0.95, 0.16);
+  mkWheel(-0.95, 0.28);
   box(0.5, 0.34, 0.78, paint, 0, 0.98, 0.78, g, -0.32, 0, 0);
   box(0.06, 0.62, 1.35, paint, -0.27, 0.72, 0.05, g);
   box(0.06, 0.62, 1.35, paint, 0.27, 0.72, 0.05, g);
@@ -342,10 +368,14 @@ export function makeBike(G, color = 0xd81a1a) {
   box(0.4, 0.4, 0.5, std(0x333333, { metalness: 0.6, roughness: 0.5 }), 0, 0.55, -0.05, g);
   for (const x of [-0.1, 0.1]) limb(x, 1.12, 0.6, x, 0.42, 0.95, 0.05, gold, g);
   const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.62, 6), dark);
-  bar.rotation.z = Math.PI / 2; bar.position.set(0, 1.12, 0.58); g.add(bar);
+  bar.rotation.z = Math.PI / 2;
+  bar.position.set(0, 1.12, 0.58);
+  g.add(bar);
   for (const x of [-0.3, 0.3]) {
     const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.14, 6), dark);
-    grip.rotation.z = Math.PI / 2; grip.position.set(x, 1.12, 0.58); g.add(grip);
+    grip.rotation.z = Math.PI / 2;
+    grip.position.set(x, 1.12, 0.58);
+    g.add(grip);
   }
   box(0.08, 0.12, 0.85, metal, -0.16, 0.45, -0.6, g);
   box(0.08, 0.12, 0.85, metal, 0.16, 0.45, -0.6, g);
@@ -355,16 +385,21 @@ export function makeBike(G, color = 0xd81a1a) {
   box(0.4, 0.06, 0.5, accent, 0, 1.18, -0.82, g, -0.18, 0, 0);
   box(0.3, 0.08, 0.05, std(0xd81a1a, { emissive: 0xaa0000, emissiveIntensity: 1.0 }), 0, 1.06, -1.1, g);
   const muff = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 0.42, 10), chrome);
-  muff.rotation.x = Math.PI / 2; muff.position.set(0.2, 0.42, -0.78); g.add(muff);
+  muff.rotation.x = Math.PI / 2;
+  muff.position.set(0.2, 0.42, -0.78);
+  g.add(muff);
   const rider = new THREE.Group();
   const jacket = std(color);
   const pants = std(0x222831);
   const skin = std(0xd9a066, { roughness: 0.8 });
   box(0.5, 0.28, 0.62, jacket, 0, 1.3, -0.08, rider, 0.95, 0, 0);
   const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.26, 12, 10), std(accentColor, { roughness: 0.3 }));
-  helmet.position.set(0, 1.46, 0.38); rider.add(helmet);
+  helmet.position.set(0, 1.46, 0.38);
+  rider.add(helmet);
   const visor = new THREE.Mesh(new THREE.SphereGeometry(0.23, 12, 8, 0, Math.PI * 2, 0, 1.1), std(0x14202e, { roughness: 0.1, metalness: 0.6 }));
-  visor.position.set(0, 1.46, 0.42); visor.rotation.x = -0.5; rider.add(visor);
+  visor.position.set(0, 1.46, 0.42);
+  visor.rotation.x = -0.5;
+  rider.add(visor);
   limb(-0.26, 1.42, 0.05, -0.3, 1.12, 0.58, 0.07, jacket, rider);
   limb(0.26, 1.42, 0.05, 0.3, 1.12, 0.58, 0.07, jacket, rider);
   limb(-0.2, 1.02, -0.35, -0.3, 0.82, 0.1, 0.09, pants, rider);
@@ -374,7 +409,12 @@ export function makeBike(G, color = 0xd81a1a) {
   box(0.1, 0.06, 0.24, dark, -0.28, 0.56, -0.34, rider);
   box(0.1, 0.06, 0.24, dark, 0.28, 0.56, -0.34, rider);
   g.add(rider);
-  g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; } });
+  g.traverse((o) => {
+    if (o.isMesh) {
+      o.castShadow = true;
+      o.receiveShadow = false;
+    }
+  });
   return { group: g, kind: 'bike', wheels, color, rider };
 }
 
@@ -402,11 +442,22 @@ export function createDrive(G, vehicle, opts = {}) {
         G.driftBanked += cash;
         if (G.toast) G.toast(`DRIFT +$${cash} (x${d.combo})`);
       }
-      d.points = 0; d.combo = 1; d.comboTime = 0; d.endTimer = 0; d.angle = 0; d.hadSlip = false;
+      d.points = 0;
+      d.combo = 1;
+      d.comboTime = 0;
+      d.endTimer = 0;
+      d.angle = 0;
+      d.hadSlip = false;
     },
     place(x, z, heading = 0) {
-      D.pos.set(x, 0, z); D.heading = heading; D.speed = 0; D.vel.set(0, 0, 0);
-      D.drift.active = false; D.drift.points = 0; D.drift.combo = 1; D.sync();
+      D.pos.set(x, 0, z);
+      D.heading = heading;
+      D.speed = 0;
+      D.vel.set(0, 0, 0);
+      D.drift.active = false;
+      D.drift.points = 0;
+      D.drift.combo = 1;
+      D.sync();
     },
     sync() {
       D.group.position.copy(D.pos);
@@ -431,7 +482,10 @@ export function createDrive(G, vehicle, opts = {}) {
       }
       if (D.drift.active) {
         D.speed -= Math.sign(D.speed) * Math.min(Math.abs(D.speed), 6 * dt);
-        if (Math.abs(D.speed) < 8) { D.drift.active = false; D.bankDrift(); }
+        if (Math.abs(D.speed) < 8) {
+          D.drift.active = false;
+          D.bankDrift();
+        }
       } else if (input.brake) {
         D.speed -= Math.sign(D.speed) * Math.min(Math.abs(D.speed), 34 * dt);
       }
@@ -447,7 +501,8 @@ export function createDrive(G, vehicle, opts = {}) {
         D.vel.x += (targetVx - D.vel.x) * Math.min(1, grip * dt);
         D.vel.z += (targetVz - D.vel.z) * Math.min(1, grip * dt);
       } else {
-        D.vel.x = targetVx; D.vel.z = targetVz;
+        D.vel.x = targetVx;
+        D.vel.z = targetVz;
       }
       D.pos.x += D.vel.x * dt;
       D.pos.z += D.vel.z * dt;
@@ -468,7 +523,9 @@ export function createDrive(G, vehicle, opts = {}) {
         D.drift.angle = slipDeg;
         if (slip > 1.25) {
           D.drift.active = false;
-          D.drift.points = 0; D.drift.combo = 1; D.drift.hadSlip = false;
+          D.drift.points = 0;
+          D.drift.combo = 1;
+          D.drift.hadSlip = false;
           D.speed *= 0.25;
           D.vel.multiplyScalar(0.25);
           if (G.toast) G.toast('SPUN OUT — drift combo lost');
@@ -492,7 +549,10 @@ export function createDrive(G, vehicle, opts = {}) {
           }
         } else if (D.drift.hadSlip) {
           D.drift.endTimer += dt;
-          if (D.drift.endTimer > 0.4) { D.drift.active = false; D.bankDrift(); }
+          if (D.drift.endTimer > 0.4) {
+            D.drift.active = false;
+            D.bankDrift();
+          }
         }
       }
       D.sync();
@@ -500,4 +560,3 @@ export function createDrive(G, vehicle, opts = {}) {
   };
   return D;
 }
-

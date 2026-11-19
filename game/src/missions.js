@@ -50,15 +50,24 @@ export function initMissions(G) {
     marker: null,
     target: null,
     startNext() {
-      if (M.active) { G.toast('Mission already running: ' + M.active.def.name); return false; }
+      if (M.active) {
+        G.toast('Mission already running: ' + M.active.def.name);
+        return false;
+      }
       const def = DEFS.find((d) => !M.done.has(d.id));
-      if (!def) { G.toast('All 8 story missions complete — Ember Bay is yours'); return false; }
+      if (!def) {
+        G.toast('All 8 story missions complete — Ember Bay is yours');
+        return false;
+      }
       return M.startId(def.id);
     },
     startId(id) {
       const def = DEFS.find((d) => d.id === id);
       if (!def || M.active) return false;
-      M.active = { def, stepIdx: 0, collected: 0, timer: 0, hits: 0, chaseTime: 0, driftBase: G.driftBanked || 0 };
+      M.active = {
+        def, stepIdx: 0, collected: 0, timer: 0, hits: 0, chaseTime: 0,
+        driftBase: G.driftBanked || 0,
+      };
       if (def.id === 5) G.police.setWanted(Math.max(G.police.wanted, 3));
       if (def.id === 8) G.setClock(23.5);
       G.hud.showMission(`${def.name} — ${def.desc}`);
@@ -117,7 +126,10 @@ export function initMissions(G) {
       const waypoints = type === 'chase'
         ? [[300, 200], [300, -100], [-100, -100], [-100, 200], [300, 200]]
         : [[320, 320], [380, 380], [260, 320], [320, 260]];
-      M.target = { ...v, pos: v.group.position, heading: 0, wp: 0, waypoints, speed: type === 'chase' ? 24 : 16, hitCooldown: 0 };
+      M.target = {
+        ...v, pos: v.group.position, heading: 0, wp: 0, waypoints,
+        speed: type === 'chase' ? 24 : 16, hitCooldown: 0,
+      };
     },
     completeStep() {
       const a = M.active;
@@ -244,4 +256,3 @@ export function initMissions(G) {
   };
   return M;
 }
-

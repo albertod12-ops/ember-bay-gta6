@@ -8,6 +8,7 @@ export function initAudio(G) {
     step: 0, nextTime: 0, sirenOsc: null, sirenGain: null, sirenHi: false, sirenNext: 0,
     engOsc: null, engGain: null, engFilter: null, stationIdx: 0,
     station() { return STATIONS[A.stationIdx]; },
+    get chords() { return A.station().chords; },
     prevStation() {
       A.stationIdx = (A.stationIdx + 1) % STATIONS.length;
       A.step = 0;
@@ -19,7 +20,10 @@ export function initAudio(G) {
       if (A.master) A.master.gain.value = on ? 0.5 : 0;
     },
     start() {
-      if (A.ctx) { if (A.ctx.state === 'suspended') A.ctx.resume(); return; }
+      if (A.ctx) {
+        if (A.ctx.state === 'suspended') A.ctx.resume();
+        return;
+      }
       try {
         const Ctx = window.AudioContext || window.webkitAudioContext;
         A.ctx = new Ctx();
@@ -31,16 +35,20 @@ export function initAudio(G) {
         A.sirenOsc.frequency.value = 720;
         A.sirenGain = A.ctx.createGain();
         A.sirenGain.gain.value = 0;
-        A.sirenOsc.connect(A.sirenGain); A.sirenGain.connect(A.master);
+        A.sirenOsc.connect(A.sirenGain);
+        A.sirenGain.connect(A.master);
         A.sirenOsc.start();
         A.engOsc = A.ctx.createOscillator();
         A.engOsc.type = 'sawtooth';
         A.engOsc.frequency.value = 55;
         A.engFilter = A.ctx.createBiquadFilter();
-        A.engFilter.type = 'lowpass'; A.engFilter.frequency.value = 420;
+        A.engFilter.type = 'lowpass';
+        A.engFilter.frequency.value = 420;
         A.engGain = A.ctx.createGain();
         A.engGain.gain.value = 0;
-        A.engOsc.connect(A.engFilter); A.engFilter.connect(A.engGain); A.engGain.connect(A.master);
+        A.engOsc.connect(A.engFilter);
+        A.engFilter.connect(A.engGain);
+        A.engGain.connect(A.master);
         A.engOsc.start();
         A.nextTime = A.ctx.currentTime + 0.1;
       } catch (e) { A.ctx = null; }
@@ -49,16 +57,18 @@ export function initAudio(G) {
       const s = A.station();
       G.toast(A.radioOn ? `${s.name} — ${s.song}` : 'Radio off');
     },
-    get chords() { return A.station().chords; },
     note(freq, t, dur, type, vol) {
       const o = A.ctx.createOscillator();
-      o.type = type; o.frequency.value = freq;
+      o.type = type;
+      o.frequency.value = freq;
       const g = A.ctx.createGain();
       g.gain.setValueAtTime(0, t);
       g.gain.linearRampToValueAtTime(vol, t + 0.02);
       g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-      o.connect(g); g.connect(A.master);
-      o.start(t); o.stop(t + dur + 0.05);
+      o.connect(g);
+      g.connect(A.master);
+      o.start(t);
+      o.stop(t + dur + 0.05);
     },
     update(dt) {
       if (!A.ctx) return;
