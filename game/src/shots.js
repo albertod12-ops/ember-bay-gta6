@@ -2,6 +2,41 @@ import * as THREE from 'three';
 import { makeCar, makeBike, createDrive } from './vehicles.js';
 import { makePoliceCar, makeHeli, makePolicePed } from './police.js';
 import { ROADS, roadPoint, nsCenter, nsHeading, ewCenter, ewHeading } from './city.js';
+// Give a police ped a visible gun and an action pose. The gun is built along
+// the forearm (local -Y of the shoulder group), so raising the arm to aim
+// swings the barrel forward at the player. pose 'aim' = two-handed stance,
+// 'advance' = mid-stride run with a one-handed pistol.
+function armCop(ped, gun, pose) {
+  const gunM = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.5, metalness: 0.6 });
+  const g = new THREE.Group();
+  const bx = (w, h, d, x, y, z) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), gunM);
+    m.position.set(x, y, z);
+    g.add(m);
+  };
+  if (gun === 'rifle') {
+    bx(0.08, 0.7, 0.1, 0, -0.3, 0);
+    bx(0.07, 0.18, 0.12, 0, 0.1, -0.02);
+    bx(0.05, 0.14, 0.07, 0, -0.15, 0.06);
+  } else {
+    bx(0.08, 0.38, 0.09, 0, -0.16, 0);
+    bx(0.06, 0.12, 0.12, 0, 0.02, 0.04);
+  }
+  g.position.set(0, -0.62, 0.02);
+  ped.shR.add(g);
+  if (pose === 'aim') {
+    ped.shL.rotation.x = -1.35; ped.shR.rotation.x = -1.25;
+    ped.shL.rotation.z = 0.3; ped.shR.rotation.z = -0.3;
+    ped.hipL.rotation.x = 0.15; ped.hipR.rotation.x = -0.12;
+    ped.group.rotation.x = 0.06;
+  } else {
+    ped.shR.rotation.x = -1.15;
+    ped.shL.rotation.x = 0.7;
+    ped.hipL.rotation.x = -0.6; ped.hipR.rotation.x = 0.6;
+    ped.hipL.rotation.z = 0.15; ped.hipR.rotation.z = -0.15;
+    ped.group.rotation.x = 0.2;
+  }
+}
 const STAGE_ROAD = 3;
 const COVER_ROAD = 0; // Palms Beach (ns[0], z=-70): low pastel beach buildings + palms + ocean-side district read as a different place from downtown (ns[3]); cover and title must not share one street
 const COVER_Z = -70; // Palms Beach stretch
@@ -117,6 +152,8 @@ export function stageShot(G, name) {
       const side = i === 0 ? -3 : 3;
       ped.group.position.set(cpt.x + fx * fwd + rx * side, 0, cpt.z + fz * fwd + rz * side);
       ped.group.rotation.y = cpt.heading + Math.PI;
+      // Cop 0 aims a rifle two-handed; cop 1 advances mid-stride, pistol up.
+      armCop(ped, i === 0 ? 'rifle' : 'pistol', i === 0 ? 'aim' : 'advance');
       G.scene.add(ped.group);
       G._combatCops.push(ped);
     }
