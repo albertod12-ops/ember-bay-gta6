@@ -744,7 +744,7 @@ export function buildCity(G) {
     [4, 100, 28, 28, 170, 0, 3],
     [-44, 160, 24, 22, 150, 0, 4],
   ];
-  const nearHero = (x, z) => HEROES.some(([hx, hz]) => Math.hypot(x - hx, z - hz) < 45);
+  const nearHero = (x, z, m = 45) => HEROES.some(([hx, hz]) => Math.hypot(x - hx, z - hz) < m);
   for (const [hx, hz, hw, hd, hh, fk, top] of HEROES) {
     const fi = (fk * 2 + (top % 2)) % FACADES.length;
     if (top === 3) {
@@ -1275,11 +1275,11 @@ export function buildCity(G) {
     out.lights.push({ pos: new THREE.Vector3(c.x + 9, 0, c.z + 9), axis: 'ns', phase: rng.range(0, 12), lamps, head });
   }
 
-  const stageRoad = ROADS.ns[3];
+  const sr = ROADS.ns[3];
   const nearCrossing = (x, z, m = 16) => crossPts.some((c) => Math.hypot(x - c.x, z - c.z) < m);
   for (let z = -400; z <= 400; z += 34) {
     for (const side of [-1, 1]) {
-      const x = nsPlain(stageRoad, z) + side * 10;
+      const x = nsPlain(sr, z) + side * 10;
       if (Math.hypot(x - RBX, z - RBZ) < 34) continue;
       if (nearCrossing(x, z)) continue;
       if (DIAGONALS.some(([ax, az, bx, bz]) => distToSegment(x, z, ax, az, bx, bz) < 12)) continue;
@@ -1287,10 +1287,10 @@ export function buildCity(G) {
     }
   }
   const VEN = [['EMBER TACOS', '#ff5e2d'], ['HOTEL CORALIE', '#2fd8ff'], ['DUSK CINEMA', '#ff2d95'], ['NOODLE BAR', '#ffd24d']];
-  for (let i = 0; i < 31; i++) for (const s of [-1, 1]) {
-    const z = -400 + i * 26, fx = nsPlain(stageRoad, z) + s * 11.5;
-    if (Math.hypot(fx - RBX, z - RBZ) < 34 || nearCrossing(fx, z) || nearHero(fx, z)) continue;
-    if (s > 0 && i === 25) {
+  for (let i = 0; i < 51; i++) for (const s of [-1, 1]) {
+    const z = -400 + i * 16, fx = nsPlain(sr, z) + s * 11.5;
+    if (Math.hypot(fx - RBX, z - RBZ) < 34 || nearCrossing(fx, z) || nearHero(fx, z, 30)) continue;
+    if (s > 0 && i === 20) {
       box(9, 0.4, 15, mat(0x5a9a4a), fx + 4, 0.2, z, root);
       makeTree({ pick: (a) => a[0] }, fx + 3, z - 3, root, 1.2);
       continue;

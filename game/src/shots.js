@@ -61,7 +61,7 @@ export function stageShot(G, name) {
     G.mode = 'playing';
     G.hud.setMenu(true);
     G.player.group.visible = false;
-    const pt = roadPoint('ns', STAGE_ROAD, -30, 1);
+    const pt = roadPoint('ns', STAGE_ROAD, -70, 1);
     enterSport(G, pt.x, pt.z, pt.heading, 38);
     G._titleCops = [];
     for (let i = 0; i < 2; i++) {
@@ -89,7 +89,7 @@ export function stageShot(G, name) {
   }
   G.mode = 'playing';
   G.hud.setMenu(false);
-  const pt = roadPoint('ns', G.shot === 'cover' ? COVER_ROAD : STAGE_ROAD, -30, 1);
+  const pt = roadPoint('ns', G.shot === 'cover' ? COVER_ROAD : STAGE_ROAD, -70, 1);
   if (name === 'cover') {
     G.setClock(19.8);
     enterSport(G, pt.x, pt.z, pt.heading, 38);
@@ -97,7 +97,7 @@ export function stageShot(G, name) {
     G.hud.dialogue('MARA VOSS', 'FIXER', 'Three stars and counting. Stay hot for 45 seconds and they\'ll know your name.', 'mara', true);
   } else if (name === 'combat') {
     G.setClock(21.7);
-    const cpt = roadPoint('ns', STAGE_ROAD, -30, -1);
+    const cpt = roadPoint('ns', STAGE_ROAD, -70, -1);
     G.player.place(cpt.x, cpt.z, cpt.heading);
     G.playerPos = G.player.pos;
     G.playerHeading = cpt.heading;

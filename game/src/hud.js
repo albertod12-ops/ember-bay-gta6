@@ -342,9 +342,9 @@ export function initHud(G) {
           if (Math.hypot(midX - ROUNDABOUT.cx, midZ - ROUNDABOUT.cz) < 55) continue;
           if (!onLand(midX, midZ)) continue;
           poly(insetPoly(pts, 4));
-          c.fillStyle = (ix * 5 + iz * 3) % 9 === 0 ? '#7ab85e' : '#f4f4f4'; c.fill();
+          c.fillStyle = (ix * 5 + iz * 3) % 9 === 0 ? '#7ab85e' : '#e8d8b8'; c.fill();
           poly(insetPoly(pts, 10));
-          c.fillStyle = '#dcdcdc'; c.fill();
+          c.fillStyle = '#b8b8a8'; c.fill();
           const inner = insetPoly(pts, 14);
           poly(inner);
           c.save();
@@ -352,9 +352,9 @@ export function initHud(G) {
           const mpts = inner.map((p) => toMap(p.x, p.z));
           const minX = Math.min(...mpts.map((p) => p[0])), maxX = Math.max(...mpts.map((p) => p[0]));
           const minY = Math.min(...mpts.map((p) => p[1])), maxY = Math.max(...mpts.map((p) => p[1]));
-          const shades = ['#b8b8b8', '#9a9a9a', '#c8b898', '#8fa08f', '#a89a88', '#c4c4c4'];
-          const n = 3 + ((ix * 3 + iz) % 3);
-          const m = 3 + ((ix + iz * 2) % 2);
+          const shades = ['#7a9ab8', '#a88a6a', '#c98a9a', '#7ab85e', '#d8b86a', '#8a7ab8'];
+          const n = 4 + ((ix * 3 + iz) % 3);
+          const m = 4 + ((ix + iz * 2) % 2);
           for (let gx = 0; gx < n; gx++) {
             for (let gy = 0; gy < m; gy++) {
               const bw = (maxX - minX) / n, bh = (maxY - minY) / m;
@@ -402,7 +402,7 @@ export function initHud(G) {
         c.stroke();
       };
       c.lineWidth = 2;
-      for (const [ax, az, bx, bz] of MINOR_SEGS) strokePts([[ax, az], [bx, bz]], 2);
+      for (const [ax, az, bx, bz] of MINOR_SEGS) strokePts([[ax, az], [bx, bz]], 3);
       {
         const pts = FREEWAY.pts.map((p) => [p.x, p.z]);
         pts.push(pts[0]);
