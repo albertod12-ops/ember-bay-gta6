@@ -1,4 +1,4 @@
-import { ROADS, DIAGONALS, ROUNDABOUT, MINOR_SEGS, FREEWAY, GOLF_RECT, STADIUM, RAIL_X, nsPlain, ewPlain, crossing, districtAt, standingLabel } from './city.js';
+import { ROADS, ROUNDABOUT, MINOR_SEGS, GOLF_RECT, STADIUM, nsPlain, ewPlain, crossing, districtAt, standingLabel } from './city.js';
 
 const WEAPONS = [
   { key: '1', name: 'FISTS', mag: '∞', lock: 0 },
@@ -235,7 +235,16 @@ export function initHud(G) {
         const w = Math.min(100, Math.round((have / total) * 100));
         return `<div class="prow">${label} <b>${have}/${total}${suffix}</b><div class="pbar"><i style="width:${w}%"></i></div></div>`;
       };
-      el.mapProgress.innerHTML = `<h2>PROGRESS — ${pct}% COMPLETE</h2>` +
+      const medal = (i) => {
+        const d = M.defs[i];
+        const done = M.done.has(d.id);
+        const act = M.active && M.active.def.id === d.id;
+        const bg = done ? '#ffd24d' : act ? '#ff5a3d' : 'transparent';
+        const bd = done ? '#ffd24d' : act ? '#ff5a3d' : '#555';
+        const col = done ? '#111' : '#fff';
+        return `<span style="display:inline-flex;width:22px;height:22px;border-radius:50%;border:2px solid ${bd};background:${bg};color:${col};align-items:center;justify-content:center;font-size:11px;font-weight:bold;margin:0 2px">${done ? '✓' : i + 1}</span>`;
+      };
+      el.mapProgress.innerHTML = `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div style="width:84px;height:84px;border-radius:50%;background:conic-gradient(#ffd24d 0 ${pct}%, #2a2a3a ${pct}% 100%);display:flex;align-items:center;justify-content:center;flex:none"><div style="width:60px;height:60px;border-radius:50%;background:#0a0614;display:flex;flex-direction:column;align-items:center;justify-content:center"><b style="font-size:19px;color:#ffd24d">${pct}%</b><span style="font-size:8px;color:#aaa">COMPLETE</span></div></div><div><h2 style="margin:0">PROGRESS</h2><div style="margin-top:6px">${M.defs.map((_, i) => medal(i)).join('')}</div></div></div>` +
         bar('Story missions', M.done.size, 8) +
         bar('Sunset Tapes', G.tapesFound, 20) +
         bar('Districts FRIENDLY', friendly, 14) +
@@ -252,7 +261,8 @@ export function initHud(G) {
         `Cops escaped <span class="stat"><b>${st.copsEscaped}</b></span><br>` +
         `Distance driven <span class="stat"><b>${(st.distanceDriven / 1000).toFixed(1)} km</b></span><br>` +
         `People taken out <span class="stat"><b>${st.takenOut}</b></span><br>` +
-        `Longest drift <span class="stat"><b>$${st.longestDrift}</b></span>`;
+        `Longest drift <span class="stat"><b>$${st.longestDrift}</b></span><br>` +
+        `Crew recruited <span class="stat"><b>${G.crew.length} / 3</b></span>`;
       const fmtClock = (h) => `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.floor((h % 1) * 60)).padStart(2, '0')}`;
       el.mapSlots.innerHTML = `<h2>SAVE SLOTS</h2>` + G.slotInfo().map((s) => s.empty
         ? `<div class="slot">SLOT ${s.slot + 1} · EMPTY</div>`
@@ -269,13 +279,17 @@ export function initHud(G) {
       const toMap = (x, z) => [ox + ((x + 460) / 920) * S, oy + ((z + 460) / 920) * S];
       const m2p = (m) => (m / 920) * S;
       const coastX = (z) => -465 + 12 * Math.sin(z * 0.006 + 0.8) + 8 * Math.sin(z * 0.017 + 2.2);
-      const inBay = (x, z) => ((x + 240) / 110) ** 2 + ((z - 455) / 48) ** 2 < 1;
-      const onLand = (x, z) => x > coastX(z) + 26 && !inBay(x, z) && x < 460 && z > -460 && z < 460;
+      const BAY0 = 170, BAY1 = 300;
+      const inStar = (x, z) => ((x - 235) / 38) ** 2 + ((z - 40) / 26) ** 2 < 1;
+      const inPrawn = (x, z) => ((x - 235) / 32) ** 2 + ((z + 180) / 22) ** 2 < 1;
+      const inBayS = (x, z) => ((x + 240) / 110) ** 2 + ((z - 455) / 48) ** 2 < 1;
+      const onLand = (x, z) => x > coastX(z) + 26 && !inBayS(x, z) && x < 460 && z > -460 && z < 460 &&
+        (x <= BAY0 || x >= BAY1 || inStar(x, z) || inPrawn(x, z));
       c.clearRect(0, 0, W, Ht);
       const sea = c.createLinearGradient(0, 0, W, Ht);
-      sea.addColorStop(0, '#1c5a78'); sea.addColorStop(1, '#2a7a9a');
+      sea.addColorStop(0, '#7fb8d8'); sea.addColorStop(1, '#a8d0e8');
       c.fillStyle = sea; c.fillRect(0, 0, W, Ht);
-      const landPath = () => {
+      const landPaths = () => {
         c.beginPath();
         let [mx, mz] = toMap(coastX(-460), -460);
         c.moveTo(mx, mz);
@@ -284,12 +298,27 @@ export function initHud(G) {
         const [bx, by] = toMap(-240, 407);
         const [ex, ey] = toMap(-130, 460);
         c.quadraticCurveTo(bx, by, ex, ey);
-        [mx, mz] = toMap(460, 460); c.lineTo(mx, mz);
-        [mx, mz] = toMap(460, -460); c.lineTo(mx, mz);
+        [mx, mz] = toMap(BAY0, 460); c.lineTo(mx, mz);
+        [mx, mz] = toMap(BAY0, -460); c.lineTo(mx, mz);
         c.closePath();
+        c.moveTo(...toMap(BAY1, -460));
+        c.lineTo(...toMap(460, -460));
+        c.lineTo(...toMap(460, 460));
+        c.lineTo(...toMap(BAY1, 460));
+        c.closePath();
+        c.moveTo(...toMap(235 + 38, 40));
+        c.ellipse(...toMap(235, 40), m2p(38), m2p(26), 0, 0, Math.PI * 2);
+        c.moveTo(...toMap(235 + 32, -180));
+        c.ellipse(...toMap(235, -180), m2p(32), m2p(22), 0, 0, Math.PI * 2);
       };
-      landPath();
-      c.fillStyle = '#98a684'; c.fill();
+      landPaths();
+      c.fillStyle = '#a8b898'; c.fill();
+      {
+        const [sx0, sy0] = toMap(435, -460);
+        const [sx1, sy1] = toMap(460, 460);
+        c.fillStyle = '#e8d8a0';
+        c.fillRect(sx0, sy0, sx1 - sx0, sy1 - sy0);
+      }
       c.save();
       c.strokeStyle = '#d9c08a'; c.lineWidth = m2p(12); c.lineJoin = 'round';
       c.beginPath();
@@ -312,7 +341,7 @@ export function initHud(G) {
         c.beginPath(); c.arc(wx, wy, 6, 0, Math.PI * 2); c.stroke();
         c.beginPath(); c.moveTo(wx - 6, wy); c.lineTo(wx + 6, wy); c.moveTo(wx, wy - 6); c.lineTo(wx, wy + 6); c.stroke();
       }
-      landPath(); c.save(); c.clip();
+      landPaths(); c.save(); c.clip();
       const cell = (ix, iz) => {
         const a = crossing(ROADS.ns[ix], ROADS.ew[iz]);
         const b = crossing(ROADS.ns[ix + 1], ROADS.ew[iz]);
@@ -395,6 +424,15 @@ export function initHud(G) {
         c.strokeStyle = '#9a9a9a'; c.lineWidth = 3;
         c.beginPath(); c.ellipse(sx, sy, m2p(STADIUM.r) * 0.6, m2p(STADIUM.r) * 0.45, 0, 0, Math.PI * 2); c.stroke();
       }
+      {
+        const [ax, ay] = toMap(-380, 425);
+        const [bx, by] = toMap(-150, 450);
+        c.fillStyle = '#8a8a8a';
+        c.fillRect(ax, ay, bx - ax, by - ay);
+        c.strokeStyle = '#ffffff'; c.lineWidth = 2; c.setLineDash([8, 6]);
+        c.beginPath(); c.moveTo(ax, (ay + by) / 2); c.lineTo(bx, (ay + by) / 2); c.stroke();
+        c.setLineDash([]);
+      }
       const strokePts = (pts, width) => {
         c.strokeStyle = '#111111'; c.lineWidth = width; c.lineJoin = 'round';
         c.beginPath();
@@ -402,11 +440,9 @@ export function initHud(G) {
         c.stroke();
       };
       c.lineWidth = 2;
-      for (const [ax, az, bx, bz] of MINOR_SEGS) strokePts([[ax, az], [bx, bz]], 3);
-      {
-        const pts = FREEWAY.pts.map((p) => [p.x, p.z]);
-        pts.push(pts[0]);
-        strokePts(pts, 3);
+      for (const [ax, az, bx, bz] of MINOR_SEGS) {
+        if (!onLand((ax + bx) / 2, (az + bz) / 2)) continue;
+        strokePts([[ax, az], [bx, bz]], 3);
       }
       for (const road of ROADS.ns) {
         const pts = [];
@@ -418,19 +454,20 @@ export function initHud(G) {
         for (let x = -460; x <= 460; x += 20) pts.push([x, ewPlain(road, x)]);
         strokePts(pts, 4);
       }
-      for (const [ax, az, bx, bz] of DIAGONALS) strokePts([[ax, az], [bx, bz]], 3);
       {
         const [rx, rz] = toMap(ROUNDABOUT.cx, ROUNDABOUT.cz);
         c.strokeStyle = '#111111'; c.lineWidth = 3;
         c.beginPath(); c.arc(rx, rz, m2p(ROUNDABOUT.r), 0, Math.PI * 2); c.stroke();
       }
-      {
-        const [ax, ay] = toMap(RAIL_X, -460);
-        const [bx, by] = toMap(RAIL_X, 460);
-        c.strokeStyle = '#7a2a2a'; c.lineWidth = 3;
-        c.beginPath(); c.moveTo(ax, ay); c.lineTo(bx, by); c.stroke();
-      }
       c.restore();
+      for (const road of ROADS.ew) {
+        const pts = [];
+        for (let x = BAY0; x <= BAY1; x += 10) pts.push([x, ewPlain(road, x)]);
+        c.strokeStyle = '#1a1a1a'; c.lineWidth = 2.5; c.lineJoin = 'round';
+        c.beginPath();
+        pts.forEach(([x, z], i) => { const [mx, mz] = toMap(x, z); if (i === 0) c.moveTo(mx, mz); else c.lineTo(mx, mz); });
+        c.stroke();
+      }
       c.textAlign = 'center'; c.textBaseline = 'middle';
       const stFor = (n) => {
         const k = Object.keys(G.standing).find((kk) => kk.toUpperCase() === n);
@@ -457,16 +494,18 @@ export function initHud(G) {
       };
       dlabel(-240, -330, 'OLD TOWN');
       dlabel(40, -320, 'GLASS MILE');
-      dlabel(320, -320, 'NORTHGATE');
+      dlabel(380, -320, 'NORTHGATE');
       dlabel(-240, -100, 'MARINA POINT');
       dlabel(40, -150, 'DOWNTOWN CORE');
-      dlabel(320, -60, 'HILLCREST');
+      dlabel(380, -60, 'HILLCREST');
       dlabel(-240, 100, 'SUNSET ROW');
       dlabel(-240, 265, 'HOODSIDE');
-      dlabel(-240, 395, 'CORAL ROW');
+      dlabel(-240, 370, 'CORAL ROW');
       dlabel(40, 320, 'CENTRAL AVENUES');
-      dlabel(320, 160, 'CRANESIDE');
-      dlabel(340, 300, 'PORT EMBER');
+      dlabel(380, 160, 'CRANESIDE');
+      dlabel(380, 360, 'PORT EMBER');
+      dlabel(330, 100, 'STADIUM', 11);
+      dlabel(-265, 412, 'AIRPORT', 11);
       const vlabel = (x, z, name) => {
         const [mx, mz] = toMap(x, z);
         c.save(); c.translate(mx, mz); c.rotate(-Math.PI / 2);
@@ -494,7 +533,7 @@ export function initHud(G) {
         c.strokeStyle = '#111111'; c.lineWidth = 1.5; c.stroke();
       };
       house(-340, 320);
-      house(200, -300);
+      house(235, 40);
       dot(150, 150, '#ff9de2');
       dot(-100, 300, '#2fd8ff');
       dot(400, -120, '#ffd24d', 6);
@@ -502,13 +541,13 @@ export function initHud(G) {
       dot(0, 0, '#6ec6ff');
       dot(-60, -60, '#ffe14d', 6);
       dot(-280, -280, '#ffd24d');
-      dot(260, 230, '#ff9de2');
+      dot(380, 230, '#ff9de2');
       dot(-350, 50, '#ffffff');
       dot(140, -260, '#c07dff');
       dot(320, 60, '#6ec6ff');
       dot(-120, -350, '#ff6fa5');
       dot(140, 400, '#ffd24d');
-      dot(220, 120, '#2fd8ff');
+      dot(360, 120, '#2fd8ff');
       c.font = 'bold 12px Verdana'; c.textAlign = 'center'; c.textBaseline = 'middle';
       c.fillStyle = '#9ab8c8';
       for (let i = 0; i < 6; i++) {
@@ -667,6 +706,10 @@ export function initHud(G) {
       for (let y = 0; y <= S; y += 10) mm.lineTo(4 + 3 * Math.sin(y * 0.05), y);
       mm.lineTo(0, S); mm.closePath(); mm.fill();
       mm.beginPath(); mm.ellipse(((-240 + 460) / W2) * S, S, 22, 10, 0, Math.PI, 0); mm.fill();
+      mm.fillRect(toMap(170, 0)[0], 0, toMap(300, 0)[0] - toMap(170, 0)[0], S);
+      mm.fillStyle = '#3a4a2f';
+      mm.beginPath(); mm.ellipse(...toMap(235, 40), 4, 3, 0, 0, Math.PI * 2); mm.fill();
+      mm.beginPath(); mm.ellipse(...toMap(235, -180), 3, 2, 0, 0, Math.PI * 2); mm.fill();
       mm.fillStyle = '#3a4a2f';
       for (let ix = 0; ix < ROADS.ns.length - 1; ix++) {
         for (let iz = 0; iz < ROADS.ew.length - 1; iz++) {
@@ -674,6 +717,8 @@ export function initHud(G) {
           const c01 = crossing(ROADS.ns[ix], ROADS.ew[iz + 1]);
           const c10 = crossing(ROADS.ns[ix + 1], ROADS.ew[iz]);
           const c11 = crossing(ROADS.ns[ix + 1], ROADS.ew[iz + 1]);
+          const ccx = (c00.x + c01.x + c10.x + c11.x) / 4;
+          if (ccx > 170 && ccx < 300) continue;
           const p = [c00, c10, c11, c01].map((c) => toMap(c.x, c.z));
           mm.beginPath();
           mm.moveTo(p[0][0], p[0][1]);
@@ -697,7 +742,6 @@ export function initHud(G) {
         for (let x = -460; x <= 460; x += 20) pts.push([x, ewPlain(road, x)]);
         strokeRoad(pts);
       }
-      for (const [ax, az, bx, bz] of DIAGONALS) strokeRoad([[ax, az], [bx, bz]]);
       {
         const [rx, rz] = toMap(ROUNDABOUT.cx, ROUNDABOUT.cz);
         mm.beginPath(); mm.arc(rx, rz, (ROUNDABOUT.r / W2) * S, 0, Math.PI * 2); mm.stroke();

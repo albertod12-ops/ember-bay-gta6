@@ -6,16 +6,16 @@ export const WORLD = { min: -460, max: 460 };
 export const DISTRICTS = [
   [-380, -460, -100, -200, 'Old Town', 'brick'],
   [-100, -460, 180, -180, 'Glass Mile', 'downtown'],
-  [180, -460, 460, -180, 'Northgate', 'residential'],
+  [300, -460, 460, -180, 'Northgate', 'residential'],
   [-380, -200, -100, 0, 'Marina Point', 'marina'],
   [-100, -180, 180, 180, 'Downtown Core', 'downtown'],
-  [180, -180, 460, 60, 'Hillcrest', 'hill'],
+  [300, -180, 460, 60, 'Hillcrest', 'hill'],
   [-380, 0, -100, 200, 'Sunset Row', 'residential'],
   [-380, 200, -100, 330, 'Hoodside', 'hood'],
   [-380, 330, -100, 460, 'Coral Row', 'hood'],
   [-100, 180, 180, 460, 'Central Avenues', 'residential'],
-  [180, 60, 460, 260, 'Craneside', 'docks'],
-  [180, 260, 460, 460, 'Port Ember', 'docks'],
+  [300, 60, 460, 260, 'Craneside', 'docks'],
+  [300, 260, 460, 460, 'Port Ember', 'docks'],
   [-460, -460, -380, 0, 'Palms Beach', 'beach'],
   [-460, 0, -380, 460, 'Boardwalk', 'beach'],
 ];
@@ -44,6 +44,7 @@ export const ROADS = {
     { base: -20, amp: 14, freq: Math.PI / 430, phase: 5.0, rb: true },
     { base: 150, amp: 11, freq: Math.PI / 480, phase: 2.2 },
     { base: 320, amp: 13, freq: Math.PI / 540, phase: 4.4 },
+    { base: 418, amp: 8, freq: Math.PI / 520, phase: 1.1 },
   ],
   ew: [
     { base: -360, amp: 12, freq: Math.PI / 500, phase: 0.9 },
@@ -57,10 +58,7 @@ export const ROAD_W = 12;
 export const RB_R = 18;
 export const RB_ISLAND = 10;
 
-export const DIAGONALS = [
-  [-430, 300, 300, -430],
-  [180, 260, 420, 430],
-];
+export const DIAGONALS = [];
 
 export function nsPlain(road, z) { return road.base + road.amp * Math.sin(z * road.freq + road.phase); }
 export function ewPlain(road, x) { return road.base + road.amp * Math.sin(x * road.freq + road.phase); }
@@ -109,19 +107,10 @@ export const MINOR_SEGS = (() => {
   return segs;
 })();
 
-export const FREEWAY = (() => {
-  const cx = 40, cz = 0, rx = 210, rz = 190;
-  const pts = [];
-  for (let i = 0; i < 64; i++) {
-    const a = (i / 64) * Math.PI * 2;
-    pts.push({ x: cx + Math.cos(a) * rx, z: cz + Math.sin(a) * rz });
-  }
-  return { cx, cz, rx, rz, pts };
-})();
+export const FREEWAY = { cx: 40, cz: 0, rx: 210, rz: 190, pts: [] };
 
 export const GOLF_RECT = [-100, 280, 160, 440];
 export const STADIUM = { x: 330, z: 140, r: 30 };
-export const RAIL_X = 405;
 
 function bump(along, c) {
   const t = (along - (c - RB_R)) / (2 * RB_R);
@@ -603,14 +592,6 @@ export function buildCity(G) {
       roadRibbon(sampleRoad('ew', road, -460, 460, 20), ROAD_W, roadMat, 0.1, root);
     }
   }
-  for (const [ax, az, bx, bz] of DIAGONALS) {
-    const pts = [];
-    const steps = 24;
-    for (let i = 0; i <= steps; i++) {
-      pts.push({ x: ax + ((bx - ax) * i) / steps, z: az + ((bz - az) * i) / steps });
-    }
-    roadRibbon(pts, ROAD_W, roadMat, 0.11, root);
-  }
   const offsetPts = (pts, d) => pts.map((p, i) => {
     const q = pts[Math.min(i + 1, pts.length - 1)];
     const r = pts[Math.max(i - 1, 0)];
@@ -649,22 +630,6 @@ export function buildCity(G) {
   minorMat.map.wrapT = THREE.RepeatWrapping;
   for (const [ax, az, bx, bz] of MINOR_SEGS) {
     roadRibbon([{ x: ax, z: az }, { x: bx, z: bz }], 8, minorMat, 0.42, root);
-  }
-  roadRibbon([...FREEWAY.pts, FREEWAY.pts[0]], 20, roadMat, 0.45, root);
-  const railMat = mat(0x4a2a2a, { roughness: 0.9 });
-  for (const rx of [RAIL_X - 2, RAIL_X + 2]) {
-    const pts = [];
-    for (let z = -460; z <= 460; z += 40) pts.push({ x: rx, z });
-    roadRibbon(pts, 2.5, railMat, 0.13, root);
-  }
-  for (let z = -450; z <= 450; z += 14) {
-    box(7, 0.3, 1.4, mat(0x3a2a22), RAIL_X, 0.15, z, root);
-  }
-  box(10, 1, 24, mat(0x9a958a), RAIL_X + 9, 0.5, 0, root);
-  box(10, 0.5, 24, mat(0x4a6a8a), RAIL_X + 9, 4.5, 0, root);
-  for (const pz of [-10, 10]) {
-    box(0.5, 4, 0.5, mat(0x555555), RAIL_X + 6, 2.5, pz, root);
-    box(0.5, 4, 0.5, mat(0x555555), RAIL_X + 12, 2.5, pz, root);
   }
   const ring = new THREE.Mesh(
     new THREE.RingGeometry(RB_ISLAND - 0.5, RB_R + 8, 40),
