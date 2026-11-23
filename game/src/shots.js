@@ -96,8 +96,11 @@ export function stageShot(G, name) {
     // Diagnostic only (never a submission shot): one car, large in frame,
     // front 3/4, clean street, no HUD — to compare the silhouette with the
     // 3D-model reference. Name: showcase-<kind>, kind = sport|muscle|wedge|
-    // boxy|stripe|police0|police1.
-    const kind = name.slice(9);
+    // boxy|stripe|police0|police1. showcase-side-<kind> = pure profile view
+    // (wheel-fit check: tire top vs fender line, side flush).
+    let kind = name.slice(9);
+    const side = kind.startsWith('side-');
+    if (side) kind = kind.slice(5);
     G.setClock(13); // v18.4: bright midday for the diagnostic — at 17:00 the
     // car's front sat in shadow and the lime read as dark olive, which hid
     // the shape. Submission shots keep their own clocks.
@@ -127,7 +130,10 @@ export function stageShot(G, name) {
     G.traffic.cars.forEach((c, i) => parkFar(c, i));
     G.traffic.bikes.forEach((c, i) => parkFar(c, i));
     for (const g of parkedCars(G)) g.visible = false;
-    G.camOverride = {
+    G.camOverride = side ? {
+      pos: [pt.x + rx * 5.5, 0.75, pt.z + rz * 5.5],
+      look: [pt.x, 0.45, pt.z],
+    } : {
       pos: [pt.x + fx * 5 + rx * 3, 0.85, pt.z + fz * 5 + rz * 3],
       look: [pt.x, 0.5, pt.z],
     };
