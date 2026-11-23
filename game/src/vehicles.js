@@ -5,7 +5,11 @@ export const BIKE_TOP_SPEED = 52;
 
 const CAR_COLORS = {
   sedan: [0x2a6fd8, 0xd83a2a, 0xcccccc, 0x222831],
-  sport: [0xff6a00, 0xffc21c, 0xe02030, 0x2fd05a, 0x2a6fd8],
+  sport: [0xff6a00, 0xffc21c, 0xd8e021, 0x2fd05a, 0x2a6fd8],
+  muscle: [0xff7a1a, 0x2a6fd8, 0xd83a2a, 0xcccccc],
+  wedge: [0xff6a00, 0xf2f2f2, 0xe02030],
+  boxy: [0xe02030, 0x2a6fd8, 0x222831],
+  stripe: [0xffc21c, 0xff6a00, 0x2fd05a],
   taxi: [0xffc21c],
   van: [0x8a97a8, 0x5a6a7a, 0xffffff],
   pickup: [0x7a4a2a, 0x2a7a4a, 0x9a2a2a],
@@ -14,8 +18,9 @@ const CAR_COLORS = {
 };
 
 export const CAR_NAMES = {
-  sport: 'Ember GT', sedan: 'Marina S', taxi: 'Bay Cab', van: 'Harbor Van',
+  sport: 'Ultima GTR', sedan: 'Marina S', taxi: 'Bay Cab', van: 'Harbor Van',
   pickup: 'Dune Pickup', truck: 'Crate Hauler', lowrider: 'Sunset Low', bike: 'Ember GP',
+  muscle: 'Sunset Muscle', wedge: 'Ember Wedge', boxy: 'Craneside GT', stripe: 'Stripe GT',
 };
 
 function std(color, opts = {}) {
@@ -38,6 +43,9 @@ function limb(ax, ay, az, bx, by, bz, r, material, parent, seg = 6) {
   m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
   parent.add(m);
   return m;
+}
+function parts(g, L, M) {
+  for (const p of L) box(p[0], p[1], p[2], M[p[6]], p[3], p[4], p[5], g, p[7] || 0, 0, 0);
 }
 
 function wheel(r = 0.42) {
@@ -117,6 +125,15 @@ export function makeCar(G, kind, colorIdx = 0) {
   const glass = std(0x14202e, { roughness: 0.12, metalness: 0.65 });
   const dark = std(0x1a1a1a, { roughness: 0.8, metalness: 0.1 });
   const chrome = std(0xd8d8d8, { metalness: 0.9, roughness: 0.2 });
+  const head = std(0xfff2b0, { emissive: 0xffe9a0, emissiveIntensity: 1.4 });
+  const tail = std(0xd81a1a, { emissive: 0xaa0000, emissiveIntensity: 1.1 });
+  const wht = std(0xf2f2f2);
+  const addSW = (x, z, r = 0.46) => {
+    const w = sportWheel(r, 0xffc21c);
+    w.position.set(x, r, z);
+    g.add(w);
+    wheels.push(w);
+  };
   const wheels = [];
   const addWheel = (x, z, r = 0.42) => {
     const w = wheel(r);
@@ -191,69 +208,87 @@ export function makeCar(G, kind, colorIdx = 0) {
     for (const gx of [-0.35, 0, 0.35]) box(0.07, 0.13, 0.03, chrome, gx, 0.85, 2.62, g);
     lamps(g, 2.62, -2.62, 0.9);
   } else if (kind === 'sport') {
-    const addSportWheel = (x, z) => {
-      const w = sportWheel(0.46, 0xffc21c);
-      w.position.set(x, 0.46, z);
-      g.add(w);
-      wheels.push(w);
-    };
-    box(2.2, 0.42, 4.8, paint, 0, 0.52, 0, g);
-    box(2.1, 0.3, 1.3, paint, 0, 0.48, 1.85, g, -0.16, 0, 0);
-    box(1.9, 0.3, 0.7, paint, 0, 0.4, 2.2, g, -0.32, 0, 0);
-    box(1.95, 0.22, 0.25, dark, 0, 0.3, 2.42, g);
-    box(2.24, 0.12, 4.5, paint, 0, 0.74, 0, g);
-    box(2.0, 0.16, 4.5, dark, 0, 0.26, 0, g);
-    box(2.15, 0.34, 0.9, paint, 0, 0.6, -1.95, g);
-    box(2.1, 0.2, 0.2, dark, 0, 0.36, -2.4, g);
-    box(2.22, 0.12, 4.6, dark, 0, 0.3, 0, g);
-    box(0.06, 0.3, 0.8, dark, -1.11, 0.6, -0.9, g);
-    box(0.06, 0.3, 0.8, dark, 1.11, 0.6, -0.9, g);
-    box(0.06, 0.42, 0.95, dark, -1.06, 0.66, -0.55, g, 0, 0, 0.28);
-    box(0.06, 0.42, 0.95, dark, 1.06, 0.66, -0.55, g, 0, 0, -0.28);
-    box(0.06, 0.1, 0.9, chrome, -1.07, 0.88, -0.55, g);
-    box(0.06, 0.1, 0.9, chrome, 1.07, 0.88, -0.55, g);
-    box(1.7, 0.38, 1.5, glass, 0, 0.95, -0.15, g);
-    box(1.6, 0.07, 1.3, dark, 0, 1.16, -0.2, g);
-    box(1.66, 0.05, 0.9, glass, 0, 0.92, 0.62, g, 0.55, 0, 0);
-    box(1.66, 0.05, 0.7, glass, 0, 0.9, -0.92, g, -0.5, 0, 0);
-    box(1.62, 0.1, 0.06, dark, 0, 0.78, -1.28, g);
-    box(0.1, 0.22, 0.1, dark, -0.7, 0.95, -2.3, g);
-    box(0.1, 0.22, 0.1, dark, 0.7, 0.95, -2.3, g);
-    box(1.6, 0.08, 0.4, paint, 0, 1.24, -2.32, g);
-    box(0.06, 0.4, 0.4, paint, -0.75, 1.02, -2.32, g);
-    box(0.06, 0.4, 0.4, paint, 0.75, 1.02, -2.32, g);
-    box(1.9, 0.24, 0.28, dark, 0, 0.34, -2.38, g);
-    for (const ex of [-0.35, 0.35]) {
-      const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.2, 8), chrome);
-      tip.rotation.x = Math.PI / 2;
-      tip.position.set(ex, 0.42, -2.5);
-      g.add(tip);
-    }
-    const head = std(0xfff2b0, { emissive: 0xffe9a0, emissiveIntensity: 1.4 });
-    box(0.6, 0.12, 0.08, head, -0.7, 0.62, 2.42, g, 0, -0.45, 0);
-    box(0.6, 0.12, 0.08, head, 0.7, 0.62, 2.42, g, 0, 0.45, 0);
-    box(0.3, 0.1, 0.08, head, -0.85, 0.52, 2.4, g, 0, -0.9, 0);
-    box(0.3, 0.1, 0.08, head, 0.85, 0.52, 2.4, g, 0, 0.9, 0);
-    const tailBar = std(0xd81a1a, { emissive: 0xaa0000, emissiveIntensity: 1.1 });
-    box(1.9, 0.18, 0.08, tailBar, 0, 0.72, -2.42, g);
-    box(0.3, 0.18, 0.08, tailBar, -0.82, 0.72, -2.42, g);
-    box(0.3, 0.18, 0.08, tailBar, 0.82, 0.72, -2.42, g);
-    box(0.05, 0.05, 0.2, dark, -1.06, 0.98, 0.55, g);
-    box(0.05, 0.05, 0.2, dark, 1.06, 0.98, 0.55, g);
-    box(0.16, 0.09, 0.18, paint, -1.12, 1.0, 0.55, g);
-    box(0.16, 0.09, 0.18, paint, 1.12, 1.0, 0.55, g);
-    box(0.04, 0.05, 0.26, chrome, -1.06, 0.72, -0.1, g);
-    box(0.04, 0.05, 0.26, chrome, 1.06, 0.72, -0.1, g);
-    box(1.0, 0.12, 0.08, dark, 0, 0.5, 2.44, g);
-    for (const gx of [-0.3, 0, 0.3]) box(0.07, 0.1, 0.03, chrome, gx, 0.5, 2.46, g);
-    addSportWheel(-1.02, 1.5);
-    addSportWheel(1.02, 1.5);
-    addSportWheel(-1.02, -1.5);
-    addSportWheel(1.02, -1.5);
-    for (const sx of [-1.11, 1.11]) {
-      box(0.02, 0.42, 0.03, dark, sx, 0.72, 0.3, g);
-      box(0.02, 0.42, 0.03, dark, sx, 0.72, -0.9, g);
-    }
+    // Ultima GTR: low wide lime supercar, big rear wing, black canopy.
+    parts(g, [
+      [2.3, 0.3, 4.8, 0, 0.42, 0, 0], [2.0, 0.16, 1.6, 0, 0.36, 1.6, 0],
+      [1.9, 0.14, 0.9, 0, 0.3, 2.0, 0], [2.1, 0.1, 0.5, 0, 0.22, 2.25, 2],
+      [1.7, 0.34, 1.9, 0, 0.72, -0.2, 1], [1.6, 0.06, 1.0, 0, 0.92, -0.5, 0],
+      [1.66, 0.05, 0.9, 0, 0.85, 0.55, 1, 0.55], [1.66, 0.05, 0.7, 0, 0.83, -1.05, 1, -0.5],
+      [0.1, 0.28, 1.1, -1.16, 0.55, -0.6, 2], [0.1, 0.28, 1.1, 1.16, 0.55, -0.6, 2],
+      [2.0, 0.06, 0.45, 0, 1.02, -2.25, 0], [0.08, 0.35, 0.08, -0.7, 0.82, -2.25, 2],
+      [0.08, 0.35, 0.08, 0.7, 0.82, -2.25, 2], [0.55, 0.12, 0.08, -0.68, 0.55, 2.42, 5],
+      [0.55, 0.12, 0.08, 0.68, 0.55, 2.42, 5], [1.9, 0.16, 0.08, 0, 0.62, -2.42, 6],
+      [2.24, 0.1, 4.6, 0, 0.3, 0, 2], [0.16, 0.09, 0.18, -1.12, 0.85, 0.55, 0],
+      [0.16, 0.09, 0.18, 1.12, 0.85, 0.55, 0], [0.9, 0.1, 0.08, 0, 0.42, 2.44, 2],
+      [0.12, 0.12, 0.15, -0.35, 0.4, -2.45, 3], [0.12, 0.12, 0.15, 0.35, 0.4, -2.45, 3],
+    ], [paint, glass, dark, chrome, wht, head, tail]);
+    addSW(-1.05, 1.5);
+    addSW(1.05, 1.5);
+    addSW(-1.05, -1.5);
+    addSW(1.05, -1.5);
+  } else if (kind === 'muscle') {
+    // Classic muscle: long hood, quad round lamps, scoop, chrome bumpers.
+    parts(g, [
+      [2.0, 0.5, 4.6, 0, 0.52, 0, 0], [2.04, 0.1, 4.4, 0, 0.28, 0, 2],
+      [1.9, 0.14, 2.0, 0, 0.82, 1.3, 0], [0.5, 0.08, 0.9, 0, 0.92, 1.2, 2],
+      [1.75, 0.45, 1.9, 0, 0.95, -0.7, 1], [1.7, 0.07, 1.7, 0, 1.2, -0.7, 0],
+      [1.7, 0.05, 0.8, 0, 1.02, 0.25, 1, 0.5], [1.7, 0.05, 0.7, 0, 1.0, -1.55, 1, -0.45],
+      [2.0, 0.3, 0.3, 0, 0.45, 2.35, 3], [2.0, 0.3, 0.3, 0, 0.45, -2.35, 3],
+      [1.9, 0.28, 0.1, 0, 0.6, 2.32, 2], [0.22, 0.18, 0.08, -0.8, 0.62, 2.36, 4],
+      [0.22, 0.18, 0.08, -0.45, 0.62, 2.36, 4], [0.22, 0.18, 0.08, 0.45, 0.62, 2.36, 4],
+      [0.22, 0.18, 0.08, 0.8, 0.62, 2.36, 4], [1.8, 0.16, 0.08, 0, 0.6, -2.36, 5],
+      [2.04, 0.06, 4.3, 0, 0.78, 0, 3], [0.05, 0.05, 0.2, -1.06, 1.0, 0.5, 2],
+      [0.05, 0.05, 0.2, 1.06, 1.0, 0.5, 2],
+    ], [paint, glass, dark, chrome, head, tail]);
+    addWheel(-1.05, 1.45);
+    addWheel(1.05, 1.45);
+    addWheel(-1.05, -1.45);
+    addWheel(1.05, -1.45);
+  } else if (kind === 'wedge') {
+    // Wedge coupe: orange/white, hood scoop, small rear wing, teal glass.
+    parts(g, [
+      [2.0, 0.4, 4.2, 0, 0.48, 0, 0], [1.8, 0.12, 1.2, 0, 0.4, 1.5, 4],
+      [1.5, 0.5, 1.6, 0, 0.85, -0.3, 1], [1.4, 0.06, 1.2, 0, 1.12, -0.3, 4],
+      [0.4, 0.1, 0.7, 0, 0.72, 0.9, 2], [1.7, 0.06, 0.4, 0, 0.95, -1.9, 0],
+      [0.06, 0.3, 0.06, -0.6, 0.78, -1.9, 2], [0.06, 0.3, 0.06, 0.6, 0.78, -1.9, 2],
+      [0.4, 0.1, 0.08, -0.6, 0.55, 2.12, 5], [0.4, 0.1, 0.08, 0.6, 0.55, 2.12, 5],
+      [1.6, 0.14, 0.08, 0, 0.6, -2.12, 6], [2.02, 0.08, 4.0, 0, 0.28, 0, 2],
+      [0.9, 0.1, 0.08, 0, 0.42, 2.14, 2],
+    ], [paint, glass, dark, chrome, wht, head, tail]);
+    addSW(-1.0, 1.35, 0.44);
+    addSW(1.0, 1.35, 0.44);
+    addSW(-1.0, -1.35, 0.44);
+    addSW(1.0, -1.35, 0.44);
+  } else if (kind === 'boxy') {
+    // Boxy 80s coupe: flat panels, fat chrome wheels, blue glass.
+    const blueGlass = std(0x5a9fd8, { roughness: 0.12, metalness: 0.5 });
+    parts(g, [
+      [2.1, 0.6, 4.6, 0, 0.55, 0, 0], [2.0, 0.5, 2.2, 0, 1.1, -0.3, 1],
+      [1.9, 0.08, 2.0, 0, 1.38, -0.3, 0], [2.12, 0.12, 4.4, 0, 0.3, 0, 2],
+      [1.9, 0.3, 0.25, 0, 0.5, 2.32, 3], [1.9, 0.3, 0.25, 0, 0.5, -2.32, 3],
+      [0.5, 0.2, 0.08, -0.6, 0.7, 2.34, 4], [0.5, 0.2, 0.08, 0.6, 0.7, 2.34, 4],
+      [1.7, 0.16, 0.08, 0, 0.7, -2.34, 5], [0.06, 0.5, 1.8, -1.06, 0.9, -0.3, 2],
+      [0.06, 0.5, 1.8, 1.06, 0.9, -0.3, 2], [2.0, 0.35, 0.3, 0, 0.45, 2.3, 2],
+    ], [paint, blueGlass, dark, chrome, head, tail]);
+    addWheel(-1.05, 1.45, 0.5);
+    addWheel(1.05, 1.45, 0.5);
+    addWheel(-1.05, -1.45, 0.5);
+    addWheel(1.05, -1.45, 0.5);
+  } else if (kind === 'stripe') {
+    // Yellow coupe, white racing stripes over hood and roof, rear wing.
+    parts(g, [
+      [2.2, 0.42, 4.8, 0, 0.52, 0, 0], [0.28, 0.03, 1.6, -0.3, 0.75, 1.5, 4],
+      [0.28, 0.03, 1.6, 0.3, 0.75, 1.5, 4], [1.7, 0.38, 1.5, 0, 0.95, -0.15, 1],
+      [1.6, 0.07, 1.3, 0, 1.16, -0.2, 0], [0.28, 0.03, 1.4, -0.3, 1.2, -0.2, 4],
+      [0.28, 0.03, 1.4, 0.3, 1.2, -0.2, 4], [1.9, 0.06, 0.4, 0, 0.95, -2.2, 0],
+      [0.06, 0.3, 0.06, -0.6, 0.78, -2.2, 2], [0.06, 0.3, 0.06, 0.6, 0.78, -2.2, 2],
+      [0.6, 0.12, 0.08, -0.7, 0.62, 2.42, 5], [0.6, 0.12, 0.08, 0.7, 0.62, 2.42, 5],
+      [1.9, 0.18, 0.08, 0, 0.72, -2.42, 6], [2.0, 0.16, 4.5, 0, 0.26, 0, 2], [1.0, 0.12, 0.08, 0, 0.5, 2.44, 2],
+    ], [paint, glass, dark, chrome, wht, head, tail]);
+    addSW(-1.02, 1.5);
+    addSW(1.02, 1.5);
+    addSW(-1.02, -1.5);
+    addSW(1.02, -1.5);
   } else {
     const low = kind === 'lowrider';
     const drop = low ? 0.14 : 0;

@@ -3,9 +3,8 @@ import { makePerson } from './people.js';
 
 export function createPlayer(G) {
   const fig = makePerson(G, {
-    skin: 0xd9a066, shirt: 0x2a2a2a, shirt2: 0x2a2a2a, pants: 0x2a3a5a,
-    shoes: 0x222222, hair: 0x14141c, hairStyle: 'cap', hat: 0xe02030,
-    jacket: 0xff7a1a,
+    skin: 0x6e4530, shirt: 0xf2f2f2, shirt2: null, pants: 0x3a5a7a,
+    shoes: 0xe8e8e8, hair: 0x14141c, hairStyle: 'short', tank: true, build: 1.18,
   });
   const g = fig.group;
   const { hipL, hipR, shL, shR } = fig;

@@ -127,9 +127,7 @@ G.slotInfo = () => SLOTS.map((s, i) => (s ? {
   slot: i, chapter: s.chapter || 1, money: s.money, day: s.day,
   missions: (s.missionsDone || []).length, clock: s.clock ?? 19.8, savedAt: s.savedAt || 0,
 } : { slot: i, empty: true }));
-// Rank on the display value round(respect*13), max ~1300: the top two ranks
-// (FIXER 1500+, SHOT CALLER 3000+) are unreachable at respect 100 — the
-// bar is shown honestly, it just cannot be reached yet.
+// Rank on round(respect*13), max ~1300: FIXER/SHOT CALLER unreachable yet.
 const RANKS = [[300, 'ROOKIE'], [750, 'RUNNER'], [1500, 'WHEELMAN'], [3000, 'FIXER'], [Infinity, 'SHOT CALLER']];
 const WUNLOCK = [[260, 'SMG'], [520, 'RIFLE'], [780, 'SHOTGUN']];
 G.rankInfo = () => {
@@ -204,7 +202,7 @@ const PDEFS = [
   ['ns', 4, -80, 1], ['ns', 5, 220, -1], ['ew', 0, -100, 1], ['ew', 1, 260, -1],
   ['ew', 2, -300, 1], ['ew', 3, 80, -1], ['ew', 4, -180, 1], ['ns', 1, 60, 1],
 ];
-const PKINDS = ['sport', 'sport', 'taxi', 'pickup', 'sport', 'van', 'sport', 'sport', 'sport', 'taxi', 'pickup', 'sport'];
+const PKINDS = ['sport', 'muscle', 'taxi', 'pickup', 'wedge', 'van', 'boxy', 'stripe', 'sport', 'taxi', 'pickup', 'muscle'];
 PDEFS.forEach(([axis, idx, along, dir], i) => {
   const pt = roadPoint(axis, idx, along, dir);
   const v = makeCar(G, PKINDS[i], i % 3);

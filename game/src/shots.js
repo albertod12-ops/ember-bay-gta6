@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { makeCar, makeBike, createDrive } from './vehicles.js';
-import { makePoliceCar, makeHeli } from './police.js';
+import { makePoliceCar, makeHeli, makePolicePed } from './police.js';
 import { ROADS, roadPoint, nsCenter, nsHeading, ewCenter, ewHeading } from './city.js';
 const STAGE_ROAD = 3;
 const COVER_ROAD = 0; // Palms Beach (ns[0], z=-70): low pastel beach buildings + palms + ocean-side district read as a different place from downtown (ns[3]); cover and title must not share one street
@@ -66,7 +66,7 @@ export function stageShot(G, name) {
     enterSport(G, pt.x, pt.z, pt.heading, 38);
     G._titleCops = [];
     for (let i = 0; i < 2; i++) {
-      const cop = makePoliceCar(G);
+      const cop = makePoliceCar(G, i);
       G.scene.add(cop.group);
       G._titleCops.push(cop);
     }
@@ -110,6 +110,16 @@ export function stageShot(G, name) {
     G._shotTimer = 1.35;
     G._aimPose = true;
     G._muzzle = flashSprite(G);
+    G._combatCops = [];
+    for (let i = 0; i < 2; i++) {
+      const ped = makePolicePed(G, i === 1);
+      const fwd = 5 + i * 1;
+      const side = i === 0 ? -3 : 3;
+      ped.group.position.set(cpt.x + fx * fwd + rx * side, 0, cpt.z + fz * fwd + rz * side);
+      ped.group.rotation.y = cpt.heading + Math.PI;
+      G.scene.add(ped.group);
+      G._combatCops.push(ped);
+    }
     G.camOverride = {
       pos: [cpt.x - fx * 1.7 - rx * 2.0, 1.75, cpt.z - fz * 1.7 - rz * 2.0],
       look: [cpt.x + fx * 8, 1.2, cpt.z + fz * 8],

@@ -30,8 +30,9 @@ export function makePerson(G, opts = {}) {
     skin = 0xd9a066, shirt = 0xff7a1a, shirt2 = null, pants = 0x2a3a5a,
     shoes = 0x222222, hair = 0x14141c, hairStyle = 'short', hat = null,
     jacket = null, vest = null, badge = false, h = 1.8, build = 1,
-    sleeves = 'short', hoodie = false, backpack = null,
+    sleeves = 'short', hoodie = false, backpack = null, tank = false, female = false,
   } = opts;
+  const wf = female ? 0.82 : 1;
   const g = new THREE.Group();
   const skinM = std(skin);
   const shirtM = std(shirt);
@@ -61,20 +62,20 @@ export function makePerson(G, opts = {}) {
   box(0.08, 0.05, 0.03, std(0xd8d8d8, { metalness: 0.8, roughness: 0.3 }), 0, 1.14, 0.13, g);
   const chest = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.19, 0.42, 10), shirtM);
   chest.position.set(0, 1.34, 0);
-  chest.scale.set(1, 1, 0.62);
+  chest.scale.set(wf, 1, 0.62);
   g.add(chest);
-  const shoulderBar = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.46, 8), shirtM);
+  const shoulderBar = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.46, 8), tank ? skinM : shirtM);
   shoulderBar.rotation.z = Math.PI / 2;
   shoulderBar.position.set(0, 1.52, 0);
-  shoulderBar.scale.set(1, 1, 0.7);
+  shoulderBar.scale.set(1, wf, 0.7);
   g.add(shoulderBar);
   for (const sx of [-0.24, 0.24]) {
-    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 6), shirtM);
-    cap.position.set(sx, 1.52, 0);
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 6), tank ? skinM : shirtM);
+    cap.position.set(sx * wf, 1.52, 0);
     g.add(cap);
   }
-  box(0.14, 0.1, 0.05, shirtM, -0.2, 1.52, 0.02, g, 0, 0, 0.3);
-  box(0.14, 0.1, 0.05, shirtM, 0.2, 1.52, 0.02, g, 0, 0, -0.3);
+  box(0.14, 0.1, 0.05, shirtM, -0.2 * wf, 1.52, 0.02, g, 0, 0, 0.3);
+  box(0.14, 0.1, 0.05, shirtM, 0.2 * wf, 1.52, 0.02, g, 0, 0, -0.3);
   if (shirt2 !== null) {
     box(0.28, 0.3, 0.03, std(shirt2), 0, 1.36, 0.13, g);
   }
@@ -111,10 +112,10 @@ export function makePerson(G, opts = {}) {
 
   const makeArm = (side) => {
     const sh = new THREE.Group();
-    sh.position.set(side * 0.27, 1.5, 0);
+    sh.position.set(side * 0.27 * wf, 1.5, 0);
     sh.rotation.z = -side * 0.1;
-    limb(0, 0, 0, 0, -0.28, 0.01, 0.062, shirtM, sh);
-    const elbow = new THREE.Mesh(new THREE.SphereGeometry(0.058, 8, 6), shirtM);
+    limb(0, 0, 0, 0, -0.28, 0.01, 0.062, tank ? skinM : shirtM, sh);
+    const elbow = new THREE.Mesh(new THREE.SphereGeometry(0.058, 8, 6), tank ? skinM : shirtM);
     elbow.position.set(0, -0.28, 0.01);
     sh.add(elbow);
     limb(0, -0.28, 0.01, 0, -0.56, 0.02, 0.05, armM, sh);
@@ -148,31 +149,21 @@ export function makePerson(G, opts = {}) {
   box(0.028, 0.045, 0.028, skinM, 0, -0.025, 0.115, head);
   box(0.055, 0.01, 0.012, std(0x8a3a2a, { roughness: 0.8 }), 0, -0.075, 0.106, head);
   const hairM = std(hair, { roughness: 0.95 });
-  if (hairStyle === 'short') {
-    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.117, 12, 8, 0, Math.PI * 2, 0, 1.25), hairM);
+  if (hairStyle === 'short' || hairStyle === 'long' || hairStyle === 'bun' || hairStyle === 'buzz') {
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.117, 12, 8, 0, Math.PI * 2, 0, hairStyle === 'buzz' ? 0.9 : 1.25), hairM);
     cap.position.set(0, 0.018, -0.007);
     head.add(cap);
-  } else if (hairStyle === 'long') {
-    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.117, 12, 8, 0, Math.PI * 2, 0, 1.25), hairM);
-    cap.position.set(0, 0.018, -0.007);
-    head.add(cap);
-    box(0.18, 0.28, 0.05, hairM, 0, -0.11, -0.09, head);
+    if (hairStyle === 'long') box(0.18, 0.28, 0.05, hairM, 0, -0.11, -0.09, head);
+    else if (hairStyle === 'bun') {
+      const bun = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 6), hairM);
+      bun.position.set(0, 0.1, -0.11);
+      head.add(bun);
+    }
   } else if (hairStyle === 'afro') {
     const afro = new THREE.Mesh(new THREE.SphereGeometry(0.15, 12, 10), hairM);
     afro.position.set(0, 0.04, -0.01);
     afro.scale.set(1, 0.9, 1);
     head.add(afro);
-  } else if (hairStyle === 'bun') {
-    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.117, 12, 8, 0, Math.PI * 2, 0, 1.25), hairM);
-    cap.position.set(0, 0.018, -0.007);
-    head.add(cap);
-    const bun = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 6), hairM);
-    bun.position.set(0, 0.1, -0.11);
-    head.add(bun);
-  } else if (hairStyle === 'buzz') {
-    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.116, 12, 8, 0, Math.PI * 2, 0, 0.9), hairM);
-    cap.position.set(0, 0.02, -0.005);
-    head.add(cap);
   } else if (hairStyle === 'cap' || hat) {
     const c = hat ?? hair;
     const capM = std(c, { roughness: 0.8 });

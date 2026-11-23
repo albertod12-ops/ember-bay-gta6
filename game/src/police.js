@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { makeBike, sportWheel, arch } from './vehicles.js';
+import { makePerson } from './people.js';
 
 const CALLSIGNS = ['KESTREL-39', 'FALCON-12', 'VIPER-07', 'COBRA-21', 'HAVOC-55'];
 
@@ -13,50 +14,49 @@ function box(w, h, d, material, x, y, z, parent) {
   return m;
 }
 
-export function makePoliceCar(G) {
+export function makePoliceCar(G, variant = -1) {
   const g = new THREE.Group();
   const black = std(0x14161c);
   const white = std(0xf2f2f2, { roughness: 0.4, emissive: 0x8a94a8, emissiveIntensity: 0.25 });
   const glass = std(0x14202e, { roughness: 0.12, metalness: 0.65 });
   const dark = std(0x1a1a1a, { roughness: 0.8 });
   const chrome = std(0xd8d8d8, { metalness: 0.9, roughness: 0.2 });
+  const head = std(0xfff2b0, { emissive: 0xffe9a0, emissiveIntensity: 1.4 });
+  const tailBar = std(0xd81a1a, { emissive: 0xaa0000, emissiveIntensity: 1.1 });
+  const steel = std(0x888888, { metalness: 0.8, roughness: 0.3 });
   const wheels = [];
-  const addSportWheel = (x, z) => {
-    const w = sportWheel(0.46, 0xffc21c);
-    w.position.set(x, 0.46, z);
-    g.add(w);
-    wheels.push(w);
-  };
-  box(2.2, 0.42, 4.8, black, 0, 0.52, 0, g);
-  box(2.1, 0.3, 1.3, black, 0, 0.48, 1.85, g);
-  box(1.9, 0.3, 0.7, black, 0, 0.4, 2.2, g);
-  box(1.95, 0.22, 0.25, dark, 0, 0.3, 2.42, g);
-  box(2.24, 0.12, 4.5, black, 0, 0.74, 0, g);
-  box(2.0, 0.16, 4.5, dark, 0, 0.26, 0, g);
-  box(2.15, 0.34, 0.9, black, 0, 0.6, -1.95, g);
-  box(2.1, 0.2, 0.2, dark, 0, 0.36, -2.4, g);
-  box(2.0, 0.18, 0.1, white, 0, 0.42, -2.46, g);
-  box(2.22, 0.12, 4.6, dark, 0, 0.3, 0, g);
-  box(0.06, 0.46, 2.4, white, -1.06, 0.72, 0.15, g);
-  box(0.06, 0.46, 2.4, white, 1.06, 0.72, 0.15, g);
-  box(0.065, 0.08, 2.4, dark, -1.07, 0.5, 0.15, g);
-  box(0.065, 0.08, 2.4, dark, 1.07, 0.5, 0.15, g);
-  box(1.7, 0.38, 1.5, glass, 0, 0.95, -0.15, g);
-  box(1.6, 0.07, 1.3, black, 0, 1.16, -0.2, g);
-  box(1.62, 0.1, 0.06, dark, 0, 0.78, -1.28, g);
-  box(1.66, 0.05, 0.9, glass, 0, 0.92, 0.62, g);
-  box(1.66, 0.05, 0.7, glass, 0, 0.9, -0.92, g);
-  box(0.08, 0.38, 0.1, dark, -0.86, 0.95, -0.15, g);
-  box(0.08, 0.38, 0.1, dark, 0.86, 0.95, -0.15, g);
-  box(0.05, 0.05, 0.2, dark, -1.06, 0.98, 0.55, g);
-  box(0.05, 0.05, 0.2, dark, 1.06, 0.98, 0.55, g);
-  box(0.16, 0.09, 0.18, black, -1.12, 1.0, 0.55, g);
-  box(0.16, 0.09, 0.18, black, 1.12, 1.0, 0.55, g);
-  box(0.04, 0.05, 0.26, chrome, -1.06, 0.72, -0.1, g);
-  box(0.04, 0.05, 0.26, chrome, 1.06, 0.72, -0.1, g);
-  box(2.0, 0.5, 0.14, std(0x888888, { metalness: 0.8, roughness: 0.3 }), 0, 0.6, 2.4, g);
-  box(1.0, 0.12, 0.08, dark, 0, 0.5, 2.44, g);
-  box(1.9, 0.24, 0.28, dark, 0, 0.34, -2.38, g);
+  const v = variant < 0 ? G.rng.int(0, 1) : variant;
+  const P = [
+    [2.2, 0.42, 4.8, 0, 0.52, 0, 0], [2.1, 0.3, 1.3, 0, 0.48, 1.85, 0],
+    [1.9, 0.3, 0.7, 0, 0.4, 2.2, 0], [1.95, 0.22, 0.25, 0, 0.3, 2.42, 3],
+    [2.24, 0.12, 4.5, 0, 0.74, 0, 0], [2.0, 0.16, 4.5, 0, 0.26, 0, 3],
+    [2.15, 0.34, 0.9, 0, 0.6, -1.95, 0], [2.1, 0.2, 0.2, 0, 0.36, -2.4, 3],
+    [2.0, 0.18, 0.1, 0, 0.42, -2.46, 1], [2.22, 0.12, 4.6, 0, 0.3, 0, 3],
+    [0.06, 0.46, 2.4, -1.06, 0.72, 0.15, 1], [0.06, 0.46, 2.4, 1.06, 0.72, 0.15, 1],
+    [0.065, 0.08, 2.4, -1.07, 0.5, 0.15, 3], [0.065, 0.08, 2.4, 1.07, 0.5, 0.15, 3],
+    [1.7, 0.38, 1.5, 0, 0.95, -0.15, 2], [1.6, 0.07, 1.3, 0, 1.16, -0.2, 0],
+    [1.62, 0.1, 0.06, 0, 0.78, -1.28, 3], [1.66, 0.05, 0.9, 0, 0.92, 0.62, 2],
+    [1.66, 0.05, 0.7, 0, 0.9, -0.92, 2], [0.08, 0.38, 0.1, -0.86, 0.95, -0.15, 3],
+    [0.08, 0.38, 0.1, 0.86, 0.95, -0.15, 3], [0.05, 0.05, 0.2, -1.06, 0.98, 0.55, 3],
+    [0.05, 0.05, 0.2, 1.06, 0.98, 0.55, 3], [0.16, 0.09, 0.18, -1.12, 1.0, 0.55, 0],
+    [0.16, 0.09, 0.18, 1.12, 1.0, 0.55, 0], [0.04, 0.05, 0.26, -1.06, 0.72, -0.1, 4],
+    [0.04, 0.05, 0.26, 1.06, 0.72, -0.1, 4], [2.0, 0.5, 0.14, 0, 0.6, 2.4, 7],
+    [1.0, 0.12, 0.08, 0, 0.5, 2.44, 3], [1.9, 0.24, 0.28, 0, 0.34, -2.38, 3],
+    [0.6, 0.12, 0.08, -0.7, 0.62, 2.42, 5], [0.6, 0.12, 0.08, 0.7, 0.62, 2.42, 5],
+    [1.9, 0.18, 0.08, 0, 0.72, -2.42, 6], [0.3, 0.18, 0.08, -0.82, 0.72, -2.42, 6],
+    [0.3, 0.18, 0.08, 0.82, 0.72, -2.42, 6],
+  ];
+  const M = [black, white, glass, dark, chrome, head, tailBar, steel];
+  for (const p of P) box(p[0], p[1], p[2], M[p[6]], p[3], p[4], p[5], g);
+  if (v === 0) {
+    // Illinois '90: US flag decal on the hood.
+    box(0.45, 0.03, 0.35, std(0xd83a2a), -0.45, 0.65, 1.55, g);
+    box(0.45, 0.03, 0.35, std(0x2a6fd8), 0.45, 0.65, 1.55, g);
+  } else {
+    // Fairheaven '80: white POLICE band on the hood + white roof band.
+    box(1.6, 0.04, 0.7, white, 0, 0.65, 1.6, g);
+    box(1.62, 0.04, 1.0, white, 0, 1.21, -0.2, g);
+  }
   for (const ex of [-0.35, 0.35]) {
     const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.2, 8), chrome);
     tip.rotation.x = Math.PI / 2;
@@ -66,23 +66,18 @@ export function makePoliceCar(G) {
   const red = box(0.7, 0.22, 0.4, std(0xff2211, { emissive: 0xff2211, emissiveIntensity: 2 }), -0.45, 1.5, -0.2, g);
   const blue = box(0.7, 0.22, 0.4, std(0x2244ff, { emissive: 0x2244ff, emissiveIntensity: 2 }), 0.45, 1.5, -0.2, g);
   box(1.7, 0.1, 0.5, std(0x222222), 0, 1.38, -0.2, g);
-  addSportWheel(-1.02, 1.5);
-  addSportWheel(1.02, 1.5);
-  addSportWheel(-1.02, -1.5);
-  addSportWheel(1.02, -1.5);
+  for (const [x, z] of [[-1.02, 1.5], [1.02, 1.5], [-1.02, -1.5], [1.02, -1.5]]) {
+    const w = sportWheel(0.46, 0xffc21c);
+    w.position.set(x, 0.46, z);
+    g.add(w);
+    wheels.push(w);
+  }
   for (const w of wheels) arch(g, w.position.x, w.position.y, w.position.z, w.position.y + 0.12);
   for (const sx of [-1.11, 1.11]) {
     box(0.02, 0.42, 0.03, dark, sx, 0.72, 0.3, g);
     box(0.02, 0.42, 0.03, dark, sx, 0.72, -0.9, g);
   }
   for (const gx of [-0.3, 0, 0.3]) box(0.07, 0.1, 0.03, chrome, gx, 0.5, 2.46, g);
-  const head = std(0xfff2b0, { emissive: 0xffe9a0, emissiveIntensity: 1.4 });
-  box(0.6, 0.12, 0.08, head, -0.7, 0.62, 2.42, g);
-  box(0.6, 0.12, 0.08, head, 0.7, 0.62, 2.42, g);
-  const tailBar = std(0xd81a1a, { emissive: 0xaa0000, emissiveIntensity: 1.1 });
-  box(1.9, 0.18, 0.08, tailBar, 0, 0.72, -2.42, g);
-  box(0.3, 0.18, 0.08, tailBar, -0.82, 0.72, -2.42, g);
-  box(0.3, 0.18, 0.08, tailBar, 0.82, 0.72, -2.42, g);
   g.traverse((o) => {
     if (o.isMesh) {
       o.castShadow = true;
@@ -90,6 +85,16 @@ export function makePoliceCar(G) {
     }
   });
   return { group: g, red, blue, wheels };
+}
+
+export function makePolicePed(G, female = false) {
+  // Uniformed officer on the CJ body: navy uniform + peaked cap + badge.
+  return makePerson(G, {
+    skin: 0xc98d64, shirt: female ? 0x8ab4d8 : 0x1a2a4a, shirt2: null,
+    pants: 0x1a2a4a, shoes: 0x111111, hair: 0x14141c, hairStyle: 'cap',
+    hat: 0x1a2a4a, badge: true, h: female ? 1.7 : 1.84,
+    build: female ? 0.95 : 1.08, sleeves: female ? 0 : 1,
+  });
 }
 
 export function makeHeli(G) {

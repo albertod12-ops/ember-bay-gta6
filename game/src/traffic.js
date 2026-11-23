@@ -3,7 +3,7 @@ import { makeCar, makeBike } from './vehicles.js';
 import { makePerson } from './people.js';
 import { ROADS, ROUNDABOUT, nsPlain, ewPlain, nsCenter, ewCenter, nsHeading, ewHeading } from './city.js';
 
-const KINDS = ['sport', 'sport', 'sport', 'taxi', 'van', 'pickup', 'sport', 'sedan', 'sport', 'truck'];
+const KINDS = ['sport', 'muscle', 'wedge', 'taxi', 'van', 'pickup', 'boxy', 'sedan', 'stripe', 'truck'];
 
 function laneOffset(axis, dir) {
   if (axis === 'ns') return dir > 0 ? -3.5 : 3.5;
@@ -12,14 +12,16 @@ function laneOffset(axis, dir) {
 
 function pedFigure(G, x, z) {
   const rng = G.rng;
+  const female = rng.chance(0.4);
   const fig = makePerson(G, {
+    female,
     skin: rng.pick([0xd9a066, 0xb07a4a, 0xe8b98a, 0x8a5a34, 0xc98a5e, 0x6e4530]),
     shirt: rng.pick([0x2a3a5a, 0x5a6a3a, 0x7a2a2a, 0x3a3a3a, 0x4a6a6a, 0xc9c2b2, 0x1c1c22, 0x2a6fd8, 0x8a6fd8, 0xb06a3a]),
     shirt2: rng.chance(0.4) ? rng.pick([0xffffff, 0x222831, 0xd83a2a, 0x2a3a5a]) : null,
     pants: rng.pick([0x2a3a5a, 0x3a3a3a, 0x5a4a3a, 0x2a4a2a, 0x1c222e, 0x6a5a4a]),
     shoes: rng.pick([0x222222, 0x8a2a2a, 0xdddddd, 0x2a3a5a, 0x3a2a1a]),
     hair: rng.pick([0x14141c, 0x3a2a1a, 0x8a8a8a, 0xe8c820, 0x2a1410, 0x5a3a22]),
-    hairStyle: rng.pick(['short', 'short', 'long', 'bald', 'bandana', 'afro', 'bun', 'buzz']),
+    hairStyle: female ? rng.pick(['long', 'long', 'bun', 'short', 'afro']) : rng.pick(['short', 'short', 'long', 'bald', 'bandana', 'afro', 'bun', 'buzz']),
     hat: rng.chance(0.3) ? rng.pick([0xe02030, 0x222831, 0xe8b820]) : null,
     jacket: rng.chance(0.25) ? rng.pick([0x2a6fd8, 0x8a6fd8, 0x3a3a3a, 0x5a3a2a]) : null,
     h: rng.range(1.62, 1.92),
