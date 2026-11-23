@@ -2,38 +2,38 @@ import * as THREE from 'three';
 import { makeCar, makeBike, createDrive } from './vehicles.js';
 import { makePoliceCar, makeHeli, makePolicePed } from './police.js';
 import { ROADS, roadPoint, nsCenter, nsHeading, ewCenter, ewHeading } from './city.js';
-// Give a police ped a visible gun and an action pose. The gun is built along
-// the forearm (local -Y of the shoulder group), so raising the arm to aim
-// swings the barrel forward at the player. pose 'aim' = two-handed stance,
-// 'advance' = mid-stride run with a one-handed pistol.
+// v18.2: guns are LIGHT steel + oversized so the barrel reads at a glance
+// against navy uniforms and the street; rifle held near-horizontal.
 function armCop(ped, gun, pose) {
-  const gunM = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.5, metalness: 0.6 });
+  const steel = new THREE.MeshStandardMaterial({ color: 0xc9ced6, roughness: 0.3, metalness: 0.75 });
+  const gripM = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.6, metalness: 0.4 });
   const g = new THREE.Group();
-  const bx = (w, h, d, x, y, z) => {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), gunM);
-    m.position.set(x, y, z);
-    g.add(m);
+  const bx = (w, h, d, x, y, z, m) => {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m || steel);
+    mesh.position.set(x, y, z);
+    g.add(mesh);
   };
   if (gun === 'rifle') {
-    bx(0.08, 0.7, 0.1, 0, -0.3, 0);
-    bx(0.07, 0.18, 0.12, 0, 0.1, -0.02);
-    bx(0.05, 0.14, 0.07, 0, -0.15, 0.06);
+    bx(0.13, 1.15, 0.12, 0, -0.5, 0);
+    bx(0.11, 0.22, 0.14, 0, 0.08, -0.02);
+    bx(0.09, 0.2, 0.1, 0, -0.18, 0.07, gripM);
+    bx(0.14, 0.1, 0.13, 0, -1.02, 0);
   } else {
-    bx(0.08, 0.38, 0.09, 0, -0.16, 0);
-    bx(0.06, 0.12, 0.12, 0, 0.02, 0.04);
+    bx(0.13, 0.62, 0.11, 0, -0.28, 0);
+    bx(0.11, 0.2, 0.12, 0, 0.06, 0.02, gripM);
   }
   g.position.set(0, -0.62, 0.02);
   ped.shR.add(g);
   if (pose === 'aim') {
-    ped.shL.rotation.x = -1.35; ped.shR.rotation.x = -1.25;
+    ped.shL.rotation.x = -1.35; ped.shR.rotation.x = -1.4;
     ped.shL.rotation.z = 0.3; ped.shR.rotation.z = -0.3;
     ped.hipL.rotation.x = 0.15; ped.hipR.rotation.x = -0.12;
     ped.group.rotation.x = 0.06;
   } else {
-    ped.shR.rotation.x = -1.15;
+    ped.shR.rotation.x = -1.3;
     ped.shL.rotation.x = 0.7;
-    ped.hipL.rotation.x = -0.6; ped.hipR.rotation.x = 0.6;
-    ped.hipL.rotation.z = 0.15; ped.hipR.rotation.z = -0.15;
+    ped.hipL.rotation.x = -0.8; ped.hipR.rotation.x = 0.8;
+    ped.hipL.rotation.z = 0.3; ped.hipR.rotation.z = -0.3;
     ped.group.rotation.x = 0.2;
   }
 }
@@ -148,8 +148,10 @@ export function stageShot(G, name) {
     G._combatCops = [];
     for (let i = 0; i < 2; i++) {
       const ped = makePolicePed(G, i === 1);
-      const fwd = 5 + i * 1;
-      const side = i === 0 ? -3 : 3;
+      // v18.2: both cops on the camera-right side, clear of CJ's muzzle flash
+      // (flash sits screen-left); cop 1 advances from beside the cruiser.
+      const fwd = 5.5 + i * 3.5;
+      const side = i === 0 ? -2 : -5;
       ped.group.position.set(cpt.x + fx * fwd + rx * side, 0, cpt.z + fz * fwd + rz * side);
       ped.group.rotation.y = cpt.heading + Math.PI;
       // Cop 0 aims a rifle two-handed; cop 1 advances mid-stride, pistol up.
@@ -197,7 +199,8 @@ export function updateShot(G, dt) {
       const rx = Math.cos(car.heading), rz = -Math.sin(car.heading);
       const flash = Math.sin(G._titleT * 14) > 0;
       G._titleCops.forEach((cop, i) => {
-        const back = -(4 + i * 3);
+        const back = 4 + i * 3; // v18.2: BEHIND the car — the front camera looks
+        // back at the Ultima, so the cruisers chase in beyond it, not in front.
         const side = i === 0 ? 2 : -2;
         cop.group.position.set(car.pos.x - fx * back + rx * side, 0, car.pos.z - fz * back + rz * side);
         cop.group.rotation.y = car.heading;
@@ -236,9 +239,11 @@ export function updateShot(G, dt) {
       });
       G.traffic.cars.forEach((c, i) => { if (!tHeld.includes(c)) parkFar(c, i); });
       G.traffic.bikes.forEach((c, i) => parkFar(c, i));
+      // v18.2: front 3/4 — the Ultima's long sloping nose + black canopy face
+      // the camera (cover keeps the rear view). Cops chase in behind it.
       G.camOverride = {
-        pos: [car.pos.x - fx * 10 + rx * 1.2, 3.2, car.pos.z - fz * 10 + rz * 1.2],
-        look: [car.pos.x + fx * 8, 1.6, car.pos.z + fz * 8],
+        pos: [car.pos.x + fx * 9 + rx * 4, 2.7, car.pos.z + fz * 9 + rz * 4],
+        look: [car.pos.x - fx * 2, 1.4, car.pos.z - fz * 2],
       };
       G.playerHeading = car.heading;
     }
