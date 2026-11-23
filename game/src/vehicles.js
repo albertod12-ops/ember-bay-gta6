@@ -48,12 +48,12 @@ function parts(g, L, M) {
   for (const p of L) box(p[0], p[1], p[2], M[p[6]], p[3], p[4], p[5], g, p[7] || 0, 0, 0);
 }
 
-function wheel(r = 0.42) {
+export function wheel(r = 0.42) {
   const g = new THREE.Group();
   const tire = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.3, 16), std(0x141414, { roughness: 0.92, metalness: 0 }));
   tire.rotation.z = Math.PI / 2;
   g.add(tire);
-  const rim = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.68, r * 0.68, 0.32, 12), std(0xc8c8c8, { metalness: 0.85, roughness: 0.25 }));
+  const rim = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.68, r * 0.68, 0.32, 12), std(0xd8d8d8, { metalness: 0.5, roughness: 0.3, emissive: 0x666666, emissiveIntensity: 0.35 }));
   rim.rotation.z = Math.PI / 2;
   g.add(rim);
   const spokeMat = std(0x8a8a8a, { metalness: 0.8, roughness: 0.35 });
@@ -73,8 +73,8 @@ function wheel(r = 0.42) {
   return g;
 }
 
-export function arch(g, x, y, z, r = 0.55) {
-  const a = new THREE.Mesh(new THREE.TorusGeometry(r, 0.09, 6, 12, Math.PI), std(0x141414, { roughness: 0.9 }));
+export function arch(g, x, y, z, r = 0.55, m) {
+  const a = new THREE.Mesh(new THREE.TorusGeometry(r, 0.05, 6, 12, Math.PI), m || std(0x141414, { roughness: 0.9 }));
   a.rotation.y = Math.PI / 2;
   a.position.set(x, y, z);
   g.add(a);
@@ -95,10 +95,10 @@ export function sportWheel(r = 0.46, caliperColor = 0xffc21c) {
   const tire = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.32, 18), std(0x141414, { roughness: 0.92, metalness: 0 }));
   tire.rotation.z = Math.PI / 2;
   g.add(tire);
-  const rim = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.68, r * 0.68, 0.34, 14), std(0x1a1a1a, { metalness: 0.85, roughness: 0.3 }));
+  const rim = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.68, r * 0.68, 0.34, 14), std(0x999999, { metalness: 0.55, roughness: 0.3, emissive: 0x555555, emissiveIntensity: 0.3 }));
   rim.rotation.z = Math.PI / 2;
   g.add(rim);
-  const spokeMat = std(0x2a2a2a, { metalness: 0.85, roughness: 0.3 });
+  const spokeMat = std(0x888888, { metalness: 0.6, roughness: 0.3 });
   for (let i = 0; i < 7; i++) {
     const s = new THREE.Mesh(new THREE.BoxGeometry(0.36, r * 0.6, 0.06), spokeMat);
     const a = (i / 7) * Math.PI * 2;
@@ -106,7 +106,7 @@ export function sportWheel(r = 0.46, caliperColor = 0xffc21c) {
     s.rotation.x = -a;
     g.add(s);
   }
-  const disc = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.45, r * 0.45, 0.36, 14), std(0x8a8a8a, { metalness: 0.75, roughness: 0.35 }));
+  const disc = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.45, r * 0.45, 0.36, 14), std(0xaaaaaa, { metalness: 0.6, roughness: 0.35 }));
   disc.rotation.z = Math.PI / 2;
   g.add(disc);
   const caliper = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.22, 0.1), std(caliperColor, { metalness: 0.4, roughness: 0.4 }));
@@ -124,7 +124,7 @@ export function makeCar(G, kind, colorIdx = 0) {
   const paint = std(color, { roughness: 0.3, metalness: 0.55 });
   const glass = std(0x14202e, { roughness: 0.12, metalness: 0.65 });
   const dark = std(0x1a1a1a, { roughness: 0.8, metalness: 0.1 });
-  const chrome = std(0xd8d8d8, { metalness: 0.9, roughness: 0.2 });
+  const chrome = std(0xd8d8d8, { metalness: 0.5, roughness: 0.35, emissive: 0x555555, emissiveIntensity: 0.3 });
   const head = std(0xfff2b0, { emissive: 0xffe9a0, emissiveIntensity: 1.4 });
   const tail = std(0xd81a1a, { emissive: 0xaa0000, emissiveIntensity: 1.1 });
   const wht = std(0xf2f2f2);
@@ -208,90 +208,28 @@ export function makeCar(G, kind, colorIdx = 0) {
     for (const gx of [-0.35, 0, 0.35]) box(0.07, 0.13, 0.03, chrome, gx, 0.85, 2.62, g);
     lamps(g, 2.62, -2.62, 0.9);
   } else if (kind === 'sport') {
-    // Ultima GTR: low wide wedge, long sloping nose, black canopy, high wing.
-    parts(g, [
-      [2.3, 0.18, 5.0, 0, 0.32, 0, 0], [2.2, 0.08, 2.4, 0, 0.55, 1.3, 0, 0.3],
-      [2.4, 0.08, 0.35, 0, 0.22, 2.45, 0], [0.5, 0.1, 0.06, -0.7, 0.3, 2.5, 2],
-      [0.5, 0.1, 0.06, 0.7, 0.3, 2.5, 2], [0.55, 0.1, 0.06, -0.68, 0.62, 1.9, 5, 0.3],
-      [0.55, 0.1, 0.06, 0.68, 0.62, 1.9, 5, 0.3], [1.9, 0.85, 0.06, 0, 0.82, 0.35, 1, 0.42],
-      [0.06, 0.5, 1.2, -0.95, 0.85, -0.2, 1], [0.06, 0.5, 1.2, 0.95, 0.85, -0.2, 1],
-      [1.5, 0.05, 1.0, 0, 1.14, -0.35, 0], [1.6, 0.06, 1.2, 0, 0.9, -1.4, 1, -0.4],
-      [0.35, 0.3, 1.6, -1.15, 0.5, -1.4, 0], [0.35, 0.3, 1.6, 1.15, 0.5, -1.4, 0],
-      [0.1, 0.32, 1.1, -1.18, 0.55, -0.4, 2], [0.1, 0.32, 1.1, 1.18, 0.55, -0.4, 2],
-      [2.4, 0.12, 0.55, 0, 1.42, -2.35, 0], [0.06, 0.35, 0.55, -1.2, 1.35, -2.35, 0],
-      [0.06, 0.35, 0.55, 1.2, 1.35, -2.35, 0], [0.08, 0.45, 0.08, -0.7, 1.18, -2.35, 2],
-      [0.08, 0.45, 0.08, 0.7, 1.18, -2.35, 2], [1.9, 0.12, 0.06, 0, 0.6, -2.52, 6],
-      [1.8, 0.12, 0.2, 0, 0.28, -2.45, 2], [2.24, 0.1, 4.6, 0, 0.3, 0, 2],
-    ], [paint, glass, dark, chrome, wht, head, tail]);
-    addSW(-1.08, 1.5);
-    addSW(1.08, 1.5);
-    addSW(-1.15, -1.5);
-    addSW(1.15, -1.5);
-  } else if (kind === 'muscle') {
-    // Lexyc16 muscle: long hood, short deck, quad lamps, scoop, chrome bumpers.
-    parts(g, [
-      [2.0, 0.5, 4.8, 0, 0.52, 0, 0], [2.04, 0.1, 4.6, 0, 0.28, 0, 2],
-      [1.9, 0.1, 2.2, 0, 0.8, 1.2, 0, 0.12], [0.5, 0.08, 0.9, 0, 0.9, 1.2, 2],
-      [1.75, 0.45, 1.7, 0, 0.95, -0.9, 1], [1.7, 0.07, 1.5, 0, 1.2, -0.9, 0],
-      [1.7, 0.05, 0.8, 0, 1.02, -0.05, 1, 0.5], [1.7, 0.05, 0.7, 0, 1.0, -1.75, 1, -0.45],
-      [1.8, 0.3, 0.6, 0, 0.72, -2.2, 0], [2.0, 0.3, 0.3, 0, 0.45, 2.45, 3],
-      [2.0, 0.3, 0.3, 0, 0.45, -2.45, 3], [1.9, 0.28, 0.1, 0, 0.6, 2.42, 2],
-      [0.22, 0.18, 0.08, -0.8, 0.62, 2.46, 4], [0.22, 0.18, 0.08, -0.45, 0.62, 2.46, 4],
-      [0.22, 0.18, 0.08, 0.45, 0.62, 2.46, 4], [0.22, 0.18, 0.08, 0.8, 0.62, 2.46, 4],
-      [1.8, 0.16, 0.08, 0, 0.6, -2.46, 5], [2.04, 0.06, 4.5, 0, 0.78, 0, 3],
-    ], [paint, glass, dark, chrome, head, tail]);
-    addWheel(-1.05, 1.45);
-    addWheel(1.05, 1.45);
-    addWheel(-1.05, -1.45);
-    addWheel(1.05, -1.45);
-  } else if (kind === 'wedge') {
-    // Prudnik wedge: low sharp wedge, white nose+stripe, scoop, wing.
-    parts(g, [
-      [2.0, 0.4, 4.2, 0, 0.48, 0, 0], [1.8, 0.1, 1.4, 0, 0.5, 1.4, 4, 0.25],
-      [1.5, 0.06, 1.5, 0, 0.85, -0.2, 1, 0.5], [1.4, 0.06, 1.2, 0, 1.12, -0.3, 4],
-      [0.4, 0.1, 0.7, 0, 0.72, 0.9, 2], [1.7, 0.06, 0.4, 0, 0.95, -1.9, 0],
-      [0.06, 0.3, 0.06, -0.6, 0.78, -1.9, 2], [0.06, 0.3, 0.06, 0.6, 0.78, -1.9, 2],
-      [0.4, 0.1, 0.08, -0.6, 0.55, 2.12, 5], [0.4, 0.1, 0.08, 0.6, 0.55, 2.12, 5],
-      [1.6, 0.14, 0.08, 0, 0.6, -2.12, 6], [0.3, 0.02, 1.4, 0, 0.68, 1.2, 4],
-      [2.02, 0.08, 4.0, 0, 0.28, 0, 2],
-    ], [paint, glass, dark, chrome, wht, head, tail]);
-    addSW(-1.0, 1.35, 0.44);
-    addSW(1.0, 1.35, 0.44);
-    addSW(-1.0, -1.35, 0.44);
-    addSW(1.0, -1.35, 0.44);
-  } else if (kind === 'boxy') {
-    // Argyle boxy: tall upright 80s coupe, huge chrome wheels, blue glass.
-    const blueGlass = std(0x5a9fd8, { roughness: 0.12, metalness: 0.5 });
-    parts(g, [
-      [2.1, 0.7, 4.6, 0, 0.6, 0, 0], [2.0, 0.55, 2.2, 0, 1.15, -0.3, 1],
-      [1.9, 0.08, 2.0, 0, 1.45, -0.3, 0], [2.12, 0.12, 4.4, 0, 0.3, 0, 2],
-      [1.9, 0.3, 0.25, 0, 0.5, 2.32, 3], [1.9, 0.3, 0.25, 0, 0.5, -2.32, 3],
-      [0.5, 0.2, 0.08, -0.6, 0.7, 2.34, 4], [0.5, 0.2, 0.08, 0.6, 0.7, 2.34, 4],
-      [1.7, 0.16, 0.08, 0, 0.7, -2.34, 5], [0.06, 0.5, 1.8, -1.06, 0.9, -0.3, 2],
-      [0.06, 0.5, 1.8, 1.06, 0.9, -0.3, 2], [2.0, 0.35, 0.3, 0, 0.45, 2.3, 2],
-    ], [paint, blueGlass, dark, chrome, head, tail]);
-    addWheel(-1.05, 1.45, 0.55);
-    addWheel(1.05, 1.45, 0.55);
-    addWheel(-1.05, -1.45, 0.55);
-    addWheel(1.05, -1.45, 0.55);
-  } else if (kind === 'stripe') {
-    // Donnichols stripe: sleek coupe, sloping hood, stripes, wing.
-    parts(g, [
-      [2.2, 0.42, 4.8, 0, 0.52, 0, 0], [2.0, 0.1, 1.8, 0, 0.68, 1.4, 0, 0.18],
-      [0.28, 0.03, 1.6, -0.3, 0.75, 1.5, 4, 0.18], [0.28, 0.03, 1.6, 0.3, 0.75, 1.5, 4, 0.18],
-      [1.7, 0.06, 1.4, 0, 0.9, -0.1, 1, 0.5], [1.6, 0.07, 1.3, 0, 1.16, -0.2, 0],
-      [0.28, 0.03, 1.4, -0.3, 1.2, -0.2, 4], [0.28, 0.03, 1.4, 0.3, 1.2, -0.2, 4],
-      [1.9, 0.06, 1.0, 0, 1.0, -1.5, 0, -0.3], [1.9, 0.06, 0.4, 0, 0.95, -2.2, 0],
-      [0.06, 0.3, 0.06, -0.6, 0.78, -2.2, 2], [0.06, 0.3, 0.06, 0.6, 0.78, -2.2, 2],
-      [0.6, 0.12, 0.08, -0.7, 0.62, 2.42, 5, 0.18], [0.6, 0.12, 0.08, 0.7, 0.62, 2.42, 5, 0.18],
-      [1.9, 0.18, 0.08, 0, 0.72, -2.42, 6], [2.0, 0.16, 4.5, 0, 0.26, 0, 2],
-      [1.0, 0.12, 0.08, 0, 0.5, 2.44, 2],
-    ], [paint, glass, dark, chrome, wht, head, tail]);
-    addSW(-1.02, 1.5);
-    addSW(1.02, 1.5);
-    addSW(-1.02, -1.5);
-    addSW(1.02, -1.5);
-  } else {
+    parts(g,[
+[2.4,.3,5.2,0,.32,0,0],[2.1,.07,2.2,0,.52,1.55,0,.28],[2.2,.1,.3,0,.18,2.55,2],[1.7,.14,.08,0,.3,2.5,2],[.35,.08,.06,-.75,.32,2.52,2],[.35,.08,.06,.75,.32,2.52,2],[.7,.2,.6,-.62,.52,1.95,3,.28],[.7,.2,.6,.62,.52,1.95,3,.28],[.15,.1,.06,-.85,.6,2.12,5,.28],[.15,.1,.06,-.55,.6,2.12,5,.28],[.15,.1,.06,.55,.6,2.12,5,.28],[.15,.1,.06,.85,.6,2.12,5,.28],[.12,.08,.06,-.68,.58,2.14,6,.28],[.12,.08,.06,.68,.58,2.14,6,.28],[1.85,.06,1.8,0,.9,-.35,1,.1],[.06,.4,1.5,-.94,.7,-.35,1,.1],[.06,.4,1.5,.94,.7,-.35,1,.1],[1.6,.05,.6,0,1,-1.45,0],[1.9,.06,1,0,.8,-2.15,0,-.45],[.3,.25,1.5,-1.05,.5,1.4,0],[.3,.25,1.5,1.05,.5,1.4,0],[.3,.25,1.6,-1.05,.52,-1.4,0],[.3,.25,1.6,1.05,.52,-1.4,0],[.06,.3,.9,-1.21,.5,-.3,2],[.06,.3,.9,1.21,.5,-.3,2],[2.42,.1,4.4,0,.24,0,2],[2.2,.1,.5,0,1.45,-2.35,0],[.06,.35,.5,-1.1,1.42,-2.35,0],[.06,.35,.5,1.1,1.42,-2.35,0],[.08,.7,.08,-.7,1.05,-2.35,2],[.08,.7,.08,.7,1.05,-2.35,2],[1.9,.12,.06,0,.6,-2.58,6],[1.8,.12,.2,0,.28,-2.5,2]],[paint,glass,dark,chrome,wht,head,tail]);
+    addSW(-.98,1.5,.36);addSW(.98,1.5,.36);addSW(-.98,-1.5,.36);addSW(.98,-1.5,.36);
+} else if (kind === 'muscle') {
+    parts(g,[
+[2,.5,4.8,0,.52,0,0],[2.04,.1,4.6,0,.28,0,2],[1.9,.1,2.3,0,.78,1.25,0,.12],[.5,.08,.9,0,.83,1.2,2],[1.75,.06,.85,0,1.08,-.25,1,.42],[1.7,.07,1.5,0,1.22,-.9,0],[.06,.42,1.3,-.98,1,-.85,1],[.06,.42,1.3,.98,1,-.85,1],[1.7,.05,.7,0,1.02,-1.75,1,-.45],[1.8,.3,.6,0,.72,-2.2,0],[2,.3,.3,0,.45,2.45,3],[2,.3,.3,0,.45,-2.45,3],[1.9,.28,.1,0,.6,2.42,2],[.22,.18,.08,-.8,.62,2.46,4],[.22,.18,.08,-.45,.62,2.46,4],[.22,.18,.08,.45,.62,2.46,4],[.22,.18,.08,.8,.62,2.46,4],[1.8,.16,.08,0,.6,-2.46,5],[2.04,.06,4.5,0,.74,0,3],[.05,.05,.2,-1.06,1,.5,2],[.05,.05,.2,1.06,1,.5,2]],[paint,glass,dark,chrome,head,tail]);
+    addWheel(-1.05,1.45);addWheel(1.05,1.45);addWheel(-1.05,-1.45);addWheel(1.05,-1.45);
+} else if (kind === 'wedge') {
+    const tg=std(0x3a9a9a,{roughness:.12,metalness:.5});
+    parts(g,[
+[2,.4,4.2,0,.48,0,0],[1.8,.1,1.4,0,.5,1.4,4,.25],[1.7,.06,1.3,0,.9,0,1,.45],[1.4,.06,1.2,0,1.12,-.3,4],[.4,.1,.7,0,.72,.9,2],[1.7,.06,.4,0,.95,-1.9,2],[.06,.3,.06,-.6,.78,-1.9,2],[.06,.3,.06,.6,.78,-1.9,2],[.4,.1,.08,-.6,.55,2.12,5],[.4,.1,.08,.6,.55,2.12,5],[1.6,.14,.08,0,.6,-2.12,6],[.3,.02,1.4,0,.68,1.2,4],[2.02,.08,4,0,.28,0,2]],[paint,tg,dark,chrome,wht,head,tail]);
+    addSW(-1,1.35,.4);addSW(1,1.35,.4);addSW(-1,-1.35,.4);addSW(1,-1.35,.4);
+} else if (kind === 'boxy') {
+    const bg=std(0x5a9fd8,{roughness:.12,metalness:.5});
+    parts(g,[
+[2.1,.7,4.6,0,.6,0,0],[2,.55,2.2,0,1.15,-.3,1],[1.9,.08,2,0,1.45,-.3,0],[2.12,.12,4.4,0,.3,0,2],[1.9,.3,.25,0,.5,2.32,3],[1.9,.3,.25,0,.5,-2.32,3],[.45,.16,.08,-.62,.72,2.34,4],[.45,.16,.08,.62,.72,2.34,4],[.45,.16,.08,-.62,.5,2.34,4],[.45,.16,.08,.62,.5,2.34,4],[1.7,.16,.08,0,.7,-2.34,5],[.06,.5,1.8,-1.06,.9,-.3,2],[.06,.5,1.8,1.06,.9,-.3,2],[2,.35,.3,0,.45,2.3,0]],[paint,bg,dark,chrome,head,tail]);
+    addWheel(-1.05,1.45,.55);addWheel(1.05,1.45,.55);addWheel(-1.05,-1.45,.55);addWheel(1.05,-1.45,.55);
+} else if (kind === 'stripe') {
+    parts(g,[
+[2.2,.42,4.8,0,.52,0,0],[2,.1,1.8,0,.68,1.4,0,.18],[.28,.03,1.6,-.3,.75,1.5,4,.18],[.28,.03,1.6,.3,.75,1.5,4,.18],[.5,.08,.7,0,.75,1.3,2],[1.7,.06,1.4,0,.9,-.1,1,.5],[1.6,.07,1.3,0,1.16,-.2,0],[.28,.03,1.4,-.3,1.2,-.2,4],[.28,.03,1.4,.3,1.2,-.2,4],[1.9,.06,1,0,1,-1.5,0,-.3],[.28,.03,.9,-.3,1.04,-1.5,4,-.3],[.28,.03,.9,.3,1.04,-1.5,4,-.3],[.78,.22,.7,-.68,.68,2.05,2,.18],[.78,.22,.7,.68,.68,2.05,2,.18],[1.9,.06,.4,0,.95,-2.2,0],[.06,.3,.06,-.6,.78,-2.2,2],[.06,.3,.06,.6,.78,-2.2,2],[1.9,.18,.08,0,.72,-2.42,6],[2,.16,4.5,0,.26,0,2],[1,.12,.08,0,.5,2.44,2]],[paint,glass,dark,chrome,wht,head,tail]);
+    addSW(-1.02,1.5,.44);addSW(1.02,1.5,.44);addSW(-1.02,-1.5,.44);addSW(1.02,-1.5,.44);
+} else {
     const low = kind === 'lowrider';
     const drop = low ? 0.14 : 0;
     const bodyY = 0.52 - drop;
@@ -348,7 +286,7 @@ export function makeCar(G, kind, colorIdx = 0) {
       o.receiveShadow = false;
     }
   });
-  for (const w of wheels) arch(g, w.position.x, w.position.y, w.position.z, w.position.y + 0.12);
+  for (const w of wheels) arch(g, w.position.x, w.position.y, w.position.z, w.position.y + 0.03, paint);
   return { group: g, kind, wheels, color };
 }
 
@@ -363,7 +301,7 @@ export function makeBike(G, color = 0xd81a1a) {
   const dark = std(0x1a1a1a, { roughness: 0.85, metalness: 0.1 });
   const metal = std(0x9a9a9a, { metalness: 0.85, roughness: 0.3 });
   const gold = std(0xd8a03c, { metalness: 0.9, roughness: 0.25 });
-  const chrome = std(0xd8d8d8, { metalness: 0.9, roughness: 0.2 });
+  const chrome = std(0xd8d8d8, { metalness: 0.5, roughness: 0.35, emissive: 0x555555, emissiveIntensity: 0.3 });
   const glass = std(0x223344, { roughness: 0.12, metalness: 0.5 });
   const wheels = [];
   const mkWheel = (z, width) => {

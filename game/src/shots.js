@@ -92,6 +92,45 @@ function flashSprite(G) {
 export function stageShot(G, name) {
   G.shot = name;
   G._aimPose = false;
+  if (name.startsWith('showcase')) {
+    // Diagnostic only (never a submission shot): one car, large in frame,
+    // front 3/4, clean street, no HUD — to compare the silhouette with the
+    // 3D-model reference. Name: showcase-<kind>, kind = sport|muscle|wedge|
+    // boxy|stripe|police0|police1.
+    const kind = name.slice(9);
+    G.setClock(17);
+    G.mode = 'playing';
+    G.hud.setMenu(false);
+    for (const id of ['hud', 'ebpd', 'missionBanner', 'dialogue', 'title']) {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    }
+    G.player.group.visible = false;
+    const pt = roadPoint('ns', STAGE_ROAD, -70, 1);
+    const fx = Math.sin(pt.heading), fz = Math.cos(pt.heading);
+    const rx = Math.cos(pt.heading), rz = -Math.sin(pt.heading);
+    if (kind === 'police0' || kind === 'police1') {
+      const v = makePoliceCar(G, kind === 'police0' ? 0 : 1);
+      G.scene.add(v.group);
+      v.group.position.set(pt.x, 0, pt.z);
+      v.group.rotation.y = pt.heading;
+    } else {
+      const ci = { sport: 2, muscle: 0, wedge: 0, boxy: 0, stripe: 0 }[kind] ?? 0;
+      const v = makeCar(G, kind, ci);
+      G.scene.add(v.group);
+      const d = createDrive(G, v, {});
+      d.place(pt.x, pt.z, pt.heading);
+      d.speed = 0;
+    }
+    G.traffic.cars.forEach((c, i) => parkFar(c, i));
+    G.traffic.bikes.forEach((c, i) => parkFar(c, i));
+    for (const g of parkedCars(G)) g.visible = false;
+    G.camOverride = {
+      pos: [pt.x + fx * 5 + rx * 3, 1.9, pt.z + fz * 5 + rz * 3],
+      look: [pt.x, 0.55, pt.z],
+    };
+    return;
+  }
   if (name === 'title') {
     G.setClock(19.8);
     G.mode = 'playing';
@@ -166,7 +205,7 @@ export function stageShot(G, name) {
   }
 }
 export function updateShot(G, dt) {
-  if (!G.shot || G.shot === 'map') return;
+  if (!G.shot || G.shot === 'map' || G.shot.startsWith('showcase')) return;
   const P = G.police;
   if (G.shot !== 'combat') for (const g of parkedCars(G)) g.visible = true;
   if (G.shot === 'title') {
@@ -239,10 +278,10 @@ export function updateShot(G, dt) {
       });
       G.traffic.cars.forEach((c, i) => { if (!tHeld.includes(c)) parkFar(c, i); });
       G.traffic.bikes.forEach((c, i) => parkFar(c, i));
-      // v18.2: front 3/4 — the Ultima's long sloping nose + black canopy face
-      // the camera (cover keeps the rear view). Cops chase in behind it.
+      // v18.3: camera CLOSER than v18.2 (was fx*9+rx*4, y 2.7) so the
+      // rebuilt Ultima is LARGE in frame — the user must see the shape.
       G.camOverride = {
-        pos: [car.pos.x + fx * 9 + rx * 4, 2.7, car.pos.z + fz * 9 + rz * 4],
+        pos: [car.pos.x + fx * 6.5 + rx * 3, 2.2, car.pos.z + fz * 6.5 + rz * 3],
         look: [car.pos.x - fx * 2, 1.4, car.pos.z - fz * 2],
       };
       G.playerHeading = car.heading;

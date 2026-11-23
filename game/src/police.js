@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { makeBike, sportWheel, arch } from './vehicles.js';
+import { makeBike, wheel, arch } from './vehicles.js';
 import { makePerson } from './people.js';
 
 const CALLSIGNS = ['KESTREL-39', 'FALCON-12', 'VIPER-07', 'COBRA-21', 'HAVOC-55'];
@@ -18,38 +18,33 @@ function box(w, h, d, material, x, y, z, parent, rx = 0) {
 export function makePoliceCar(G, variant = -1) {
   const g = new THREE.Group();
   const black = std(0x14161c);
-  const white = std(0xf2f2f2, { roughness: 0.4, emissive: 0x8a94a8, emissiveIntensity: 0.25 });
+  const white = std(0xf2f2f2, { roughness: 0.4, emissive: 0xbfc8d8, emissiveIntensity: 0.5 });
   const glass = std(0x14202e, { roughness: 0.12, metalness: 0.65 });
   const dark = std(0x1a1a1a, { roughness: 0.8 });
-  const chrome = std(0xd8d8d8, { metalness: 0.9, roughness: 0.2 });
+  const chrome = std(0xd8d8d8, { metalness: 0.5, roughness: 0.35, emissive: 0x555555, emissiveIntensity: 0.3 });
   const head = std(0xfff2b0, { emissive: 0xffe9a0, emissiveIntensity: 1.4 });
   const tailBar = std(0xd81a1a, { emissive: 0xaa0000, emissiveIntensity: 1.1 });
   const steel = std(0x888888, { metalness: 0.8, roughness: 0.3 });
+  const orange = std(0xff7a1a, { emissive: 0xcc5500, emissiveIntensity: 0.8 });
   const wheels = [];
   const v = variant < 0 ? G.rng.int(0, 1) : variant;
   const P = [
-    [2.2, 0.42, 5.0, 0, 0.52, 0, 0], [2.1, 0.1, 2.0, 0, 0.78, 1.4, 0, 0.12],
-    [1.9, 0.5, 0.06, 0, 0.9, 0.55, 2, 0.45], [1.9, 0.06, 1.4, 0, 1.14, -0.3, 1],
-    [1.8, 0.06, 1.0, 0, 0.92, -1.5, 2, -0.35], [1.9, 0.3, 0.7, 0, 0.68, -2.2, 0],
-    [0.06, 0.42, 1.7, -1.08, 0.7, 0.1, 1], [0.06, 0.42, 1.7, 1.08, 0.7, 0.1, 1],
-    [0.06, 0.4, 1.3, -1.06, 0.95, -0.2, 2], [0.06, 0.4, 1.3, 1.06, 0.95, -0.2, 2],
-    [2.24, 0.12, 4.6, 0, 0.74, 0, 0], [2.0, 0.16, 4.6, 0, 0.26, 0, 3],
-    [2.0, 0.5, 0.14, 0, 0.6, 2.4, 7], [1.0, 0.12, 0.08, 0, 0.5, 2.44, 3],
-    [0.6, 0.12, 0.08, -0.7, 0.62, 2.42, 5], [0.6, 0.12, 0.08, 0.7, 0.62, 2.42, 5],
-    [1.9, 0.18, 0.08, 0, 0.72, -2.42, 6], [1.9, 0.24, 0.28, 0, 0.34, -2.38, 3],
-    [0.065, 0.08, 2.4, -1.07, 0.5, 0.15, 3], [0.065, 0.08, 2.4, 1.07, 0.5, 0.15, 3],
-    [0.05, 0.05, 0.2, -1.06, 0.98, 0.55, 3], [0.05, 0.05, 0.2, 1.06, 0.98, 0.55, 3],
-  ];
-  const M = [black, white, glass, dark, chrome, head, tailBar, steel];
+[2.2,.42,5,0,.52,0,0],[2,.08,1.9,0,.76,1.5,0,.1],[1.95,.25,.8,0,.8,-2.1,0],[.06,.42,1.7,-1.08,.7,.1,1],[.06,.42,1.7,1.08,.7,.1,1],[.06,.55,1.7,-1.06,1.18,-.1,2],[.06,.55,1.7,1.06,1.18,-.1,2],[2.24,.12,4.6,0,.74,0,0],[2,.16,4.6,0,.26,0,3],[1.6,.25,.08,0,.55,2.52,4],[.6,.16,.08,-.7,.62,2.52,5],[.6,.16,.08,.7,.62,2.52,5],[.3,.12,.08,-.98,.55,2.52,8],[.3,.12,.08,.98,.55,2.52,8],[1.7,.28,.12,0,.48,2.5,4],[2,.16,.1,0,.32,2.52,4],[1.9,.18,.08,0,.7,-2.52,6],[1.9,.24,.28,0,.34,-2.38,4],[.065,.08,2.4,-1.07,.5,.15,3],[.065,.08,2.4,1.07,.5,.15,3],[.05,.05,.2,-1.06,.98,.55,3],[.05,.05,.2,1.06,.98,.55,3]];
+  const M = [black, white, glass, dark, chrome, head, tailBar, steel, orange];
   for (const p of P) box(p[0], p[1], p[2], M[p[6]], p[3], p[4], p[5], g, p[7] || 0);
+  const roofY = v === 0 ? 1.42 : 1.54;
   if (v === 0) {
-    // Illinois '90: US flag decal on the hood.
-    box(0.45, 0.03, 0.35, std(0xd83a2a), -0.45, 0.83, 1.55, g, 0.12);
-    box(0.45, 0.03, 0.35, std(0x2a6fd8), 0.45, 0.83, 1.55, g, 0.12);
+    box(1.9, 0.06, 1.05, glass, 0, 1.12, 0.7, g, 0.68);
+    box(1.8, 0.06, 1.1, glass, 0, 1.15, -1.45, g, -0.59);
+    box(2.05, 0.06, 1.4, white, 0, 1.42, -0.3, g);
+    for(const sx of[-1.12,1.12])for(const[dy,c]of[[.07,0xd83a2a],[0,0xf2f2f2],[-.07,0x2a6fd8]])box(.02,.06,.34,std(c),sx,.85+dy,1.15,g);
+    box(1.5, 0.05, 0.05, chrome, 0, 0.6, 2.55, g);
   } else {
-    // Fairheaven '80: white POLICE band on the hood + white roof band.
-    box(1.6, 0.04, 0.7, white, 0, 0.83, 1.6, g, 0.12);
-    box(1.62, 0.04, 1.0, white, 0, 1.19, -0.2, g);
+    box(1.9, 0.06, 0.95, glass, 0, 1.15, 0.78, g, 0.82);
+    box(1.8, 0.06, 0.95, glass, 0, 1.18, -1.65, g, -0.75);
+    box(2.05, 0.06, 1.9, white, 0, 1.54, -0.45, g);
+    box(1.6, 0.04, 0.7, white, 0, 0.8, 1.6, g, 0.12);
+    box(0.04, 0.7, 0.04, chrome, 0.85, 1.5, -1.9, g);
   }
   for (const ex of [-0.35, 0.35]) {
     const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.2, 8), chrome);
@@ -57,16 +52,16 @@ export function makePoliceCar(G, variant = -1) {
     tip.position.set(ex, 0.42, -2.5);
     g.add(tip);
   }
-  const red = box(0.7, 0.22, 0.4, std(0xff2211, { emissive: 0xff2211, emissiveIntensity: 2 }), -0.45, 1.5, -0.2, g);
-  const blue = box(0.7, 0.22, 0.4, std(0x2244ff, { emissive: 0x2244ff, emissiveIntensity: 2 }), 0.45, 1.5, -0.2, g);
-  box(1.7, 0.1, 0.5, std(0x222222), 0, 1.38, -0.2, g);
+  const red = box(0.7, 0.22, 0.4, std(0xff2211, { emissive: 0xff2211, emissiveIntensity: 2 }), -0.45, roofY + 0.13, -0.2, g);
+  const blue = box(0.7, 0.22, 0.4, std(0x2244ff, { emissive: 0x2244ff, emissiveIntensity: 2 }), 0.45, roofY + 0.13, -0.2, g);
+  box(1.7, 0.1, 0.5, std(0x222222), 0, roofY + 0.03, -0.2, g);
   for (const [x, z] of [[-1.02, 1.5], [1.02, 1.5], [-1.02, -1.5], [1.02, -1.5]]) {
-    const w = sportWheel(0.46, 0xffc21c);
-    w.position.set(x, 0.46, z);
+    const w = wheel(0.38);
+    w.position.set(x, 0.38, z);
     g.add(w);
     wheels.push(w);
   }
-  for (const w of wheels) arch(g, w.position.x, w.position.y, w.position.z, w.position.y + 0.12);
+  for (const w of wheels) arch(g, w.position.x, w.position.y, w.position.z, w.position.y + 0.03);
   for (const sx of [-1.11, 1.11]) {
     box(0.02, 0.42, 0.03, dark, sx, 0.72, 0.3, g);
     box(0.02, 0.42, 0.03, dark, sx, 0.72, -0.9, g);
