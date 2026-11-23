@@ -98,7 +98,9 @@ export function stageShot(G, name) {
     // 3D-model reference. Name: showcase-<kind>, kind = sport|muscle|wedge|
     // boxy|stripe|police0|police1.
     const kind = name.slice(9);
-    G.setClock(17);
+    G.setClock(13); // v18.4: bright midday for the diagnostic — at 17:00 the
+    // car's front sat in shadow and the lime read as dark olive, which hid
+    // the shape. Submission shots keep their own clocks.
     G.mode = 'playing';
     G.hud.setMenu(false);
     for (const id of ['hud', 'ebpd', 'missionBanner', 'dialogue', 'title']) {
@@ -126,8 +128,8 @@ export function stageShot(G, name) {
     G.traffic.bikes.forEach((c, i) => parkFar(c, i));
     for (const g of parkedCars(G)) g.visible = false;
     G.camOverride = {
-      pos: [pt.x + fx * 5 + rx * 3, 1.9, pt.z + fz * 5 + rz * 3],
-      look: [pt.x, 0.55, pt.z],
+      pos: [pt.x + fx * 5 + rx * 3, 0.85, pt.z + fz * 5 + rz * 3],
+      look: [pt.x, 0.5, pt.z],
     };
     return;
   }
@@ -238,9 +240,9 @@ export function updateShot(G, dt) {
       const rx = Math.cos(car.heading), rz = -Math.sin(car.heading);
       const flash = Math.sin(G._titleT * 14) > 0;
       G._titleCops.forEach((cop, i) => {
-        const back = 4 + i * 3; // v18.2: BEHIND the car — the front camera looks
-        // back at the Ultima, so the cruisers chase in beyond it, not in front.
-        const side = i === 0 ? 2 : -2;
+        const back = 8 + i * 3.5; // v18.4: FAR behind the car — at back 4 the
+        // cruiser's front overlapped the Ultima's wing/rear in the title shot.
+        const side = i === 0 ? 3 : -3;
         cop.group.position.set(car.pos.x - fx * back + rx * side, 0, car.pos.z - fz * back + rz * side);
         cop.group.rotation.y = car.heading;
         cop.red.material.emissiveIntensity = flash ? 2.4 : 0.25;
