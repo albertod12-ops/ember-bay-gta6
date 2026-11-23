@@ -3,7 +3,8 @@ import { makeCar, makeBike, createDrive } from './vehicles.js';
 import { makePoliceCar, makeHeli } from './police.js';
 import { ROADS, roadPoint, nsCenter, nsHeading, ewCenter, ewHeading } from './city.js';
 const STAGE_ROAD = 3;
-const COVER_ROAD = 3; // downtown: dense towers + billboards read better than the coastal road (ns[0] was tried — flat wall, sparse chase)
+const COVER_ROAD = 0; // Palms Beach (ns[0], z=-70): low pastel beach buildings + palms + ocean-side district read as a different place from downtown (ns[3]); cover and title must not share one street
+const COVER_Z = -70; // Palms Beach stretch
 function parkFar(c, i) {
   const far = (i % 2 === 0 ? -1 : 1) * (380 + (i % 5) * 8);
   if (c.axis === 'ns') {
@@ -89,7 +90,7 @@ export function stageShot(G, name) {
   }
   G.mode = 'playing';
   G.hud.setMenu(false);
-  const pt = roadPoint('ns', G.shot === 'cover' ? COVER_ROAD : STAGE_ROAD, -70, 1);
+  const pt = roadPoint('ns', COVER_ROAD, COVER_Z, 1);
   if (name === 'cover') {
     G.setClock(19.8);
     enterSport(G, pt.x, pt.z, pt.heading, 38);
@@ -250,7 +251,7 @@ export function updateShot(G, dt) {
     if (P.heli) P.heli.group.position.set(pp.x + fx * 24, 24, pp.z + fz * 24);
     return;
   }
-  const road = ROADS.ns[G.shot === 'cover' ? COVER_ROAD : STAGE_ROAD];
+  const road = ROADS.ns[COVER_ROAD];
   if (G.vehicle) {
     G.vehicle.speed = 38;
     const t = nsHeading(road, G.vehicle.pos.z, 1);
