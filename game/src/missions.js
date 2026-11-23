@@ -92,8 +92,6 @@ export function initMissions(G) {
         return;
       }
       if (step.type === 'clear') {
-        // Fresh guards only: clear any crew from a previous attempt so the
-        // count is this mission's own guards, then spawn them ahead of the player.
         G.clearCrew();
         const fx = Math.sin(G.playerHeading), fz = Math.cos(G.playerHeading);
         G.spawnCrew(G.playerPos.x + fx * 10, G.playerPos.z + fz * 10, step.count || 3);

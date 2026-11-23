@@ -28,8 +28,6 @@ export function districtAt(x, z) {
   return { name: 'Ember Bay', type: 'residential' };
 }
 
-// Per-district standing 0-100: beach + downtown crews like you, the docks
-// and the hood do not — yet. +5 when a mission completes in that district.
 export const STANDING = {
   'Old Town': 48, 'Glass Mile': 66, 'Northgate': 52, 'Marina Point': 64,
   'Downtown Core': 62, 'Hillcrest': 55, 'Sunset Row': 58, 'Hoodside': 38,
@@ -347,7 +345,7 @@ function shopfrontTexture(color) {
 function shopMat(color, w = 20) {
   const t = shopfrontTexture(color);
   t.repeat.set(Math.max(1, Math.round(w / 13)), 1);
-  return new THREE.MeshStandardMaterial({ map: t, emissiveMap: t, emissive: 0xffffff, emissiveIntensity: 0.4, roughness: 0.6, metalness: 0.1 });
+  return new THREE.MeshStandardMaterial({ map: t, emissiveMap: t, emissive: 0xffffff, emissiveIntensity: 0.7, roughness: 0.6, metalness: 0.1 });
 }
 
 const MAT = {};
@@ -502,12 +500,12 @@ export function buildCity(G) {
 
   const skyTex = canvasTexture(32, 256, (g, w, h) => {
     const grad = g.createLinearGradient(0, 0, 0, h);
-    grad.addColorStop(0, '#2a1a4e');
-    grad.addColorStop(0.4, '#8a3a55');
-    grad.addColorStop(0.62, '#e06030');
-    grad.addColorStop(0.78, '#ff8a3d');
-    grad.addColorStop(0.9, '#ffb36b');
-    grad.addColorStop(1, '#ffe0a8');
+    grad.addColorStop(0, '#1a1038');
+    grad.addColorStop(0.4, '#4a2060');
+    grad.addColorStop(0.62, '#8a2a6a');
+    grad.addColorStop(0.78, '#c94a6a');
+    grad.addColorStop(0.9, '#ff7a45');
+    grad.addColorStop(1, '#ffb36b');
     g.fillStyle = grad;
     g.fillRect(0, 0, w, h);
   });
@@ -547,7 +545,7 @@ export function buildCity(G) {
     g.fillRect(0, 0, w, h);
   });
   const sunDisc = new THREE.Mesh(new THREE.PlaneGeometry(150, 150), new THREE.MeshBasicMaterial({ map: sunTex, transparent: true, fog: false, depthWrite: false }));
-  sunDisc.position.set(-350, 60, 800);
+  sunDisc.position.set(-350, 8, 800);
   sunDisc.rotation.y = Math.PI;
   root.add(sunDisc);
   for (const [mx, mz, mr, mh] of [[-500, -720, 170, 130], [-100, -780, 200, 160], [300, -720, 160, 120], [720, -300, 180, 140], [720, 300, 160, 110]]) {
@@ -732,7 +730,7 @@ export function buildCity(G) {
     t.repeat.set(Math.max(1, Math.round(w / 13)), Math.max(1, Math.round(h / 13)));
     t.needsUpdate = true;
     return new THREE.MeshStandardMaterial({
-      map: t, emissiveMap: t, emissive: 0xffffff, emissiveIntensity: 0.35,
+      map: t, emissiveMap: t, emissive: 0xffffff, emissiveIntensity: 0.5,
       roughness: 0.4, metalness: 0.35,
     });
   };
@@ -1239,7 +1237,7 @@ export function buildCity(G) {
       const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 9, 6), mat(0x3a3a3a));
       pole.position.set(x, 4.5, z);
       root.add(pole);
-      const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 6), new THREE.MeshStandardMaterial({ color: 0xffe9b0, emissive: 0xffd24d, emissiveIntensity: 0.9 }));
+      const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 6), new THREE.MeshStandardMaterial({ color: 0xffe9b0, emissive: 0xffd24d, emissiveIntensity: 1.6 }));
       lamp.position.set(x, 9.2, z);
       root.add(lamp);
     }
@@ -1251,7 +1249,7 @@ export function buildCity(G) {
       const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 9, 6), mat(0x3a3a3a));
       pole.position.set(x, 4.5, z);
       root.add(pole);
-      const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 6), new THREE.MeshStandardMaterial({ color: 0xffe9b0, emissive: 0xffd24d, emissiveIntensity: 0.9 }));
+      const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 6), new THREE.MeshStandardMaterial({ color: 0xffe9b0, emissive: 0xffd24d, emissiveIntensity: 1.6 }));
       lamp.position.set(x, 9.2, z);
       root.add(lamp);
     }
@@ -1286,6 +1284,28 @@ export function buildCity(G) {
       if (nearCrossing(x, z)) continue;
       if (DIAGONALS.some(([ax, az, bx, bz]) => distToSegment(x, z, ax, az, bx, bz) < 12)) continue;
       makePalm(rng, x, z, root, rng.range(1.15, 1.45), 0xc23a2e, 0.55);
+    }
+  }
+  const VEN = [['EMBER TACOS', '#ff5e2d'], ['HOTEL CORALIE', '#2fd8ff'], ['DUSK CINEMA', '#ff2d95'], ['NOODLE BAR', '#ffd24d']];
+  for (let i = 0; i < 31; i++) for (const s of [-1, 1]) {
+    const z = -400 + i * 26, fx = nsPlain(stageRoad, z) + s * 11.5;
+    if (Math.hypot(fx - RBX, z - RBZ) < 34 || nearCrossing(fx, z) || nearHero(fx, z)) continue;
+    if (s > 0 && i === 25) {
+      box(9, 0.4, 15, mat(0x5a9a4a), fx + 4, 0.2, z, root);
+      makeTree({ pick: (a) => a[0] }, fx + 3, z - 3, root, 1.2);
+      continue;
+    }
+    const q = i + (s + 1) / 2, h = 6 + ((i * 3 + q) % 5) * 2, d = 12 + ((i * 5 + q) % 3) * 2, w = 7 + (i + q) % 2, bx = fx + s * w / 2;
+    const onRd = ROADS.ew.some((e) => Math.abs(z - ewCenter(e, bx, 1)) < 13 || Math.abs(z - ewCenter(e, bx, -1)) < 13)
+      || DIAGONALS.some(([ax, az, ex, ez]) => distToSegment(bx, z, ax, az, ex, ez) < 16)
+      || MINOR_SEGS.some(([ax, az, ex, ez]) => distToSegment(bx, z, ax, az, ex, ez) < 12)
+      || FREEWAY.pts.some((p) => Math.hypot(bx - p.x, z - p.z) < 19);
+    if (onRd) continue;
+    box(w, h, d, towerMat(FACADES[[2, 3, 6, 7][q % 4]], w, h), bx, h / 2 + 0.4, z, root).castShadow = true;
+    box(w + 0.6, 4, d + 0.6, shopMat(['#1c4a6a', '#6a1c3a', '#2a5a3a'][q % 3], w), bx, 2.4, z, root);
+    if (q % 7 === 3) {
+      const sg = new THREE.Mesh(new THREE.PlaneGeometry(6, 1.5), new THREE.MeshBasicMaterial({ map: neonTexture(VEN[q % 4][0], VEN[q % 4][1]) }));
+      sg.position.set(fx - s * 0.4, 5.6, z); sg.rotation.y = -s * Math.PI / 2; root.add(sg);
     }
   }
   const parkedColors = [0x2a6fd8, 0xd83a2a, 0xcccccc, 0x222831, 0xff6a00, 0x2fd05a, 0xe8b820, 0x8a6fd8];
@@ -1353,22 +1373,6 @@ export function buildCity(G) {
     g.rotation.y = 0;
     g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
     root.add(g);
-  }
-  const NEON_EXTRA = [
-    ['EMBER TACOS', '#ff5e2d', -190, 8],
-    ['HOTEL CORALIE', '#2fd8ff', 190, 8],
-  ];
-  for (const [text, color, z, y] of NEON_EXTRA) {
-    const sx = nsPlain(ROADS.ns[3], z) + 10;
-    const sign = new THREE.Mesh(
-      new THREE.PlaneGeometry(13, 3.2),
-      new THREE.MeshBasicMaterial({ map: neonTexture(text, color) }),
-    );
-    sign.position.set(sx, y, z);
-    sign.rotation.y = -Math.PI / 2;
-    root.add(sign);
-    const back = box(13.4, 3.6, 0.3, mat(0x0a0614), sx + 0.2, y, z, root);
-    back.rotation.y = -Math.PI / 2;
   }
   const pier = new THREE.Group();
   const deckMat = mat(0x8a6a42, { roughness: 0.9 });

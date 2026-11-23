@@ -16,7 +16,7 @@ const params = new URLSearchParams(location.search);
 const seed = parseInt(params.get('seed') || '1', 10) || 1;
 const shotName = params.get('shot');
 const rng = makeRng((seed ^ hashStr('ember-bay')) >>> 0);
-const SAVE_KEY = 'ember-bay-v5'; // legacy single-slot key, read once for migration
+const SAVE_KEY = 'ember-bay-v5';
 const SLOTS_KEY = 'ember-bay-v5-slots';
 const ACTIVE_KEY = 'ember-bay-v5-active';
 function loadSlots() {
@@ -26,16 +26,16 @@ function loadSlots() {
     const leg = localStorage.getItem(SAVE_KEY);
     if (leg) {
       const s = JSON.parse(leg);
-      return [{ ...s, respect: 0, standing: null, clock: 17.75, savedAt: Date.now(), chapter: (s.missionsDone?.length || 0) + 1 }, null, null];
+      return [{ ...s, respect: 0, standing: null, clock: 19.8, savedAt: Date.now(), chapter: (s.missionsDone?.length || 0) + 1 }, null, null];
     }
-  } catch { /* storage unavailable — play fresh */ }
+  } catch {}
   return [null, null, null];
 }
 function loadActive(slots) {
   try {
     const a = Number(localStorage.getItem(ACTIVE_KEY));
     if (a >= 0 && a < 3 && slots[a]) return a;
-  } catch { /* ignore */ }
+  } catch {}
   let best = -1, bestT = -1;
   slots.forEach((s, i) => { if (s && (s.savedAt || 0) > bestT) { bestT = s.savedAt || 0; best = i; } });
   return best >= 0 ? best : 0;
@@ -51,7 +51,7 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.domElement.classList.add('webgl');
 document.getElementById('app').appendChild(renderer.domElement);
 const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0xe07a45, 320, 1300);
+scene.fog = new THREE.Fog(0x241a3e, 320, 1300);
 const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 4000);
 const hemi = new THREE.HemisphereLight(0xffd9a0, 0x4a3a55, 0.7);
 const sun = new THREE.DirectionalLight(0xff8a3d, 1.9);
@@ -65,7 +65,7 @@ sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.5;
 scene.add(hemi, sun, sun.target);
 const G = {
   scene, camera, renderer, rng, seed,
-  time: 0, clock: 17.75, day: 1,
+  time: 0, clock: 19.8, day: 1,
   money: 500, health: 100, armour: 50, respect: 0,
   weaponIdx: 1, mode: 'menu',
   vehicle: null, parked: [], camOverride: null, shot: null,
@@ -83,7 +83,7 @@ const G = {
 };
 if (G.save) {
   G.money = G.save.money ?? 500; G.day = G.save.day ?? 1;
-  G.respect = G.save.respect ?? 0; G.clock = G.save.clock ?? 17.75;
+  G.respect = G.save.respect ?? 0; G.clock = G.save.clock ?? 19.8;
 }
 G.setClock = (h) => {
   G.clock = ((h % 24) + 24) % 24;
@@ -92,9 +92,9 @@ G.setClock = (h) => {
   if (night) {
     sun.position.set(300, 400, -200);
     sun.intensity = 0.35; sun.color.setHex(0x8aa0ff);
-    hemi.intensity = 0.35;
-    scene.fog.color.setHex(0x14142e); scene.fog.near = 200; scene.fog.far = 900;
-    if (G.city?.sky) G.city.sky.material.color.setHex(0x35355e);
+    hemi.intensity = 0.5;
+    scene.fog.color.setHex(0x241a3e); scene.fog.near = 200; scene.fog.far = 1100;
+    if (G.city?.sky) G.city.sky.material.color.setHex(0x4a2a6e);
   } else if (sunset) {
     sun.position.set(-850, 130, 320);
     sun.intensity = 1.9; sun.color.setHex(0xff8a3d);
@@ -121,11 +121,11 @@ G.saveGame = () => {
     };
     localStorage.setItem(SLOTS_KEY, JSON.stringify(SLOTS));
     localStorage.setItem(ACTIVE_KEY, String(G.slot));
-  } catch { /* storage unavailable — play on without saving */ }
+  } catch {}
 };
 G.slotInfo = () => SLOTS.map((s, i) => (s ? {
   slot: i, chapter: s.chapter || 1, money: s.money, day: s.day,
-  missions: (s.missionsDone || []).length, clock: s.clock ?? 17.75, savedAt: s.savedAt || 0,
+  missions: (s.missionsDone || []).length, clock: s.clock ?? 19.8, savedAt: s.savedAt || 0,
 } : { slot: i, empty: true }));
 // Rank on the display value round(respect*13), max ~1300: the top two ranks
 // (FIXER 1500+, SHOT CALLER 3000+) are unreachable at respect 100 — the
@@ -402,8 +402,6 @@ if (G.save) {
 document.getElementById('btnStart').addEventListener('click', () => G.startGame());
 document.getElementById('btnContinue').addEventListener('click', () => G.startGame());
 document.getElementById('btnNew').addEventListener('click', () => {
-  // Fresh game in the first empty slot; if all three are full, the oldest
-  // slot (by savedAt) is overwritten.
   try {
     const slots = G.slotInfo();
     let target = slots.findIndex((s) => s.empty);
@@ -415,7 +413,7 @@ document.getElementById('btnNew').addEventListener('click', () => {
     SLOTS[target] = null;
     localStorage.setItem(SLOTS_KEY, JSON.stringify(SLOTS));
     localStorage.setItem(ACTIVE_KEY, String(target));
-  } catch { /* ignore */ }
+  } catch {}
   location.reload();
 });
 // Title-screen save slots: occupied loads that slot (reload + auto-start),
@@ -437,7 +435,7 @@ document.getElementById('btnNew').addEventListener('click', () => {
           localStorage.setItem(SLOTS_KEY, JSON.stringify(SLOTS));
         }
         sessionStorage.setItem('ember-autostart', '1');
-      } catch { /* ignore */ }
+      } catch {}
       location.reload();
     });
     list.appendChild(row);
@@ -584,6 +582,6 @@ else {
       sessionStorage.removeItem('ember-autostart');
       G.startGame();
     }
-  } catch { /* ignore */ }
+  } catch {}
 }
 loop();
