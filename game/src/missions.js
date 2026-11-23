@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { makeCar, makeBike } from './vehicles.js';
+import { districtAt } from './city.js';
 
 export const DIALOGUE = {
   1: { name: 'MARA VOSS', role: 'FIXER', line: 'Package goes to Port Ember. No stops, no questions — and don\'t scratch the paint.', who: 'mara' },
@@ -32,8 +33,11 @@ const DEFS = [
     steps: [{ type: 'survive', seconds: 45, label: 'Stay hot — survive 45s at 3 stars' }] },
   { id: 6, name: 'Harbor Lights', payout: 750, desc: 'Chase the courier bike through Craneside',
     steps: [{ type: 'chase', label: 'Stay on the courier bike' }] },
-  { id: 7, name: 'Harbor Showdown', payout: 1200, desc: 'Ram Vic Torres and his crew car 3 times',
-    steps: [{ type: 'boss', label: 'Ram the crew car — 0/3 hits' }] },
+  { id: 7, name: 'Harbor Showdown', payout: 1200, desc: 'Take out Vic\'s guards, then ram his crew car 3 times',
+    steps: [
+      { type: 'clear', count: 3, label: "Take out Vic's guards (0/3)" },
+      { type: 'boss', label: 'Ram the crew car — 0/3 hits' },
+    ] },
   { id: 8, name: 'Midnight Run', payout: 800, desc: 'Night delivery: Northgate, then Coral Row, before dawn',
     steps: [
       { type: 'goto', pos: [350, -350], label: 'Night drop at Northgate' },
@@ -70,6 +74,7 @@ export function initMissions(G) {
       };
       if (def.id === 5) G.police.setWanted(Math.max(G.police.wanted, 3));
       if (def.id === 8) G.setClock(23.5);
+      G.clearCrew();
       G.hud.showMission(`${def.name} — ${def.desc}`);
       const dlg = DIALOGUE[def.id];
       if (dlg && G.hud.dialogue) G.hud.dialogue(dlg.name, dlg.role, dlg.line, dlg.who);
@@ -84,6 +89,15 @@ export function initMissions(G) {
       const step = a.def.steps[a.stepIdx];
       if (step.type === 'drift') {
         G.hud.showMission(`${a.def.name} — Drift for the crowd — 0/${step.target} pts`);
+        return;
+      }
+      if (step.type === 'clear') {
+        // Fresh guards only: clear any crew from a previous attempt so the
+        // count is this mission's own guards, then spawn them ahead of the player.
+        G.clearCrew();
+        const fx = Math.sin(G.playerHeading), fz = Math.cos(G.playerHeading);
+        G.spawnCrew(G.playerPos.x + fx * 10, G.playerPos.z + fz * 10, step.count || 3);
+        G.hud.showMission(`${a.def.name} — ${step.label}`);
         return;
       }
       let pos = null;
@@ -142,10 +156,13 @@ export function initMissions(G) {
       G.money += a.def.payout;
       G.respect = Math.min(100, G.respect + 12);
       M.done.add(a.def.id);
+      const d = districtAt(G.playerPos.x, G.playerPos.z);
+      if (G.standing[d.name] != null) G.standing[d.name] = Math.min(100, G.standing[d.name] + 5);
       G.toast(`${a.def.name} complete — +$${a.def.payout}`);
       G.hud.showMission(`${a.def.name} complete — +$${a.def.payout}`);
       G.saveGame();
       M.clearMarker();
+      G.clearCrew();
       M.active = null;
     },
     failMission(why) {
@@ -154,6 +171,7 @@ export function initMissions(G) {
       G.toast(`Mission failed: ${why}`);
       G.hud.showMission('');
       M.clearMarker();
+      G.clearCrew();
       M.active = null;
     },
     banner() {
@@ -171,6 +189,9 @@ export function initMissions(G) {
         objective = `Stay hot — survive ${timer}s at 3 stars`;
       } else if (step.type === 'collect') {
         objective = `${step.label.split('(')[0]}(${a.collected}/3)`;
+      } else if (step.type === 'clear') {
+        const down = G.crew.filter((c) => c.down).length;
+        objective = `${step.label.split('(')[0]}(${down}/${step.count || 3})`;
       } else if (step.type === 'boss') {
         objective = `Ram the crew car — ${a.hits}/3 hits`;
       } else if (step.type === 'chase') {
@@ -189,7 +210,11 @@ export function initMissions(G) {
       if (!a) return;
       const step = a.def.steps[a.stepIdx];
       const pp = G.playerPos;
-      if (step.type === 'drift') {
+      if (step.type === 'clear') {
+        const down = G.crew.filter((c) => c.down).length;
+        G.hud.showMission(`${a.def.name} — ${step.label.split('(')[0]}(${down}/${step.count || 3})`);
+        if (down >= (step.count || 3)) M.completeStep();
+      } else if (step.type === 'drift') {
         const banked = (G.driftBanked || 0) - (a.driftBase || 0);
         const live = G.vehicle && G.vehicle.drift ? Math.round(G.vehicle.drift.points * G.vehicle.drift.combo) : 0;
         const total = banked + live;

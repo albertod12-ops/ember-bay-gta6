@@ -1,4 +1,4 @@
-import { ROADS, DIAGONALS, ROUNDABOUT, MINOR_SEGS, FREEWAY, GOLF_RECT, STADIUM, RAIL_X, nsPlain, ewPlain, crossing, districtAt } from './city.js';
+import { ROADS, DIAGONALS, ROUNDABOUT, MINOR_SEGS, FREEWAY, GOLF_RECT, STADIUM, RAIL_X, nsPlain, ewPlain, crossing, districtAt, standingLabel } from './city.js';
 
 const WEAPONS = [
   { key: '1', name: 'FISTS', mag: '∞', lock: 0 },
@@ -101,6 +101,7 @@ export function initHud(G) {
     weapons: $('weapons'), minimap: $('minimap'), district: $('district'), tapes: $('tapes'),
     healthBar: $('healthBar'), armourBar: $('armourBar'), respectBar: $('respectBar'),
     healthTxt: $('healthTxt'), armourTxt: $('armourTxt'), respectTxt: $('respectTxt'), respectLvl: $('respectLvl'),
+    rankLine: $('rankLine'), crewChips: $('crewChips'),
     radioStation: $('radioStation'), radioSong: $('radioSong'),
     carPanel: $('carPanel'), carName: $('carName'), carCondFill: $('carCondFill'), carCondTxt: $('carCondTxt'),
     carSpeed: $('carSpeed'), carGear: $('carGear'),
@@ -110,6 +111,7 @@ export function initHud(G) {
     title: $('title'), crewRow: $('crewRow'),
     mapOverlay: $('mapOverlay'), mapCanvas: $('mapCanvas'), mapStoryList: $('mapStoryList'),
     mapJob: $('mapJob'), mapLegend: $('mapLegend'), mapStats: $('mapStats'),
+    mapProgress: $('mapProgress'), mapRank: $('mapRank'), mapCareer: $('mapCareer'), mapSlots: $('mapSlots'),
   };
   const mm = el.minimap.getContext('2d');
   const mapCtx = el.mapCanvas.getContext('2d');
@@ -129,6 +131,29 @@ export function initHud(G) {
     d.append(cv, nm, rl);
     el.crewRow.appendChild(d);
   }
+
+  // Crew ability chips under the weapons panel: portrait + key + name,
+  // dimmed with seconds while on cooldown.
+  const ABILITIES = [
+    { key: 'Z', who: 'mara', name: 'MARA', ab: 'HOT TIP', cd: () => G.abilities.hotTip.cd },
+    { key: 'X', who: 'deke', name: 'DEKE', ab: 'NITRO', cd: () => G.abilities.nitro.cd },
+    { key: 'C', who: 'rosa', name: 'ROSA', ab: 'EYES OUT', cd: () => G.abilities.eyesOut.cd },
+  ];
+  const chipEls = ABILITIES.map((a) => {
+    const d = document.createElement('div');
+    d.className = 'chip';
+    const cv = document.createElement('canvas');
+    cv.width = 28; cv.height = 28;
+    drawPortrait(cv, a.who);
+    const tx = document.createElement('div');
+    tx.className = 'ctx';
+    tx.innerHTML = `<b>${a.key} · ${a.name}</b><span>${a.ab}</span>`;
+    const st = document.createElement('i');
+    st.textContent = 'READY';
+    d.append(cv, tx, st);
+    el.crewChips.appendChild(d);
+    return { d, st, cd: a.cd };
+  });
 
   const H = {
     showMission() { /* banner is driven by missions.banner() in update() */ },
@@ -194,11 +219,47 @@ export function initHud(G) {
       ];
       el.mapLegend.innerHTML = legend.map(([c, s, t]) => `<div><span style="color:${c}">${s}</span> ${t}</div>`).join('');
       const lvl = 1 + Math.floor(G.respect / 20);
+      const r = G.rankInfo();
       el.mapStats.innerHTML =
         `Cash <span class="stat"><b>$${G.money}</b></span><br>` +
         `Respect level <span class="stat"><b>${lvl}</b></span><br>` +
+        `Rank <span class="stat"><b>${r.name}</b></span> (${r.disp}/${r.next ?? 'MAX'})<br>` +
         `Sunset Tapes <span class="stat"><b>${G.tapesFound} / 20</b></span><br>` +
         `Properties <span class="stat"><b>0 / 2</b></span>`;
+      // PROGRESS: completion % = mean of story, tapes and FRIENDLY districts.
+      // Properties and drift are tracked below but not counted — properties
+      // cannot be bought yet, so counting them would cap completion at 75%.
+      const friendly = Object.values(G.standing).filter((v) => v >= 70).length;
+      const pct = Math.round(100 * ((M.done.size / 8) + (G.tapesFound / 20) + (friendly / 14)) / 3);
+      const bar = (label, have, total, suffix = '') => {
+        const w = Math.min(100, Math.round((have / total) * 100));
+        return `<div class="prow">${label} <b>${have}/${total}${suffix}</b><div class="pbar"><i style="width:${w}%"></i></div></div>`;
+      };
+      el.mapProgress.innerHTML = `<h2>PROGRESS — ${pct}% COMPLETE</h2>` +
+        bar('Story missions', M.done.size, 8) +
+        bar('Sunset Tapes', G.tapesFound, 20) +
+        bar('Districts FRIENDLY', friendly, 14) +
+        bar('Properties', 0, 2) +
+        `<div class="prow">Drift banked <b>$${G.driftBanked || 0}</b></div>`;
+      el.mapRank.innerHTML = `<h2>RANK</h2>` +
+        `<div class="rname">RANK ${r.lvl} · ${r.name}</div>` +
+        (r.next
+          ? `<div>${r.disp} / ${r.next} RP · NEXT ${r.nextName}</div><div>Unlocks ${r.unlock}</div>`
+          : `<div>TOP RANK · ${r.disp} RP · ${r.unlock}</div>`);
+      const st = G.stats;
+      el.mapCareer.innerHTML = `<h2>CAREER</h2>` +
+        `Cars stolen <span class="stat"><b>${st.carsStolen}</b></span><br>` +
+        `Cops escaped <span class="stat"><b>${st.copsEscaped}</b></span><br>` +
+        `Distance driven <span class="stat"><b>${(st.distanceDriven / 1000).toFixed(1)} km</b></span><br>` +
+        `People taken out <span class="stat"><b>${st.takenOut}</b></span><br>` +
+        `Longest drift <span class="stat"><b>$${st.longestDrift}</b></span>`;
+      const fmtClock = (h) => `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.floor((h % 1) * 60)).padStart(2, '0')}`;
+      el.mapSlots.innerHTML = `<h2>SAVE SLOTS</h2>` + G.slotInfo().map((s) => s.empty
+        ? `<div class="slot">SLOT ${s.slot + 1} · EMPTY</div>`
+        : `<div class="slot${s.slot === G.slot ? ' cur' : ''}">${s.slot === G.slot ? '● ' : ''}SLOT ${s.slot + 1} · Ch.${s.chapter} · $${s.money} · Day ${s.day} · ${s.missions}/8 · ${fmtClock(s.clock)}</div>`).join('') +
+        `<button id="mapSaveBtn">SAVE — SLOT ${G.slot + 1}</button>`;
+      const saveBtn = document.getElementById('mapSaveBtn');
+      if (saveBtn) saveBtn.addEventListener('click', () => { G.saveGame(); H.renderMap(); });
       H.drawMap();
     },
     drawMap() {
@@ -371,6 +432,20 @@ export function initHud(G) {
       }
       c.restore();
       c.textAlign = 'center'; c.textBaseline = 'middle';
+      const stFor = (n) => {
+        const k = Object.keys(G.standing).find((kk) => kk.toUpperCase() === n);
+        return k != null ? G.standing[k] : null;
+      };
+      const stLine = (x, y, name) => {
+        const st = stFor(name);
+        if (st == null) return;
+        c.font = 'bold 10px Verdana';
+        c.lineWidth = 3; c.strokeStyle = '#111111';
+        const txt = `${standingLabel(st)} · ${st}`;
+        c.strokeText(txt, x, y);
+        c.fillStyle = st >= 70 ? '#7dff5e' : st >= 40 ? '#ffd24d' : '#ff5a3d';
+        c.fillText(txt, x, y);
+      };
       const dlabel = (x, z, name, size = 13) => {
         const [mx, mz] = toMap(x, z);
         c.font = `bold ${size}px Verdana`;
@@ -378,6 +453,7 @@ export function initHud(G) {
         c.strokeText(name, mx, mz);
         c.fillStyle = '#ffffff';
         c.fillText(name, mx, mz);
+        stLine(mx, mz + 14, name);
       };
       dlabel(-240, -330, 'OLD TOWN');
       dlabel(40, -320, 'GLASS MILE');
@@ -399,6 +475,7 @@ export function initHud(G) {
         c.strokeText(name, 0, 0);
         c.fillStyle = '#ffffff';
         c.fillText(name, 0, 0);
+        stLine(0, 14, name);
         c.restore();
       };
       vlabel(-420, -230, 'PALMS BEACH');
@@ -521,9 +598,17 @@ export function initHud(G) {
       el.respectBar.firstElementChild.style.width = `${G.respect}%`;
       el.healthTxt.textContent = Math.round(G.health);
       el.armourTxt.textContent = Math.round(G.armour);
-      const lvl = 1 + Math.floor(G.respect / 20);
-      el.respectLvl.textContent = lvl;
-      el.respectTxt.textContent = `${Math.round(G.respect * 13)} / 1300`;
+      const r = G.rankInfo();
+      el.respectLvl.textContent = r.lvl;
+      el.respectTxt.textContent = `${r.disp} / ${r.next ?? 'MAX'}`;
+      el.rankLine.textContent = r.next
+        ? `RANK ${r.lvl} · ${r.name} — NEXT ${r.nextName} · unlocks ${r.unlock}`
+        : `RANK ${r.lvl} · ${r.name} · TOP RANK — ${r.unlock}`;
+      for (const ch of chipEls) {
+        const cd = ch.cd();
+        ch.st.textContent = cd > 0 ? `${Math.ceil(cd)}s` : 'READY';
+        ch.d.classList.toggle('cool', cd > 0);
+      }
       el.tapes.textContent = `Sunset Tapes ${G.tapesFound}/20`;
       el.radioStation.textContent = station.name;
       el.radioSong.textContent = station.song;
@@ -568,6 +653,7 @@ export function initHud(G) {
         el.ebpd.innerHTML = `<b>🚨 EBPD RESPONSE</b> — ${rows.length} UNIT${rows.length > 1 ? 'S' : ''}, CODE ${G.police.wanted}<br>` +
           shown.map((r) => `<div class="unit">${r.callsign} · ${r.dist}m · <b class="${cls[r.status] || 'pur'}">${r.status}</b></div>`).join('') +
           (rows.length > 5 ? `<div>+${rows.length - 5} more units in the search zone</div>` : '') +
+          (G.police.wanted > 0 ? `<div class="wstate">${G.police.inSight ? 'IN SIGHT — EBPD has eyes on you' : 'SEARCHING — lose them to clear the heat'}</div>` : '') +
           (G.police.wanted > 0 ? `<div>Lose them — EVADING ${Math.round(G.police.evading)}%</div>` : '');
       } else {
         el.ebpd.classList.add('hidden');
@@ -623,13 +709,20 @@ export function initHud(G) {
       }
       mm.fillStyle = '#6ec6ff';
       for (const u of G.police.units) {
+        // Units only show when close, unless ROSA's EYES OUT is revealing them.
+        if (G.revealT <= 0 && Math.hypot(u.pos.x - G.playerPos.x, u.pos.z - G.playerPos.z) > 120) continue;
         const [ux, uz] = toMap(u.pos.x, u.pos.z);
         mm.beginPath(); mm.arc(ux, uz, 3, 0, Math.PI * 2); mm.fill();
       }
-      if (G.police.heli) {
+      if (G.police.heli && (G.revealT > 0 || Math.hypot(G.police.heli.group.position.x - G.playerPos.x, G.police.heli.group.position.z - G.playerPos.z) <= 120)) {
         const [hx, hz] = toMap(G.police.heli.group.position.x, G.police.heli.group.position.z);
         mm.fillStyle = '#ffffff';
         mm.beginPath(); mm.arc(hx, hz, 3.5, 0, Math.PI * 2); mm.fill();
+      }
+      if (G.tapeMark) {
+        const [tx, tz] = toMap(G.tapeMark.x, G.tapeMark.z);
+        mm.fillStyle = '#ff6fa5';
+        mm.beginPath(); mm.moveTo(tx, tz - 6); mm.lineTo(tx + 5, tz); mm.lineTo(tx, tz + 6); mm.lineTo(tx - 5, tz); mm.closePath(); mm.fill();
       }
       const [px, pz] = toMap(G.playerPos.x, G.playerPos.z);
       mm.save();
@@ -641,7 +734,8 @@ export function initHud(G) {
       mm.fillStyle = '#fff'; mm.font = 'bold 11px Verdana'; mm.textAlign = 'center';
       mm.fillText('N', S / 2, 12);
       const dist = districtAt(G.playerPos.x, G.playerPos.z);
-      el.district.textContent = dist.name;
+      const dst = G.standing[dist.name];
+      el.district.textContent = dst != null ? `${dist.name} · ${standingLabel(dst)} ${dst}` : dist.name;
       if (G.mapOpen) H.drawMap();
     },
   };

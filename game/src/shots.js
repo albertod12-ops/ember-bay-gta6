@@ -3,6 +3,7 @@ import { makeCar, makeBike, createDrive } from './vehicles.js';
 import { makePoliceCar, makeHeli } from './police.js';
 import { ROADS, roadPoint, nsCenter, nsHeading, ewCenter, ewHeading } from './city.js';
 const STAGE_ROAD = 3;
+const COVER_ROAD = 3; // downtown: dense towers + billboards read better than the coastal road (ns[0] was tried — flat wall, sparse chase)
 function parkFar(c, i) {
   const far = (i % 2 === 0 ? -1 : 1) * (380 + (i % 5) * 8);
   if (c.axis === 'ns') {
@@ -88,11 +89,12 @@ export function stageShot(G, name) {
   }
   G.mode = 'playing';
   G.hud.setMenu(false);
-  const pt = roadPoint('ns', STAGE_ROAD, -30, 1);
+  const pt = roadPoint('ns', G.shot === 'cover' ? COVER_ROAD : STAGE_ROAD, -30, 1);
   if (name === 'cover') {
     G.setClock(17.75);
     enterSport(G, pt.x, pt.z, pt.heading, 38);
-    G.police.setWanted(3);
+    G.missions.startId(5);
+    G.hud.dialogue('MARA VOSS', 'FIXER', 'Three stars and counting. Stay hot for 45 seconds and they\'ll know your name.', 'mara', true);
   } else if (name === 'combat') {
     G.setClock(21.7);
     const cpt = roadPoint('ns', STAGE_ROAD, -30, -1);
@@ -101,8 +103,7 @@ export function stageShot(G, name) {
     G.playerHeading = cpt.heading;
     const fx = Math.sin(cpt.heading), fz = Math.cos(cpt.heading);
     const rx = Math.cos(cpt.heading), rz = -Math.sin(cpt.heading);
-    G.spawnCrew(cpt.x + fx * 10, cpt.z + fz * 10, 3);
-    G.missions.startId(7);
+    G.missions.startId(7); // step 1/2 spawns Vic's guards ahead of the player
     G.police.setWanted(4);
     G.hud.dialogue('VIC TORRES', 'CREW BOSS', 'You walked into the wrong street, kid. Boys — take him down.', 'vic', true);
     G._shotTimer = 1.35;
@@ -208,7 +209,7 @@ export function updateShot(G, dt) {
       m.position.set(pp.x + fx * 1.4, 1.35, pp.z + fz * 1.4);
       const on = G._shotTimer < 0.6;
       m.visible = on;
-      if (on) { const sc = 1.9 - G._shotTimer * 1.6; m.scale.set(sc, sc, 1); }
+      if (on) { const sc = 1.0 - G._shotTimer * 0.7; m.scale.set(sc, sc, 1); }
     }
     const rx = Math.cos(ph), rz = -Math.sin(ph);
     const holdTraffic = (car, fwd, side) => {
@@ -249,7 +250,7 @@ export function updateShot(G, dt) {
     if (P.heli) P.heli.group.position.set(pp.x + fx * 24, 24, pp.z + fz * 24);
     return;
   }
-  const road = ROADS.ns[STAGE_ROAD];
+  const road = ROADS.ns[G.shot === 'cover' ? COVER_ROAD : STAGE_ROAD];
   if (G.vehicle) {
     G.vehicle.speed = 38;
     const t = nsHeading(road, G.vehicle.pos.z, 1);

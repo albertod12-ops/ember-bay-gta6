@@ -32,7 +32,7 @@ export function createPlayer(G) {
       if (input.l) mx -= 1;
       if (input.r) mx += 1;
       const moving = mx !== 0 || mz !== 0;
-      const top = input.run ? 11 : 6.5;
+      const top = (input.run ? 11 : 6.5) * (G.nitroT > 0 ? 1.4 : 1);
       if (moving) {
         const len = Math.hypot(mx, mz);
         mx /= len; mz /= len;

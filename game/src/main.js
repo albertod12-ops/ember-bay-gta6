@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { makeRng, hashStr } from './rng.js';
-import { buildCity, districtAt, roadPoint } from './city.js';
+import { buildCity, districtAt, roadPoint, STANDING } from './city.js';
 import { createPlayer } from './player.js';
 import { makeCar, makeBike, createDrive } from './vehicles.js';
 import { initTraffic } from './traffic.js';
@@ -16,11 +16,33 @@ const params = new URLSearchParams(location.search);
 const seed = parseInt(params.get('seed') || '1', 10) || 1;
 const shotName = params.get('shot');
 const rng = makeRng((seed ^ hashStr('ember-bay')) >>> 0);
-const SAVE_KEY = 'ember-bay-v5';
-function loadSave() {
-  try { const raw = localStorage.getItem(SAVE_KEY); return raw ? JSON.parse(raw) : null; }
-  catch { return null; }
+const SAVE_KEY = 'ember-bay-v5'; // legacy single-slot key, read once for migration
+const SLOTS_KEY = 'ember-bay-v5-slots';
+const ACTIVE_KEY = 'ember-bay-v5-active';
+function loadSlots() {
+  try {
+    const raw = localStorage.getItem(SLOTS_KEY);
+    if (raw) { const a = JSON.parse(raw); if (Array.isArray(a) && a.length === 3) return a; }
+    const leg = localStorage.getItem(SAVE_KEY);
+    if (leg) {
+      const s = JSON.parse(leg);
+      return [{ ...s, respect: 0, standing: null, clock: 17.75, savedAt: Date.now(), chapter: (s.missionsDone?.length || 0) + 1 }, null, null];
+    }
+  } catch { /* storage unavailable — play fresh */ }
+  return [null, null, null];
 }
+function loadActive(slots) {
+  try {
+    const a = Number(localStorage.getItem(ACTIVE_KEY));
+    if (a >= 0 && a < 3 && slots[a]) return a;
+  } catch { /* ignore */ }
+  let best = -1, bestT = -1;
+  slots.forEach((s, i) => { if (s && (s.savedAt || 0) > bestT) { bestT = s.savedAt || 0; best = i; } });
+  return best >= 0 ? best : 0;
+}
+const SLOTS = loadSlots();
+const G_SLOT = loadActive(SLOTS);
+function loadSave() { return SLOTS[G_SLOT] || null; }
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -53,8 +75,16 @@ const G = {
   ammo: { 1: [12, 60], 2: [32, 160], 3: [30, 120], 4: [8, 24] },
   mapOpen: false, camClassic: false, soundOn: true,
   crew: [],
+  slot: G_SLOT,
+  standing: { ...STANDING, ...(loadSave()?.standing || {}) },
+  stats: { carsStolen: 0, copsEscaped: 0, distanceDriven: 0, takenOut: 0, longestDrift: 0 },
+  abilities: { hotTip: { cd: 0, max: 30 }, nitro: { cd: 0, max: 20 }, eyesOut: { cd: 0, max: 45 } },
+  nitroT: 0, revealT: 0, tapeMark: null,
 };
-if (G.save) { G.money = G.save.money ?? 500; G.day = G.save.day ?? 1; }
+if (G.save) {
+  G.money = G.save.money ?? 500; G.day = G.save.day ?? 1;
+  G.respect = G.save.respect ?? 0; G.clock = G.save.clock ?? 17.75;
+}
 G.setClock = (h) => {
   G.clock = ((h % 24) + 24) % 24;
   const night = G.clock >= 19.5 || G.clock < 6;
@@ -82,12 +112,63 @@ G.setClock = (h) => {
 G.toast = (t) => { if (G.hud) G.hud.toast(t); };
 G.saveGame = () => {
   try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify({
+    SLOTS[G.slot] = {
       money: G.money, day: G.day,
       missionsDone: G.missions ? [...G.missions.done] : [],
       tapesFound: G.tapes ? [...G.tapes.found] : [],
-    }));
+      respect: G.respect, standing: { ...G.standing }, clock: G.clock,
+      savedAt: Date.now(), chapter: (G.missions ? G.missions.done.size : 0) + 1,
+    };
+    localStorage.setItem(SLOTS_KEY, JSON.stringify(SLOTS));
+    localStorage.setItem(ACTIVE_KEY, String(G.slot));
   } catch { /* storage unavailable — play on without saving */ }
+};
+G.slotInfo = () => SLOTS.map((s, i) => (s ? {
+  slot: i, chapter: s.chapter || 1, money: s.money, day: s.day,
+  missions: (s.missionsDone || []).length, clock: s.clock ?? 17.75, savedAt: s.savedAt || 0,
+} : { slot: i, empty: true }));
+// Rank on the display value round(respect*13), max ~1300: the top two ranks
+// (FIXER 1500+, SHOT CALLER 3000+) are unreachable at respect 100 — the
+// bar is shown honestly, it just cannot be reached yet.
+const RANKS = [[300, 'ROOKIE'], [750, 'RUNNER'], [1500, 'WHEELMAN'], [3000, 'FIXER'], [Infinity, 'SHOT CALLER']];
+const WUNLOCK = [[260, 'SMG'], [520, 'RIFLE'], [780, 'SHOTGUN']];
+G.rankInfo = () => {
+  const disp = Math.round(G.respect * 13);
+  let i = 0;
+  while (disp >= RANKS[i][0]) i++;
+  const nextW = WUNLOCK.find(([t]) => disp < t);
+  return {
+    lvl: 1 + Math.floor(G.respect / 20), name: RANKS[i][1], disp,
+    next: RANKS[i][0] === Infinity ? null : RANKS[i][0],
+    nextName: i + 1 < RANKS.length ? RANKS[i + 1][1] : null,
+    unlock: nextW ? `${nextW[1]} at ${nextW[0]}` : 'all weapons unlocked',
+  };
+};
+G.useAbility = (key) => {
+  if (G.mode !== 'playing' || G.mapOpen) return false;
+  const a = G.abilities[key];
+  if (!a || a.cd > 0) return false;
+  if (key === 'hotTip') {
+    let best = null, bd = 1e9;
+    for (const t of G.tapes.items) {
+      const d = Math.hypot(t.x - G.playerPos.x, t.z - G.playerPos.z);
+      if (d < bd) { bd = d; best = t; }
+    }
+    if (!best) { G.toast('No tapes left to find'); return false; }
+    G.tapeMark = { x: best.x, z: best.z, t: 15 };
+    a.cd = a.max;
+    G.toast('MARA: nearest tape marked — 15s');
+  } else if (key === 'nitro') {
+    G.nitroT = 3;
+    a.cd = a.max;
+    G.toast('DEKE: nitro!');
+  } else if (key === 'eyesOut') {
+    G.police.setWanted(Math.max(0, G.police.wanted - 1));
+    G.revealT = 10;
+    a.cd = a.max;
+    G.toast('ROSA: eyes out — heat down, cops marked 10s');
+  }
+  return true;
 };
 G.damage = (amount, cause) => {
   const absorbed = Math.min(G.armour, amount * 0.6);
@@ -193,6 +274,7 @@ G.tryEnterExit = () => {
   G.enterVehicle(drive);
   if (stolen) {
     best.owned = true;
+    G.stats.carsStolen++;
     G.police.addHeat(1);
     G.toast(kind === 'bike' ? 'Stole a bike — 1 star!' : 'Stole a car — 1 star!');
   }
@@ -289,6 +371,7 @@ G.shoot = () => {
       c.down = true;
       c.group.rotation.x = -Math.PI / 2;
       c.group.position.y = 0.4;
+      G.stats.takenOut++;
       G.respect = Math.min(100, G.respect + 2);
       G.toast('Crew down! +2 respect');
     }
@@ -319,9 +402,47 @@ if (G.save) {
 document.getElementById('btnStart').addEventListener('click', () => G.startGame());
 document.getElementById('btnContinue').addEventListener('click', () => G.startGame());
 document.getElementById('btnNew').addEventListener('click', () => {
-  try { localStorage.removeItem(SAVE_KEY); } catch { /* ignore */ }
+  // Fresh game in the first empty slot; if all three are full, the oldest
+  // slot (by savedAt) is overwritten.
+  try {
+    const slots = G.slotInfo();
+    let target = slots.findIndex((s) => s.empty);
+    if (target < 0) {
+      let oldest = 0;
+      slots.forEach((s, i) => { if ((s.savedAt || 0) < (slots[oldest].savedAt || 0)) oldest = i; });
+      target = oldest;
+    }
+    SLOTS[target] = null;
+    localStorage.setItem(SLOTS_KEY, JSON.stringify(SLOTS));
+    localStorage.setItem(ACTIVE_KEY, String(target));
+  } catch { /* ignore */ }
   location.reload();
 });
+// Title-screen save slots: occupied loads that slot (reload + auto-start),
+// empty starts a fresh game in it.
+{
+  const list = document.getElementById('slotList');
+  const fmtClock = (h) => `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.floor((h % 1) * 60)).padStart(2, '0')}`;
+  G.slotInfo().forEach((s) => {
+    const row = document.createElement('div');
+    row.className = 'slotRow' + (s.empty ? ' empty' : '') + (s.slot === G.slot && !s.empty ? ' cur' : '');
+    row.textContent = s.empty
+      ? `SLOT ${s.slot + 1} · EMPTY`
+      : `SLOT ${s.slot + 1} · Ch.${s.chapter} · $${s.money} · Day ${s.day} · ${s.missions}/8 missions · ${fmtClock(s.clock)}`;
+    row.addEventListener('click', () => {
+      try {
+        localStorage.setItem(ACTIVE_KEY, String(s.slot));
+        if (s.empty) {
+          SLOTS[s.slot] = null;
+          localStorage.setItem(SLOTS_KEY, JSON.stringify(SLOTS));
+        }
+        sessionStorage.setItem('ember-autostart', '1');
+      } catch { /* ignore */ }
+      location.reload();
+    });
+    list.appendChild(row);
+  });
+}
 document.getElementById('btnControls').addEventListener('click', () => {
   const h = document.getElementById('howto');
   h.classList.toggle('hidden');
@@ -348,6 +469,9 @@ window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyE') G.interact();
   if (e.code === 'KeyM') G.toggleMap();
   if (e.code === 'KeyR') G.reload();
+  if (e.code === 'KeyZ') G.useAbility('hotTip');
+  if (e.code === 'KeyX') G.useAbility('nitro');
+  if (e.code === 'KeyC') G.useAbility('eyesOut');
   if (e.code === 'KeyQ') G.audio.prevStation();
   if (e.code === 'KeyV') { G.camClassic = !G.camClassic; G.toast(G.camClassic ? 'Classic camera' : 'Chase camera'); }
   if (e.code === 'Escape' && G.mapOpen) G.toggleMap();
@@ -408,6 +532,16 @@ function loop() {
   if (G.clock >= 24) { G.clock -= 24; G.day++; }
   const inp = input();
   if (G.mode === 'playing' && !G.mapOpen) {
+    for (const a of Object.values(G.abilities)) if (a.cd > 0) a.cd = Math.max(0, a.cd - dt);
+    if (G.tapeMark) { G.tapeMark.t -= dt; if (G.tapeMark.t <= 0) G.tapeMark = null; }
+    if (G.revealT > 0) G.revealT -= dt;
+    if (G.nitroT > 0) G.nitroT -= dt;
+    if (G.vehicle) {
+      const wantNitro = G.nitroT > 0;
+      if (wantNitro && !G.vehicle._nitroOn) { G.vehicle._nitroOn = true; G.vehicle.topSpeed *= 1.4; }
+      if (!wantNitro && G.vehicle._nitroOn) { G.vehicle._nitroOn = false; G.vehicle.topSpeed /= 1.4; }
+      G.stats.distanceDriven += Math.abs(G.vehicle.speed) * dt;
+    }
     if (G.vehicle) {
       const inp2 = (G.shot === 'cover' || G.shot === 'title') ? { ...inp, f: true, brake: true, l: true } : inp;
       G.vehicle.update(dt, inp2);
@@ -444,4 +578,12 @@ function loop() {
 installDebugApi(G);
 G.setClock(G.clock);
 if (shotName) stageShot(G, shotName);
+else {
+  try {
+    if (sessionStorage.getItem('ember-autostart')) {
+      sessionStorage.removeItem('ember-autostart');
+      G.startGame();
+    }
+  } catch { /* ignore */ }
+}
 loop();

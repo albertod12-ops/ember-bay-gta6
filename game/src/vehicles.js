@@ -440,6 +440,7 @@ export function createDrive(G, vehicle, opts = {}) {
         G.money += cash;
         G.respect = Math.min(100, G.respect + Math.min(6, cash / 400));
         G.driftBanked += cash;
+        if (G.stats) G.stats.longestDrift = Math.max(G.stats.longestDrift, cash);
         if (G.toast) G.toast(`DRIFT +$${cash} (x${d.combo})`);
       }
       d.points = 0;

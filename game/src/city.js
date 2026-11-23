@@ -28,6 +28,16 @@ export function districtAt(x, z) {
   return { name: 'Ember Bay', type: 'residential' };
 }
 
+// Per-district standing 0-100: beach + downtown crews like you, the docks
+// and the hood do not — yet. +5 when a mission completes in that district.
+export const STANDING = {
+  'Old Town': 48, 'Glass Mile': 66, 'Northgate': 52, 'Marina Point': 64,
+  'Downtown Core': 62, 'Hillcrest': 55, 'Sunset Row': 58, 'Hoodside': 38,
+  'Coral Row': 44, 'Central Avenues': 56, 'Craneside': 36, 'Port Ember': 34,
+  'Palms Beach': 72, 'Boardwalk': 68,
+};
+export function standingLabel(v) { return v >= 70 ? 'FRIENDLY' : v >= 40 ? 'NEUTRAL' : 'WARY'; }
+
 export const ROADS = {
   ns: [
     { base: -440, amp: 14, freq: Math.PI / 520, phase: 0.4 },

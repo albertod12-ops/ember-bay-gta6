@@ -136,6 +136,7 @@ export function initPolice(G) {
     unseenTimer: 0,
     flashT: 0,
     setWanted(n) {
+      if (n === 0 && P.wanted > 0 && G.stats) G.stats.copsEscaped++;
       P.wanted = Math.max(0, Math.min(5, Math.round(n)));
       if (P.wanted === 0) {
         P.evading = 0;
