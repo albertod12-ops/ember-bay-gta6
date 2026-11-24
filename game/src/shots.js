@@ -149,7 +149,7 @@ export function stageShot(G, name) {
       pos: [pt.x + rx * 5.5, 0.75, pt.z + rz * 5.5],
       look: [pt.x, 0.45, pt.z],
     } : {
-      pos: [pt.x + fx * 5 + rx * 3, 0.85, pt.z + fz * 5 + rz * 3],
+      pos: [pt.x + fx * 5 + rx * 2.5, 2.2, pt.z + fz * 5 + rz * 2.5],
       look: [pt.x, 0.5, pt.z],
     };
     return;
