@@ -40,6 +40,21 @@ function armCop(ped, gun, pose) {
 const STAGE_ROAD = 3;
 const COVER_ROAD = 0; // Palms Beach (ns[0], z=-70): low pastel beach buildings + palms + ocean-side district read as a different place from downtown (ns[3]); cover and title must not share one street
 const COVER_Z = -70; // Palms Beach stretch
+// v18.8: put a staged car ON the road, not on the player's heading tangent.
+// The tangent drifts off the curving centreline by ~fwd*sin(drift) (cover
+// drift is +0.2 rad, so a car 26 ahead sat ~5 units off-centre and the
+// 4.5 lane put it past the 6-wide road edge, half inside a building), and
+// police/traffic slot tables shared coordinates — combat had an exact
+// duplicate at (14,+4), green + black/red + orange in one pile. z follows
+// the road, x the centreline at that z, heading the road heading there.
+function roadPlace(c, road, dir, anchorZ, fwd, side) {
+  const z = anchorZ + dir * fwd;
+  const h = nsHeading(road, z, dir);
+  c.pos.set(nsCenter(road, z, dir) + side * Math.cos(h), 0, z);
+  c.heading = h;
+  c.group.position.copy(c.pos);
+  c.group.rotation.y = h;
+}
 function parkFar(c, i) {
   const far = (i % 2 === 0 ? -1 : 1) * (380 + (i % 5) * 8);
   if (c.axis === 'ns') {
@@ -277,16 +292,12 @@ export function updateShot(G, dt) {
       }
       const tSports = G.traffic.cars.filter((c) => c.kind === 'sport' && c.color !== 0xffc21c);
       const tOthers = G.traffic.cars.filter((c) => c.kind !== 'sport' || c.color === 0xffc21c);
-      const tHeld = [...tSports, ...tOthers];
       const tSlots = [[16, 0.5], [22, 4.5], [32, 0.5], [42, 4.5]];
-      tSlots.forEach(([fwd, side], i) => {
-        const tc = tHeld[i];
-        if (!tc) return;
-        tc.pos.set(car.pos.x + rx * side + fx * fwd, 0, car.pos.z + rz * side + fz * fwd);
-        tc.heading = car.heading;
-        tc.group.position.copy(tc.pos);
-        tc.group.rotation.y = car.heading;
-      });
+      // v18.8: sports+others is EVERY car, so the old un-sliced held made
+      // the park-the-rest loop a no-op and free traffic drove through the
+      // staged shot. Slice to the slots actually used.
+      const tHeld = [...tSports, ...tOthers].slice(0, tSlots.length);
+      tSlots.forEach(([fwd, side], i) => { if (tHeld[i]) roadPlace(tHeld[i], ROADS.ns[STAGE_ROAD], 1, car.pos.z, fwd, side); });
       G.traffic.cars.forEach((c, i) => { if (!tHeld.includes(c)) parkFar(c, i); });
       G.traffic.bikes.forEach((c, i) => parkFar(c, i));
       // v18.3: camera CLOSER than v18.2 (was fx*9+rx*4, y 2.7) so the
@@ -315,41 +326,44 @@ export function updateShot(G, dt) {
       if (on) { const sc = 1.0 - G._shotTimer * 0.7; m.scale.set(sc, sc, 1); }
     }
     const rx = Math.cos(ph), rz = -Math.sin(ph);
-    const holdTraffic = (car, fwd, side) => {
-      if (!car) return;
-      car.pos.set(pp.x + rx * side + fx * fwd, 0, pp.z + rz * side + fz * fwd);
-      car.heading = ph;
-      car.group.position.copy(car.pos);
-      car.group.rotation.y = ph;
-    };
+    // v18.8: every car on the road (dir -1: ahead is -z) on its own grid
+    // point — police 16..38, traffic 44..64, bikes centre lane 40/54,
+    // police bike 26. Old tables shared (14,+4) exactly and sat 2-4 apart
+    // elsewhere, so green + black/red + orange piled at one point; and
+    // un-held traffic was never parked (see the slice note in title), so
+    // free cars drove through the shot too.
+    const road3 = ROADS.ns[STAGE_ROAD];
     const sports = G.traffic.cars.filter((c) => c.kind === 'sport' && c.color !== 0xffc21c);
     const others = G.traffic.cars.filter((c) => c.kind !== 'sport' || c.color === 0xffc21c);
-    const held = [...sports, ...others];
-    holdTraffic(held[0], 18, -4);
-    holdTraffic(held[1], 14, 4);
-    holdTraffic(held[2], 24, -2);
-    holdTraffic(held[3], 30, 3);
+    const cSlots = [[44, -4], [50, 4], [58, -4], [64, 4]];
+    const held = [...sports, ...others].slice(0, cSlots.length);
+    cSlots.forEach(([fwd, side], i) => { if (held[i]) roadPlace(held[i], road3, -1, pp.z, fwd, side); });
     G.traffic.cars.forEach((c, i) => { if (!held.includes(c)) parkFar(c, i); });
     const bikeA = G.traffic.bikes[0];
-    if (bikeA) {
-      bikeA.pos.set(pp.x + rx * 4, 0, pp.z + rz * 4 + fz * 18);
-      bikeA.heading = ph; bikeA.group.position.copy(bikeA.pos); bikeA.group.rotation.y = ph;
-    }
+    if (bikeA) roadPlace(bikeA, road3, -1, pp.z, 40, 0);
     const bikeB = G.traffic.bikes[1];
-    if (bikeB) {
-      bikeB.pos.set(pp.x - rx * 4, 0, pp.z - rz * 4 + fz * 22);
-      bikeB.heading = ph; bikeB.group.position.copy(bikeB.pos); bikeB.group.rotation.y = ph;
-    }
+    if (bikeB) roadPlace(bikeB, road3, -1, pp.z, 54, 0);
     G.traffic.bikes.forEach((c, i) => { if (c !== bikeA && c !== bikeB) parkFar(c, i); });
     const cars = P.units.filter((u) => u.kind === 'car');
-    const carSlots = [[-3, 9], [4, 14], [-3, 20], [3, 24], [-4, 28], [4, 32]];
+    const carSlots = [[-3.5, 16], [3.5, 22], [-3.5, 30], [3.5, 38], [-3.5, 46], [3.5, 52]];
     cars.forEach((c, i) => {
       const [side, fwd] = carSlots[i % carSlots.length];
-      c.pos.set(pp.x + rx * side + fx * fwd, 0, pp.z + rz * side + fz * fwd);
-      c.heading = ph; c.group.position.copy(c.pos); c.group.rotation.y = ph;
+      roadPlace(c, road3, -1, pp.z, fwd, side);
     });
     const pb = P.units.find((u) => u.kind === 'bike');
-    if (pb) { pb.pos.set(pp.x - rx * 6 + fx * 18, 0, pp.z - rz * 6 + fz * 18); pb.heading = ph; pb.group.position.copy(pb.pos); pb.group.rotation.y = ph; }
+    if (pb) roadPlace(pb, road3, -1, pp.z, 26, 0);
+    // v18.8: the wanted-4 roadblock is spawned on the straight tangent 70
+    // ahead, so one of its cars sat 7.6 off-centre (off the road) and 3.6
+    // from the farthest traffic car. Pull both cars onto the road at fwd
+    // 70, ±3 across it; keep their across-road rotation and P.roadblock.pos
+    // (HUD distance + removal range) untouched.
+    if (P.roadblock) {
+      const rz70 = pp.z - 70;
+      const rh = nsHeading(road3, rz70, -1);
+      P.roadblock.cars.forEach((rb, i) => {
+        rb.group.position.set(nsCenter(road3, rz70, -1) + (i === 0 ? -3 : 3) * Math.cos(rh), 0, rz70);
+      });
+    }
     if (P.heli) P.heli.group.position.set(pp.x + fx * 24, 24, pp.z + fz * 24);
     return;
   }
@@ -394,44 +408,31 @@ export function updateShot(G, dt) {
   const pp = G.playerPos;
   const ph = G.playerHeading;
   const fx = Math.sin(ph), fz = Math.cos(ph);
-  const rx = Math.cos(ph), rz = -Math.sin(ph);
-  const holdTraffic = (car, fwd, side) => {
-    if (!car) return;
-    car.pos.set(pp.x + rx * side + fx * fwd, 0, pp.z + rz * side + fz * fwd);
-    car.heading = ph;
-    car.group.position.copy(car.pos);
-    car.group.rotation.y = ph;
-  };
+  // v18.8: all staged vehicles on the road (dir +1: ahead is +z), each on
+  // its own grid point. Old tangent placement pushed far cars off the
+  // centreline (cop at (4.5,26) sat ~9.5 off-centre, half inside the brown
+  // building left of the road) and cop/traffic slots sat 4-6 apart in the
+  // same lane. Cops 10..22, traffic 26..66, bikes centre lane 30/44.
+  const road0 = ROADS.ns[COVER_ROAD];
+  const az = G.vehicle ? G.vehicle.pos.z : pp.z;
   const sports = G.traffic.cars.filter((c) => c.kind === 'sport' && c.color !== 0xffc21c);
   const others = G.traffic.cars.filter((c) => c.kind !== 'sport' || c.color === 0xffc21c);
-  const held = [...sports, ...others];
-  const slots = [[18, 4.5], [24, -4.5], [32, 4.5], [40, -4.5], [50, 4.5], [60, -4.5]];
-  slots.forEach(([fwd, side], i) => holdTraffic(held[i], fwd, side));
+  const slots = [[26, 4.5], [32, -4.5], [40, 4.5], [48, -4.5], [58, 4.5], [66, -4.5]];
+  const held = [...sports, ...others].slice(0, slots.length);
+  slots.forEach(([fwd, side], i) => { if (held[i]) roadPlace(held[i], road0, 1, az, fwd, side); });
   G.traffic.cars.forEach((c, i) => { if (!held.includes(c)) parkFar(c, i); });
   const cars = P.units.filter((u) => u.kind === 'car');
-  const copSlots = [[4.5, 14], [-4.5, 20], [4.5, 26]];
+  const copSlots = [[-4.5, 10], [4.5, 16], [-4.5, 22]];
   cars.forEach((c, i) => {
     const [side, fwd] = copSlots[i % copSlots.length];
-    c.pos.set(pp.x + rx * side + fx * fwd, 0, pp.z + rz * side + fz * fwd);
-    c.heading = ph; c.group.position.copy(c.pos); c.group.rotation.y = ph;
+    roadPlace(c, road0, 1, az, fwd, side);
   });
   const pbikes = P.units.filter((u) => u.kind === 'bike');
-  pbikes.forEach((b, i) => {
-    const side = i % 2 === 0 ? 4.5 : -4.5;
-    const fwd = 32 + i * 6;
-    b.pos.set(pp.x + rx * side + fx * fwd, 0, pp.z + rz * side + fz * fwd);
-    b.heading = ph; b.group.position.copy(b.pos); b.group.rotation.y = ph;
-  });
+  pbikes.forEach((b, i) => roadPlace(b, road0, 1, az, 36 + i * 16, 0));
   const bike = G.traffic.bikes[0];
-  if (bike) {
-    bike.pos.set(pp.x + rx * -3.5, 0, pp.z + rz * -3.5 + fz * 30);
-    bike.heading = ph; bike.group.position.copy(bike.pos); bike.group.rotation.y = ph;
-  }
+  if (bike) roadPlace(bike, road0, 1, az, 30, 0);
   const bike2 = G.traffic.bikes[1];
-  if (bike2) {
-    bike2.pos.set(pp.x + rx * 3.5, 0, pp.z + rz * 3.5 + fz * 38);
-    bike2.heading = ph; bike2.group.position.copy(bike2.pos); bike2.group.rotation.y = ph;
-  }
+  if (bike2) roadPlace(bike2, road0, 1, az, 44, 0);
   G.traffic.bikes.forEach((c, i) => { if (c !== bike && c !== bike2) parkFar(c, i); });
   if (P.heli) P.heli.group.position.set(pp.x + fx * 26, 24, pp.z + fz * 26);
 }
