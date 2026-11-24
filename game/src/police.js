@@ -5,7 +5,7 @@ import { makePerson } from './people.js';
 const CALLSIGNS = ['KESTREL-39', 'FALCON-12', 'VIPER-07', 'COBRA-21', 'HAVOC-55'];
 
 function std(color, opts = {}) {
-  return new THREE.MeshStandardMaterial({ color, roughness: 0.45, metalness: 0.3, ...opts });
+  return new THREE.MeshStandardMaterial({ color, roughness: .45, metalness: .3, ...opts });
 }
 function box(w, h, d, material, x, y, z, parent, rx = 0) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
@@ -18,56 +18,56 @@ function box(w, h, d, material, x, y, z, parent, rx = 0) {
 export function makePoliceCar(G, variant = -1) {
   const g = new THREE.Group();
   const black = std(0x14161c);
-  const white = std(0xf2f2f2, { roughness: 0.4, emissive: 0xbfc8d8, emissiveIntensity: 0.5 });
-  const glass = std(0x14202e, { roughness: 0.12, metalness: 0.65 });
-  const dark = std(0x1a1a1a, { roughness: 0.8 });
-  const chrome = std(0xd8d8d8, { metalness: 0.5, roughness: 0.35, emissive: 0x555555, emissiveIntensity: 0.3 });
+  const white = std(0xf2f2f2, { roughness: .4, emissive: 0xbfc8d8, emissiveIntensity: .5 });
+  const glass = std(0x14202e, { roughness: .12, metalness: .65 });
+  const dark = std(0x1a1a1a, { roughness: .8 });
+  const chrome = std(0xd8d8d8, { metalness: .5, roughness: .35, emissive: 0x555555, emissiveIntensity: .3 });
   const head = std(0xfff2b0, { emissive: 0xffe9a0, emissiveIntensity: 1.4 });
   const tailBar = std(0xd81a1a, { emissive: 0xaa0000, emissiveIntensity: 1.1 });
-  const steel = std(0x888888, { metalness: 0.8, roughness: 0.3 });
-  const orange = std(0xff7a1a, { emissive: 0xcc5500, emissiveIntensity: 0.8 });
+  const steel = std(0x888888, { metalness: .8, roughness: .3 });
+  const orange = std(0xff7a1a, { emissive: 0xcc5500, emissiveIntensity: .8 });
   const wheels = [];
   const v = variant < 0 ? G.rng.int(0, 1) : variant;
   const P = [
-[1.7,.42,5,0,.52,0,0],[2,.08,1.9,0,.76,1.5,0,.1],[1.95,.25,.8,0,.8,-2.1,0],[.06,.42,1.7,-1.08,.7,.1,1],[.06,.42,1.7,1.08,.7,.1,1],[.06,.55,1.7,-1.06,1.18,-.1,2],[.06,.55,1.7,1.06,1.18,-.1,2],[1.7,.12,4.6,0,.74,0,0],[2,.16,4.6,0,.26,0,3],[1.6,.25,.08,0,.55,2.52,4],[.6,.16,.08,-.7,.62,2.52,5],[.6,.16,.08,.7,.62,2.52,5],[.3,.12,.08,-.98,.55,2.52,8],[.3,.12,.08,.98,.55,2.52,8],[1.7,.28,.12,0,.48,2.5,4],[2,.16,.1,0,.32,2.52,4],[1.9,.18,.08,0,.7,-2.52,6],[1.9,.24,.28,0,.34,-2.38,4],[.065,.08,2.4,-0.99,.5,.15,3],[.065,.08,2.4,0.99,.5,.15,3],[.05,.05,.2,-1.06,.98,.55,3],[.05,.05,.2,1.06,.98,.55,3]];
+[1.7,.42,5,0,.52,0,0],[2,.08,1.9,0,.76,1.5,0,.1],[1.95,.25,.8,0,.8,-2.1,0],[.06,.42,1.7,-1.08,.7,.1,1],[.06,.42,1.7,1.08,.7,.1,1],[.06,.55,1.7,-1.06,1.18,-.1,2],[.06,.55,1.7,1.06,1.18,-.1,2],[1.7,.12,4.6,0,.74,0,0],[2,.16,4.6,0,.26,0,3],[1.6,.25,.08,0,.55,2.52,4],[.6,.16,.08,-.7,.62,2.52,5],[.6,.16,.08,.7,.62,2.52,5],[.3,.12,.08,-.98,.55,2.52,8],[.3,.12,.08,.98,.55,2.52,8],[1.7,.28,.12,0,.48,2.5,4],[2,.16,.1,0,.32,2.52,4],[1.9,.18,.08,0,.7,-2.52,6],[1.9,.24,.28,0,.34,-2.38,4],[.065,.08,2.4,-.99,.5,.15,3],[.065,.08,2.4,.99,.5,.15,3],[.05,.05,.2,-1.06,.98,.55,3],[.05,.05,.2,1.06,.98,.55,3]];
   const M = [black, white, glass, dark, chrome, head, tailBar, steel, orange];
   for (const p of P) box(p[0], p[1], p[2], M[p[6]], p[3], p[4], p[5], g, p[7] || 0);
   const roofY = v === 0 ? 1.42 : 1.54;
   if (v === 0) {
-    box(1.9, 0.06, 1.05, glass, 0, 1.12, 0.7, g, 0.68);
-    box(1.8, 0.06, 1.1, glass, 0, 1.15, -1.45, g, -0.59);
-    box(2.05, 0.06, 1.4, white, 0, 1.42, -0.3, g);
+    box(1.9, .06, 1.05, glass, 0, 1.12, .7, g, .68);
+    box(1.8, .06, 1.1, glass, 0, 1.15, -1.45, g, -.59);
+    box(2.2, .18, 1.4, white, 0, 1.36, -.3, g);
     for(const sx of[-1.12,1.12])for(const[dy,c]of[[.07,0xd83a2a],[0,0xf2f2f2],[-.07,0x2a6fd8]])box(.02,.06,.34,std(c),sx,.85+dy,1.15,g);
-    box(1.5, 0.05, 0.05, chrome, 0, 0.6, 2.55, g);
+    box(1.5, .05, .05, chrome, 0, .6, 2.55, g);
   } else {
-    box(1.9, 0.06, 0.95, glass, 0, 1.15, 0.78, g, 0.82);
-    box(1.8, 0.06, 0.95, glass, 0, 1.18, -1.65, g, -0.75);
-    box(2.05, 0.06, 1.9, white, 0, 1.54, -0.45, g);
-    box(1.6, 0.04, 0.7, white, 0, 0.8, 1.6, g, 0.12);
-    box(0.04, 0.7, 0.04, chrome, 0.85, 1.5, -1.9, g);
+    box(1.9, .06, .95, glass, 0, 1.15, .78, g, .82);
+    box(1.8, .06, .95, glass, 0, 1.18, -1.65, g, -.75);
+    box(2.2, .18, 1.9, white, 0, 1.48, -.45, g);
+    box(1.6, .04, .7, white, 0, .8, 1.6, g, .12);
+    box(.04, .7, .04, chrome, .85, 1.5, -1.9, g);
   }
-  for (const ex of [-0.35, 0.35]) {
-    const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.2, 8), chrome);
+  for (const ex of [-.35, .35]) {
+    const tip = new THREE.Mesh(new THREE.CylinderGeometry(.09, .09, .2, 8), chrome);
     tip.rotation.x = Math.PI / 2;
-    tip.position.set(ex, 0.42, -2.5);
+    tip.position.set(ex, .42, -2.5);
     g.add(tip);
   }
-  const red = box(0.7, 0.22, 0.4, std(0xff2211, { emissive: 0xff2211, emissiveIntensity: 2 }), -0.45, roofY + 0.13, -0.2, g);
-  const blue = box(0.7, 0.22, 0.4, std(0x2244ff, { emissive: 0x2244ff, emissiveIntensity: 2 }), 0.45, roofY + 0.13, -0.2, g);
-  box(1.7, 0.1, 0.5, std(0x222222), 0, roofY + 0.03, -0.2, g);
+  const red = box(.7, .22, .4, std(0xff2211, { emissive: 0xff2211, emissiveIntensity: 2 }), -.45, roofY + .13, -.2, g);
+  const blue = box(.7, .22, .4, std(0x2244ff, { emissive: 0x2244ff, emissiveIntensity: 2 }), .45, roofY + .13, -.2, g);
+  box(1.7, .1, .5, std(0x222222), 0, roofY + .03, -.2, g);
   box(1.6,.12,.08,dark,0,.5,2.62,g);box(.08,.35,.08,dark,-.55,.4,2.62,g);box(.08,.35,.08,dark,.55,.4,2.62,g);
-  for (const [x, z] of [[-0.91, 1.5], [0.91, 1.5], [-0.91, -1.5], [0.91, -1.5]]) {
-    const w = wheel(0.38);
-    w.position.set(x, 0.38, z);
+  for (const [x, z] of [[-.91, 1.5], [.91, 1.5], [-.91, -1.5], [.91, -1.5]]) {
+    const w = wheel(.38);
+    w.position.set(x, .38, z);
     g.add(w);
     wheels.push(w);
-    fender(g, x, z, 0.38, black);
+    fender(g, x, z, .38, black);
   }
   for (const sx of [-1.11, 1.11]) {
-    box(0.02, 0.42, 0.03, dark, sx, 0.72, 0.3, g);
-    box(0.02, 0.42, 0.03, dark, sx, 0.72, -0.9, g);
+    box(.02, .42, .03, dark, sx, .72, .3, g);
+    box(.02, .42, .03, dark, sx, .72, -.9, g);
   }
-  for (const gx of [-0.3, 0, 0.3]) box(0.07, 0.1, 0.03, chrome, gx, 0.5, 2.46, g);
+  for (const gx of [-.3, 0, .3]) box(.07, .1, .03, chrome, gx, .5, 2.46, g);
   g.traverse((o) => {
     if (o.isMesh) {
       o.castShadow = true;
@@ -83,38 +83,38 @@ export function makePolicePed(G, female = false) {
     skin: 0xc98d64, shirt: female ? 0x8ab4d8 : 0x1a2a4a, shirt2: null,
     pants: 0x1a2a4a, shoes: 0x111111, hair: 0x14141c, hairStyle: 'cap',
     hat: 0x1a2a4a, badge: true, h: female ? 1.7 : 1.84,
-    build: female ? 0.95 : 1.08, sleeves: female ? 0 : 1,
+    build: female ? .95 : 1.08, sleeves: female ? 0 : 1,
   });
 }
 
 export function makeHeli(G) {
   const g = new THREE.Group();
-  const body = std(0x1c2733, { roughness: 0.4, metalness: 0.4 });
+  const body = std(0x1c2733, { roughness: .4, metalness: .4 });
   box(2.4, 1.8, 4.4, body, 0, 0, 0, g);
-  box(1.8, 1.1, 1.2, std(0x9fd4e8, { roughness: 0.1, metalness: 0.5 }), 0, 0.1, 2.4, g);
-  box(1.0, 0.9, 5.2, body, 0, 0.3, -4.2, g);
-  const fin = box(0.3, 1.6, 1.2, std(0xd8a03c), 0, 1.0, -6.6, g);
+  box(1.8, 1.1, 1.2, std(0x9fd4e8, { roughness: .1, metalness: .5 }), 0, .1, 2.4, g);
+  box(1.0, .9, 5.2, body, 0, .3, -4.2, g);
+  const fin = box(.3, 1.6, 1.2, std(0xd8a03c), 0, 1.0, -6.6, g);
   const tailRotor = new THREE.Group();
-  const tr1 = box(0.12, 2.4, 0.12, std(0x222222), 0, 0, 0, tailRotor);
-  const tr2 = box(0.12, 0.12, 2.4, std(0x222222), 0, 0, 0, tailRotor);
-  tailRotor.position.set(0.25, 0.9, -6.6);
+  const tr1 = box(.12, 2.4, .12, std(0x222222), 0, 0, 0, tailRotor);
+  const tr2 = box(.12, .12, 2.4, std(0x222222), 0, 0, 0, tailRotor);
+  tailRotor.position.set(.25, .9, -6.6);
   g.add(tailRotor);
   const rotor = new THREE.Group();
-  const b1 = box(0.3, 0.08, 11, std(0x222222), 0, 0, 0, rotor);
-  const b2 = box(11, 0.08, 0.3, std(0x222222), 0, 0, 0, rotor);
+  const b1 = box(.3, .08, 11, std(0x222222), 0, 0, 0, rotor);
+  const b2 = box(11, .08, .3, std(0x222222), 0, 0, 0, rotor);
   rotor.position.y = 1.25;
   g.add(rotor);
   for (const x of [-1.1, 1.1]) {
-    box(0.14, 0.14, 4.6, std(0x888888, { metalness: 0.8 }), x, -1.25, 0, g);
-    box(0.12, 0.9, 0.12, std(0x888888, { metalness: 0.8 }), x, -0.85, 1.2, g);
-    box(0.12, 0.9, 0.12, std(0x888888, { metalness: 0.8 }), x, -0.85, -1.2, g);
+    box(.14, .14, 4.6, std(0x888888, { metalness: .8 }), x, -1.25, 0, g);
+    box(.12, .9, .12, std(0x888888, { metalness: .8 }), x, -.85, 1.2, g);
+    box(.12, .9, .12, std(0x888888, { metalness: .8 }), x, -.85, -1.2, g);
   }
-  const spot = new THREE.SpotLight(0xfff2b0, 900, 160, 0.32, 0.45, 1.2);
+  const spot = new THREE.SpotLight(0xfff2b0, 900, 160, .32, .45, 1.2);
   spot.position.set(0, -1, 1.6);
   g.add(spot);
   const cone = new THREE.Mesh(
     new THREE.ConeGeometry(5, 42, 16, 1, true),
-    new THREE.MeshBasicMaterial({ color: 0xffe9a0, transparent: true, opacity: 0.10, side: THREE.DoubleSide, depthWrite: false }),
+    new THREE.MeshBasicMaterial({ color: 0xffe9a0, transparent: true, opacity: .10, side: THREE.DoubleSide, depthWrite: false }),
   );
   return { group: g, rotor, tailRotor, spot, cone };
 }
@@ -238,16 +238,16 @@ export function initPolice(G) {
         while (dh > Math.PI) dh -= Math.PI * 2;
         while (dh < -Math.PI) dh += Math.PI * 2;
         u.heading += dh * Math.min(1, dt * 2.2);
-        const want = d > 12 ? u.cruise : u.cruise * 0.55;
+        const want = d > 12 ? u.cruise : u.cruise * .55;
         u.speed += (want - u.speed) * Math.min(1, dt * 1.5);
         u.pos.x += Math.sin(u.heading) * u.speed * dt;
         u.pos.z += Math.cos(u.heading) * u.speed * dt;
         u.group.position.copy(u.pos);
         u.group.rotation.y = u.heading;
-        if (u.kind === 'bike') u.group.rotation.z = -dh * 0.2;
+        if (u.kind === 'bike') u.group.rotation.z = -dh * .2;
         if (u.red) {
-          u.red.material.emissiveIntensity = flash ? 2.4 : 0.25;
-          u.blue.material.emissiveIntensity = flash ? 0.25 : 2.4;
+          u.red.material.emissiveIntensity = flash ? 2.4 : .25;
+          u.blue.material.emissiveIntensity = flash ? .25 : 2.4;
         }
         if (d < 7) {
           G.damage(4 * dt * 10, 'ram');
@@ -256,10 +256,10 @@ export function initPolice(G) {
       }
       if (P.heli) {
         const h = P.heli;
-        const t = G.time * 0.45;
+        const t = G.time * .45;
         const hx = G.playerPos.x + Math.sin(t) * 32;
         const hz = G.playerPos.z + Math.cos(t) * 32;
-        h.group.position.set(hx, 26 + Math.sin(t * 0.7) * 2, hz);
+        h.group.position.set(hx, 26 + Math.sin(t * .7) * 2, hz);
         h.group.rotation.y = Math.atan2(G.playerPos.x - hx, G.playerPos.z - hz);
         h.rotor.rotation.y += dt * 22;
         h.tailRotor.rotation.x += dt * 30;

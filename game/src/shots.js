@@ -144,7 +144,10 @@ export function stageShot(G, name) {
     G.mode = 'playing';
     G.hud.setMenu(true);
     G.player.group.visible = false;
-    const pt = roadPoint('ns', STAGE_ROAD, -70, 1);
+    // v18.6: start far south (z=-247) so that at the 6.5 s capture the car
+    // is near z=0, the heart of Downtown Core (tall buildings both sides),
+    // instead of z≈177 at the district edge (flat, buildings set back).
+    const pt = roadPoint('ns', STAGE_ROAD, -247, 1);
     enterSport(G, pt.x, pt.z, pt.heading, 38);
     G._titleCops = [];
     for (let i = 0; i < 2; i++) {
