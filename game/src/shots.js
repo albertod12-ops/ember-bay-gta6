@@ -38,8 +38,8 @@ function armCop(ped, gun, pose) {
   }
 }
 const STAGE_ROAD = 3;
-const COVER_ROAD = 0; // Palms Beach (ns[0], z=-70): low pastel beach buildings + palms + ocean-side district read as a different place from downtown (ns[3]); cover and title must not share one street
-const COVER_Z = -70; // Palms Beach stretch
+const COVER_ROAD = 4; // v18.10: Downtown Core east (ns[4], z=60) — tall buildings both sides + dense pack, busier than Palms Beach; different street from title (ns[3])
+const COVER_Z = 60; // Downtown Core stretch
 // v18.8: put a staged car ON the road, not on the player's heading tangent.
 // The tangent drifts off the curving centreline by ~fwd*sin(drift) (cover
 // drift is +0.2 rad, so a car 26 ahead sat ~5 units off-centre and the
@@ -415,7 +415,7 @@ export function updateShot(G, dt) {
   const az = G.vehicle ? G.vehicle.pos.z : pp.z;
   const sports = G.traffic.cars.filter((c) => c.kind === 'sport' && c.color !== 0xffc21c);
   const others = G.traffic.cars.filter((c) => c.kind !== 'sport' || c.color === 0xffc21c);
-  const slots = [[26, 4.5], [32, -4.5], [40, 4.5], [48, -4.5], [58, 4.5], [66, -4.5]];
+  const slots = [[26, 4.5], [32, -4.5], [40, 4.5], [48, -4.5], [58, 4.5], [66, -4.5], [74, 4.5], [82, -4.5]];
   const held = [...sports, ...others].slice(0, slots.length);
   slots.forEach(([fwd, side], i) => { if (held[i]) roadPlace(held[i], road0, 1, az, fwd, side); });
   G.traffic.cars.forEach((c, i) => { if (!held.includes(c)) parkFar(c, i); });
