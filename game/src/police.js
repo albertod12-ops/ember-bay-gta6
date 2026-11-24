@@ -294,3 +294,4 @@ export function initPolice(G) {
   };
   return P;
 }
+

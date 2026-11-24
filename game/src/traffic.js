@@ -242,3 +242,4 @@ export function initTraffic(G) {
   };
   return T;
 }
+

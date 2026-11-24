@@ -28,3 +28,4 @@ export function hashStr(s) {
   }
   return h >>> 0;
 }
+

@@ -505,3 +505,4 @@ export function installDebugApi(G) {
   window.addEventListener('error', (e) => window.__ember.errors.push(String(e.message || e.error)));
   window.addEventListener('unhandledrejection', (e) => window.__ember.errors.push('rejection: ' + String(e.reason)));
 }
+

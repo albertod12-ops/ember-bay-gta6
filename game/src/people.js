@@ -186,3 +186,4 @@ export function makePerson(G, opts = {}) {
   });
   return { group: g, hipL, hipR, shL, shR, head, height: h };
 }
+
