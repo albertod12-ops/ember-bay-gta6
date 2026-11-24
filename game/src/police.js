@@ -36,13 +36,13 @@ export function makePoliceCar(G, variant = -1) {
   if (v === 0) {
     box(1.9, .06, 1.05, glass, 0, 1.12, .7, g, .68);
     box(1.8, .06, 1.1, glass, 0, 1.15, -1.45, g, -.59);
-    box(2.2, .18, 1.4, white, 0, 1.36, -.3, g);
+    box(2.05, .06, 1.4, white, 0, 1.42, -.3, g);
     for(const sx of[-1.12,1.12])for(const[dy,c]of[[.07,0xd83a2a],[0,0xf2f2f2],[-.07,0x2a6fd8]])box(.02,.06,.34,std(c),sx,.85+dy,1.15,g);
     box(1.5, .05, .05, chrome, 0, .6, 2.55, g);
   } else {
     box(1.9, .06, .95, glass, 0, 1.15, .78, g, .82);
     box(1.8, .06, .95, glass, 0, 1.18, -1.65, g, -.75);
-    box(2.2, .18, 1.9, white, 0, 1.48, -.45, g);
+    box(2.05, .06, 1.9, white, 0, 1.54, -.45, g);
     box(1.6, .04, .7, white, 0, .8, 1.6, g, .12);
     box(.04, .7, .04, chrome, .85, 1.5, -1.9, g);
   }
