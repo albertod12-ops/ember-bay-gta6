@@ -109,16 +109,13 @@ export function stageShot(G, name) {
   G._aimPose = false;
   if (name.startsWith('showcase')) {
     // Diagnostic only (never a submission shot): one car, large in frame,
-    // front 3/4, clean street, no HUD — to compare the silhouette with the
-    // 3D-model reference. Name: showcase-<kind>, kind = sport|muscle|wedge|
-    // boxy|stripe|police0|police1. showcase-side-<kind> = pure profile view
-    // (wheel-fit check: tire top vs fender line, side flush).
+    // front 3/4, no HUD — silhouette vs the 3D-model reference.
+    // showcase-<kind>, kind = sport|muscle|wedge|boxy|stripe|police0|
+    // police1; showcase-side-<kind> = pure profile (wheel-fit check).
     let kind = name.slice(9);
     const side = kind.startsWith('side-');
     if (side) kind = kind.slice(5);
-    G.setClock(13); // v18.4: bright midday for the diagnostic — at 17:00 the
-    // car's front sat in shadow and the lime read as dark olive, which hid
-    // the shape. Submission shots keep their own clocks.
+    G.setClock(13); // v18.4: bright midday — at 17:00 the front sat in shadow, lime read dark olive. Submission shots keep their own clocks.
     G.mode = 'playing';
     G.hud.setMenu(false);
     for (const id of ['hud', 'ebpd', 'missionBanner', 'dialogue', 'title']) {
@@ -126,7 +123,7 @@ export function stageShot(G, name) {
       if (el) el.style.display = 'none';
     }
     G.player.group.visible = false;
-    const pt = roadPoint('ns', STAGE_ROAD, -70, 1);
+    const pt = roadPoint('ns', STAGE_ROAD, -85, 1); // v18.9r2: -85, palm clears wing
     const fx = Math.sin(pt.heading), fz = Math.cos(pt.heading);
     const rx = Math.cos(pt.heading), rz = -Math.sin(pt.heading);
     if (kind === 'police0' || kind === 'police1') {
@@ -145,12 +142,13 @@ export function stageShot(G, name) {
     G.traffic.cars.forEach((c, i) => parkFar(c, i));
     G.traffic.bikes.forEach((c, i) => parkFar(c, i));
     for (const g of parkedCars(G)) g.visible = false;
+    // v18.9r2: title pitch ~5deg, az ~35deg, dist 5.1, look y 0.7 — car LARGE (was 17deg down).
     G.camOverride = side ? {
       pos: [pt.x + rx * 5.5, 0.75, pt.z + rz * 5.5],
       look: [pt.x, 0.45, pt.z],
     } : {
-      pos: [pt.x + fx * 5 + rx * 2.5, 2.2, pt.z + fz * 5 + rz * 2.5],
-      look: [pt.x, 0.5, pt.z],
+      pos: [pt.x + fx * 4.18 + rx * 2.93, 1.15, pt.z + fz * 4.18 + rz * 2.93],
+      look: [pt.x, 0.7, pt.z],
     };
     return;
   }
